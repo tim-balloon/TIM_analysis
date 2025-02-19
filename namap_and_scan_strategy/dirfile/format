@@ -1,0 +1,25 @@
+/ENDIAN little
+data RAW INT8 8
+lincom LINCOM data 1.1 2.2 INDEX 2.2 3.3;4.4 linterp const const
+/META data mstr STRING "This is a string constant."
+/META data mconst CONST COMPLEX128 3.3;4.4
+/META data mcarray CARRAY FLOAT64 1.9 2.8 3.7 4.6 5.5
+/META data mlut LINTERP DATA ./lut
+const CONST FLOAT64 5.5
+carray CARRAY FLOAT64 1.1 2.2 3.3 4.4 5.5 6.6
+linterp LINTERP data ./lut
+polynom POLYNOM data 1.1 2.2 2.2 3.3;4.4 const const
+bit BIT data 3 4
+sbit SBIT data 5 6
+mplex MPLEX data sbit 1 10
+mult MULTIPLY data sbit
+div DIVIDE mult bit
+recip RECIP div 6.5;4.3
+phase PHASE data 11
+window WINDOW linterp mult LT 4.1
+/ALIAS alias data
+string STRING "Zaphod Beeblebrox"
+sarray SARRAY one two three four five six seven
+data/msarray SARRAY eight nine ten eleven twelve
+indir INDIR data carray
+sindir SINDIR data sarray
