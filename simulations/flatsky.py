@@ -97,6 +97,17 @@ def make_gaussian_realisations(el, cl_dict, map_shape, pixel_res_radians):
     """
 
     #----------------------------------------
+    #refine cl_dict to remove redundant spectra.
+    cl_dict_mod = {} 
+    for keyname in cl_dict:
+        keyname_rev = keyname[::-1]
+        if keyname_rev in cl_dict_mod: continue
+        cl_dict_mod[keyname] = cl_dict[keyname]
+    cl_dict = cl_dict_mod
+    #----------------------------------------
+
+
+    #----------------------------------------
     #solve quadratic equation to get the number of maps
     """
     For "N" maps, we will have N (N +1)/2 = total spectra which is total_spec
@@ -105,13 +116,6 @@ def make_gaussian_realisations(el, cl_dict, map_shape, pixel_res_radians):
     a = 1, b = 1, c = - (2 * total_spec)
     solution is: N = ( -b + np.sqrt( b**2 - 4 * a * c) ) / (2 * a)
     """
-    '''
-    cl_dict_mod = {}
-    for keyname in cl_dict:
-        keyname_rev = keyname[::-1]
-        if keyname_rev in cl_dict_mod: continue
-        cl_dict_mod[keyname] = 
-    '''
 
     total_spec = len( cl_dict )
     a, b, c = 1, 1, -2 * total_spec
