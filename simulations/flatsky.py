@@ -1,8 +1,11 @@
-import numpy as np, sys, os, warnings
+"""
+simulations/python/flatsky.py
 
-################################################################################################
-################################################################################################
-################################################################################################
+Contains necessary function for performing flatsky analysis and 
+generating correlated Gaussian realisations across different bands. 
+"""
+
+import numpy as np, sys, os, warnings
 
 def get_lxly(map_shape, pixel_res_radians):
 
