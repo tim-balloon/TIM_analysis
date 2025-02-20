@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Simulations package &#8212; TIM analysis software  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css?v=0f882399" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="TIM analysis software documentation" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="TIM analysis software documentation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TIM analysis software  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Simulations package</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="simulations-package">
+<h1>Simulations package<a class="headerlink" href="#simulations-package" title="Link to this heading">¶</a></h1>
+<section id="module-flatsky">
+<span id="flatsky-py"></span><h2>flatsky.py<a class="headerlink" href="#module-flatsky" title="Link to this heading">¶</a></h2>
+<p>simulations/python/flatsky.py</p>
+<p>Contains necessary function for performing flatsky analysis and
+generating correlated Gaussian realisations across different bands.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.apod_mask">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">apod_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perform_apod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'circle'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">taper_radius_fac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.apod_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Interpolating a 1d power spectrum (cl) defined on multipoles (el) to 2D assuming azimuthal symmetry (i.e:) isotropy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_grid</strong> (<em>array</em>) – x grid of the map (like ra).</p></li>
+<li><p><strong>y_grid</strong> (<em>array</em>) – y grid of the map (like dec).</p></li>
+<li><p><strong>mask_radius</strong> (<em>float</em>) – mask radius in same units as x_grid and y_grid</p></li>
+<li><p><strong>perform_apod</strong> (<em>boolean</em>) – Apodise the binary mask.
+Default is True.</p></li>
+<li><p><strong>mask_shape</strong> (<em>str</em>) – circle or a square mask.
+default is circle.
+Must be on of [‘circle’, ‘square’]</p></li>
+<li><p><strong>taper_radius_fac</strong> (<em>float</em>) – radius for apodisation.
+taper_radius = taper_radius_fac * mask_radius.
+default is 6 (FIX ME: which works well but need to be explored further).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mask</strong> – binary or apodised mask.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array, shape is x_grid.shape.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.cl_to_cl2d">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">cl_to_cl2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.cl_to_cl2d" title="Link to this definition">¶</a></dt>
+<dd><p>Interpolating a 1d power spectrum (cl) defined on multipoles (el) to 2D assuming azimuthal symmetry (i.e:) isotropy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>el</strong> (<em>array</em>) – Multipoles over which the power spectrium is defined.</p></li>
+<li><p><strong>cl</strong> (<em>array</em>) – 1d power spectrum that needs to be interpolated on the 2D grid.</p></li>
+<li><p><strong>map_shape</strong> (<em>array_like</em><em>, </em><em>shape</em><em> (</em><em>2 x 1</em><em>)</em>) – dimension on the flatskymap.</p></li>
+<li><p><strong>pixel_res_radians</strong> (<em>float</em>) – map pixel resolution in radians.</p></li>
+<li><p><strong>left</strong> (<em>float</em>) – value to be used for interpolation outside of the range (lower side).
+default is zero.</p></li>
+<li><p><strong>right</strong> (<em>float</em>) – value to be used for interpolation outside of the range (higher side).
+default is zero.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>cl2d</strong> – interpolated power spectrum on the 2D grid.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array, shape is map_shape.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.get_lxly">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">get_lxly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.get_lxly" title="Link to this definition">¶</a></dt>
+<dd><p>return lx, ly modes (kx, ky Fourier modes) for a flatsky map grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>map_shape</strong> (<em>array_like</em><em>, </em><em>shape</em><em> (</em><em>2 x 1</em><em>)</em>) – dimension on the flatskymap.</p></li>
+<li><p><strong>pixel_res_radians</strong> (<em>float</em>) – map pixel resolution in radians.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>lx, ly</strong></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array, shape is map_shape.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.make_gaussian_realisations">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_realisations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.make_gaussian_realisations" title="Link to this definition">¶</a></dt>
+<dd><p>return (correlated) Gaussian realisations of flat sky maps with an underlying power spectrum
+defined by cl_dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>el</strong> (<em>array</em>) – Multipoles over which the power spectrium is defined.</p></li>
+<li><p><strong>cl_dict</strong> (<em>dictionary</em>) – Contains the auto- and cross-power spectra of multiple bands.
+Keys are simple band incides.
+Keys must be 00, 11, 01 for 2 maps;
+Keys must be 00, 11, 22, 01, 02, 12 for 3 maps; and so on
+where
+00 - 90x90 auto.
+11 - 150x150 auto.
+22 - 220x220 auto.
+01 - 90x150 cross.
+02 - 90x220 cross.
+12 - 150x220 cross.</p></li>
+<li><p><strong>map_shape</strong> (<em>array_like</em><em>, </em><em>shape</em><em> (</em><em>2 x 1</em><em>)</em>) – dimension on the flatskymap.</p></li>
+<li><p><strong>pixel_res_radians</strong> (<em>float</em>) – map pixel resolution in radians.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>sim_maps</strong> – Correlated simulated maps.
+returns N maps for N(N+1)/2 spectra.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.map2cl">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">map2cl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_2d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.map2cl" title="Link to this definition">¶</a></dt>
+<dd><p>map2cl module - get the power spectra of map/maps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>map_shape</strong> (<em>array_like</em><em>, </em><em>shape</em><em> (</em><em>2 x 1</em><em>)</em>) – dimension on the flatskymap.</p></li>
+<li><p><strong>pixel_res_radians</strong> (<em>float</em>) – map pixel resolution in radians.</p></li>
+<li><p><strong>flatskymap1</strong> (<em>array</em>) – flatsky map for power spectrum calculation.
+Computes the auto-power spectrum is flatskymap2 is None.
+else computes the cross-power spectrium for flatskymap1 and flatskymap2.</p></li>
+<li><p><strong>flatskymap2</strong> (<em>array</em>) – flatsky map 2 for cross-power spectrum calculation.
+default is None</p></li>
+<li><p><strong>minbin</strong> (<em>int</em>) – mininum scale for power spectrum calculation.
+default is ell_min = 0</p></li>
+<li><p><strong>maxbin</strong> (<em>int</em>) – maximum scale for power spectrum calculation.
+default is ell_max = 15000</p></li>
+<li><p><strong>binsize</strong> (<em>int</em>) – binning factor.
+default is Delta_ell = 100</p></li>
+<li><p><strong>mask</strong> (<em>array</em>) – (Apodisation) mask for the maps for power spectrum calculations.
+Assumes that the mask is already applied to the mask.
+Default is None.</p></li>
+<li><p><strong>filter_2d</strong> (<em>array</em>) – Filter transfer function that has information about the modes that are filtered.
+Default is None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>el</strong> (<em>array.</em>) – Multipoles (scales) over which the power spectrum is defined.</p></li>
+<li><p><strong>cl</strong> (<em>array.</em>) – 1d power spectrum.
+Azimuthally averaged (binned) equivalent of FFT( abs(map)^2 ).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="flatsky.radial_profile">
+<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">radial_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_errors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.radial_profile" title="Link to this definition">¶</a></dt>
+<dd><p>get the radial profile of an image (both real and fourier space).
+Can be used to compute radial profile of stacked profiles or 2D power spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>array</em>) – image to get the radial profile.</p></li>
+<li><p><strong>xy</strong> (<em>array</em>) – x and y grid. Same shape as the image z.
+Default is None.
+If None,
+x, y = np.indices(image.shape)</p></li>
+<li><p><strong>minbin</strong> (<em>float</em>) – minimum bin for radial profile
+default is 0.</p></li>
+<li><p><strong>maxbin</strong> (<em>float</em>) – minimum bin for radial profile
+default is 10.</p></li>
+<li><p><strong>binsize</strong> (<em>float</em>) – radial binning factor.
+default is 1.</p></li>
+<li><p><strong>get_errors</strong> (<em>float</em>) – obtain scatter in each bin.
+This is not the error due to variance. Just the sample variance.
+Default is False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>radprf</strong> – Array with three elements cotaining
+radprf[:,0] = radial bins
+radprf[:,1] = radial binned values
+if get_errors:
+radprf[:,2] = radial bin errors.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Simulations package</a><ul>
+<li><a class="reference internal" href="#module-flatsky">flatsky.py</a><ul>
+<li><a class="reference internal" href="#flatsky.apod_mask"><code class="docutils literal notranslate"><span class="pre">apod_mask()</span></code></a></li>
+<li><a class="reference internal" href="#flatsky.cl_to_cl2d"><code class="docutils literal notranslate"><span class="pre">cl_to_cl2d()</span></code></a></li>
+<li><a class="reference internal" href="#flatsky.get_lxly"><code class="docutils literal notranslate"><span class="pre">get_lxly()</span></code></a></li>
+<li><a class="reference internal" href="#flatsky.make_gaussian_realisations"><code class="docutils literal notranslate"><span class="pre">make_gaussian_realisations()</span></code></a></li>
+<li><a class="reference internal" href="#flatsky.map2cl"><code class="docutils literal notranslate"><span class="pre">map2cl()</span></code></a></li>
+<li><a class="reference internal" href="#flatsky.radial_profile"><code class="docutils literal notranslate"><span class="pre">radial_profile()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="index.html"
+                          title="previous chapter">TIM analysis software documentation</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/simulations.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="TIM analysis software documentation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TIM analysis software  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Simulations package</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2025, TIM science team.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    </div>
+  </body>
+</html>
