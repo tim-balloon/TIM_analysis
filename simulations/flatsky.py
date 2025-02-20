@@ -357,7 +357,7 @@ def radial_profile(z, xy = None, minbin = 0., maxbin = 10., binsize = 1., get_er
         x and y grid. Same shape as the image z.
         Default is None.
         If None, 
-            x, y = np.indices(image.shape)
+        x, y = np.indices(image.shape)
     minbin: float
         minimum bin for radial profile
         default is 0.
@@ -379,7 +379,7 @@ def radial_profile(z, xy = None, minbin = 0., maxbin = 10., binsize = 1., get_er
         radprf[:,0] = radial bins
         radprf[:,1] = radial binned values
         if get_errors:
-            radprf[:,2] = radial bin errors.
+        radprf[:,2] = radial bin errors.
     """
 
     z = np.asarray(z)
