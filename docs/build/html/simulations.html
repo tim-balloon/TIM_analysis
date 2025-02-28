@@ -43,13 +43,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Simulations package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#module-flatsky">flatsky.py</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.apod_mask"><code class="docutils literal notranslate"><span class="pre">apod_mask()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.cl_to_cl2d"><code class="docutils literal notranslate"><span class="pre">cl_to_cl2d()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.get_lxly"><code class="docutils literal notranslate"><span class="pre">get_lxly()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.make_gaussian_realisations"><code class="docutils literal notranslate"><span class="pre">make_gaussian_realisations()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.map2cl"><code class="docutils literal notranslate"><span class="pre">map2cl()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#flatsky.radial_profile"><code class="docutils literal notranslate"><span class="pre">radial_profile()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-sim_tools_flatsky">sim_tools_flatsky.py</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.apod_mask"><code class="docutils literal notranslate"><span class="pre">apod_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.cl_to_cl2d"><code class="docutils literal notranslate"><span class="pre">cl_to_cl2d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.get_lxly"><code class="docutils literal notranslate"><span class="pre">get_lxly()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.make_gaussian_realisations"><code class="docutils literal notranslate"><span class="pre">make_gaussian_realisations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.map2cl"><code class="docutils literal notranslate"><span class="pre">map2cl()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.radial_profile"><code class="docutils literal notranslate"><span class="pre">radial_profile()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -82,14 +82,14 @@
              
   <section id="simulations-package">
 <h1>Simulations package<a class="headerlink" href="#simulations-package" title="Link to this heading"></a></h1>
-<section id="module-flatsky">
-<span id="flatsky-py"></span><h2>flatsky.py<a class="headerlink" href="#module-flatsky" title="Link to this heading"></a></h2>
-<p>simulations/python/flatsky.py</p>
+<section id="module-sim_tools_flatsky">
+<span id="sim-tools-flatsky-py"></span><h2>sim_tools_flatsky.py<a class="headerlink" href="#module-sim_tools_flatsky" title="Link to this heading"></a></h2>
+<p>simulations/python/sim_tools_flatsky.py</p>
 <p>Contains necessary function for performing flatsky analysis and
 generating correlated Gaussian realisations across different bands.</p>
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.apod_mask">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">apod_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perform_apod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'circle'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">taper_radius_fac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.apod_mask" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.apod_mask">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">apod_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perform_apod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'circle'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">taper_radius_fac</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.apod_mask" title="Link to this definition"></a></dt>
 <dd><p>Interpolating a 1d power spectrum (cl) defined on multipoles (el) to 2D assuming azimuthal symmetry (i.e:) isotropy.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -117,8 +117,8 @@ default is 6 (FIX ME: which works well but need to be explored further).</p></li
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.cl_to_cl2d">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">cl_to_cl2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.cl_to_cl2d" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.cl_to_cl2d">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">cl_to_cl2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.cl_to_cl2d" title="Link to this definition"></a></dt>
 <dd><p>Interpolating a 1d power spectrum (cl) defined on multipoles (el) to 2D assuming azimuthal symmetry (i.e:) isotropy.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -143,8 +143,8 @@ default is zero.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.get_lxly">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">get_lxly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.get_lxly" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.get_lxly">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">get_lxly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.get_lxly" title="Link to this definition"></a></dt>
 <dd><p>return lx, ly modes (kx, ky Fourier modes) for a flatsky map grid.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -163,8 +163,8 @@ default is zero.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.make_gaussian_realisations">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_realisations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.make_gaussian_realisations" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.make_gaussian_realisations">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_realisations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.make_gaussian_realisations" title="Link to this definition"></a></dt>
 <dd><p>return (correlated) Gaussian realisations of flat sky maps with an underlying power spectrum
 defined by cl_dict.</p>
 <dl class="field-list simple">
@@ -197,8 +197,8 @@ returns N maps for N(N+1)/2 spectra.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.map2cl">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">map2cl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_2d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.map2cl" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.map2cl">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">map2cl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flatskymap2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_2d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.map2cl" title="Link to this definition"></a></dt>
 <dd><p>map2cl module - get the power spectra of map/maps</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -235,8 +235,8 @@ Azimuthally averaged (binned) equivalent of FFT( abs(map)^2 ).</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="flatsky.radial_profile">
-<span class="sig-prename descclassname"><span class="pre">flatsky.</span></span><span class="sig-name descname"><span class="pre">radial_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_errors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#flatsky.radial_profile" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="sim_tools_flatsky.radial_profile">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">radial_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">binsize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">get_errors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.radial_profile" title="Link to this definition"></a></dt>
 <dd><p>get the radial profile of an image (both real and fourier space).
 Can be used to compute radial profile of stacked profiles or 2D power spectrum.</p>
 <dl class="field-list simple">
