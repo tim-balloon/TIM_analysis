@@ -1,10 +1,10 @@
 Simulations package
 ===================
 
-flatsky.py
+sim_tools_flatsky.py
 --------------------------
 
-.. automodule:: flatsky
+.. automodule:: sim_tools_flatsky
    :members:
    :undoc-members:
    :show-inheritance:
