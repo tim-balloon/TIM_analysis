@@ -9,13 +9,25 @@ import h5py
 
 
 def loaddata(file, field, num_frames=None, first_frame=None):
-    '''
+    """
+    Load the data from a .hdf5 
     Equivalent to d.getdata()
-    file : the name of the hdf5 file
-    field: the field to be loaded
-    num_frame: the number of frames to load, with N=spf samples in each frame.
-    first_frame: the first frame to load. 
-    ''' 
+    Parameters
+    ----------
+    file: string
+        the name of the .hdf5 file
+    field: string
+        the field to be loaded
+    num_frame: int
+        the number of frames to load, with N=spf samples in each frame.
+    first_frame: int
+        the first frame to load. 
+
+    Returns
+    -------
+    data: array
+        values stores in field, from first_frame*spf to (first_frame+num_frames)*spf. 
+    """    
     H = h5py.File(file, "a")
     f = H[field]
     if(('spf' in f.keys()) and (num_frames is not None) and (first_frame is not None)):
@@ -27,13 +39,19 @@ def loaddata(file, field, num_frames=None, first_frame=None):
     return data
 
 def loadspf(file, field):
-    '''
-    Equivalent to d.getdata()
-    file : the name of the hdf5 file
-    field: the field to be loaded
-    num_frame: the number of frames to load, with N=spf samples in each frame.
-    first_frame: the first frame to load. 
-    ''' 
+    """
+    Load the sample per frame of a field from a .hdf5 
+    Parameters
+    ----------
+    file: string
+        the name of the .hdf5 file
+    field: string
+        the field for which to get the spf
+    Returns
+    -------
+    spf: int
+        number of sample per frame
+    """    
     H = h5py.File(file, "a")
     f = H[field]
     if('spf' in f.keys()): spf = f['spf'][()]
@@ -51,11 +69,16 @@ class data_value():
                  coord2_name, experiment, lst_file_type, lat_file_type, hwp_file_type,
                  startframe, numframes, roach_number=None, telemetry=False):
 
-        '''
+        """
+        #Needs to be modify !
         For BLAST-TNG the detector name is given as kid_# where # is 1,2,3,4,5
         The number is then converted to the equivalent letters that are coming from 
         the telemetry name
-        '''
+        Parameters
+        ----------
+        Returns
+        -------
+        """    
         self.det_path = det_path                    #Path of the detector dirfile
         self.det_name = det_name                    #Detector name to be analyzed
         self.coord_path = coord_path                #Path of the coordinates dirfile
@@ -80,15 +103,23 @@ class data_value():
         self.roach_number = roach_number
 
     def gdload(self, filepath, file, file_type):
-
-        '''
+        """
         Return the values of the DIRFILE as a numpy array
+        Now replaced by loaddata for .hdf5 files
         
-        filepath: path of the DIRFILE to be read
-        file: name of the value to be read from the dirfile, e.g. detector name or
-              coordinate name
-        file_type: data type conversion string for the DIRFILE data
-        '''
+        Parameters
+        ----------
+
+        filepath: string
+            path of the DIRFILE to be read
+        file: string
+            name of the value to be read from the dirfile, e.g. detector name or coordinate name
+        file_type: string
+            data type conversion string for the DIRFILE data
+
+        Returns
+        -------
+        """    
         if np.size(file) == 1: 
             d = gd.dirfile(filepath, gd.RDONLY)
             if file_type is not None:
@@ -123,16 +154,29 @@ class data_value():
             return values
 
     def load(filepath, fields, num_frames=None, first_frame=None):
+        """      
+        #Needs to be modify !
+        Return the values of the .hdf5 as a numpy array
+        Already suppose that all data have same frequency sample... so return the mean spf
 
-        '''
-        Return the values of the DIRFILE as a numpy array
-        
-        filepath: path of the DIRFILE to be read
-        file: name of the value to be read from the dirfile, e.g. detector name or
-              coordinate name
-        file_type: data type conversion string for the DIRFILE data
-        ##Already suppose that all data have same frequency sample... so return the mean spf
-        '''
+        Parameters
+        ----------
+        filepath: string
+            path of the DIRFILE to be read
+        fields: string
+            name of the value to be read from the dirfile, e.g. detector name or coordinate name
+        num_frame: int
+            the number of frames to load, with N=spf samples in each frame.
+        first_frame: int
+            the first frame to load. 
+
+        Returns
+        -------
+        values: array
+            values from the hdf5 fle
+        spf: float
+            mean number of samples per frame
+        """    
         spf = []
         for i,field in enumerate(fields):
             if i == 0: values = loaddata(filepath, field, num_frames, first_frame)
@@ -142,10 +186,36 @@ class data_value():
         return np.asarray(values), (np.asarray(spf)).mean()
 
     def values(self):
-
-        '''
+        """      
+        #Needs to be modify !
         Function to return the timestreams for detector and coordinates
-        '''
+
+        Parameters
+        ----------
+        Returns
+        -------
+        det_data: array
+            Amplitude timestream of a detector
+        coord1_data: array
+            Coord 1 timestream of a detector
+        coord2_data: array
+            Coord 2 timestream of a detector
+        hwp_data: array
+            HWP
+        lst: array
+            longitude timestream of a detector
+        lat: array
+            latitude timestream of a detector
+        spf_data: int
+            the number of saqmple per frame of data. 
+        spf_coord: int
+            the number of saqmple per frame of coord. 
+        hwp_spf: int
+            the number of saqmple per frame of hwp. 
+        lat_spf: int
+            the number of saqmple per frame of lat. 
+
+        """    
         num = self.numframes#+2*self.bufferframe
         first_frame = self.startframe
         kid_num  = self.det_name
@@ -228,12 +298,16 @@ class convert_dirfile():
         self.data = self.param1*self.data+self.param2
 
 class frame_zoom_sync():
-
-    '''
+    """
+    #Needs to be modify !
     This class is designed to extract the frames of interest from the complete timestream and 
     sync detector and coordinates timestream given a different sampling of the two
-    '''
-
+    the telemetry name
+    Parameters
+    ----------
+    Returns
+    -------
+    """    
     def __init__(self, det_data, det_sample_frame, det_fs, coord1_data, coord2_data, 
                  coord_fs, coord_sample_frame,
                  startframe, endframe, experiment, 
@@ -280,10 +354,26 @@ class frame_zoom_sync():
         
 
     def frame_zoom(self, data, sample_frame, fs, fps, offset = None):
-
-        '''
+        """
+        Not used
         Selecting the frames of interest and associate a timestamp for each value.
-        '''
+
+        Parameters
+        ----------
+        data: array
+            amplitude timestreams
+        sample_frame: int
+            all the spf?
+        fs: int
+            all the spf?
+        fps: int
+            all the spf?
+        offset: float
+            time offset ? 
+
+        Returns
+        -------
+        """    
 
         frames = fps.copy()
 
@@ -306,10 +396,16 @@ class frame_zoom_sync():
             return  time, data[:,int(frames[0]):int(frames[1])]
 
     def coord_int(self, coord1, coord2, time_acs, time_det):
-
-        '''
+        """
+        Not used
         Interpolates the coordinates values to compensate for the smaller frequency sampling
-        '''
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """    
 
         coord1_int = interp1d(time_acs, coord1, kind='linear')
         coord2_int = interp1d(time_acs, coord2, kind= 'linear')
@@ -317,11 +413,18 @@ class frame_zoom_sync():
         return coord1_int(time_det), coord2_int(time_det)
 
     def sync_data(self, telemetry=True):
-
-        '''
+        """
+        #Needs to be modify !
+        
         Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
         and the associated time
-        '''
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        """    
 
         end_det_frame = self.endframe#+self.bufferframe
         first_frame = self.startframe#-self.bufferframe
@@ -330,8 +433,11 @@ class frame_zoom_sync():
         if self.experiment.lower() == 'blast-tng':
             #d = gd.dirfile(self.roach_pps_path)
             
+            #--------------------
+            #Needs to be modify !
             ctime_mcp = loaddata(self.roach_pps_path, 'time', first_frame=first_frame, num_frames=interval) 
             ctime_usec = loaddata(self.roach_pps_path, 'time_usec', first_frame=first_frame, num_frames=interval) 
+
 
             if self.xystage is True: sample_ctime = 100
             else: sample_ctime = self.coord_sample_frame
@@ -357,6 +463,7 @@ class frame_zoom_sync():
                 else:
                     coord1time = ctime_mcp.copy()
                     coord2time = ctime_mcp.copy()
+            #--------------------
 
             if telemetry:
 
@@ -452,10 +559,14 @@ class frame_zoom_sync():
             #else: return (dettime, self.det_data, coord1_inter, coord2_inter, hwp_inter, None, None)
 
 class xsc_offset():
-    
-    '''
+    """
+    #Needs to be modify !
     class to read star camera offset files
-    '''
+    Parameters
+    ----------
+    Returns
+    -------
+    """    
 
     def __init__(self, xsc, frame1, frame2):
 
@@ -478,7 +589,7 @@ class xsc_offset():
 
         if np.size(index) > 1:
             index = index[0]
-\
+
         return xsc_file[2], xsc_file[3]
 
 class det_table():
@@ -526,3 +637,4 @@ class det_table():
 
             return det_off, noise, grid_angle, pol_angle_offset, resp
 
+ 
