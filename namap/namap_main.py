@@ -25,9 +25,18 @@ import tracemalloc
 
 def load_params(path, force_pysides_path = ''):
 
-    '''
-    #Load the parameter file as a dictionnary
-    '''
+    """
+    Return as a dictionary the parameters stores in a .par file
+    
+    Parameters
+    ----------
+    path: string
+        name of the .par file       
+    Returns
+    -------
+    params: dictionary
+        dictionary containing the loaded parameters
+    """    
     file = open(path)
 
     params = {}
@@ -47,10 +56,14 @@ def load_params(path, force_pysides_path = ''):
 def map2d(data=None, coord1=None, coord2=None, crval=None, ctype=None, pixnum=None, telcoord=False, cdelt=None, \
           crpix=None, projection=None, xystage=False, det_name=None, idx=None):
 
-    '''
-    Function to generate the map plots (I,Q and U) 
-    when the plot button is pushed
-    '''
+
+    """
+    Plot the map out of the data timestreams.     
+    Parameters
+    ----------   
+    Returns
+    -------
+    """    
 
     intervals = 3   
 
@@ -163,7 +176,28 @@ def map2d(data=None, coord1=None, coord2=None, crval=None, ctype=None, pixnum=No
 
 if __name__ == "__main__":
 
+    '''
+    Download the .hdf5: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/master.hdf5 .
 
+    To run: python namap_main.py params_namap.par
+
+    Left to be done:
+        Load the detectors and the detectors offests --> xsc_offset and det_table
+        Explain the time system in ld.sync_data ?
+        Do we need the telemetry option ? 
+        hwp ? 
+        buffer frame ?
+        Implement TIM settings
+        Do we need 'CROSS-EL and EL' ? 
+        Implement pointing offset correction
+        Implement respons correction
+        parallactic angle ? pol angle ?
+        Implement noise detectors
+        Implement spectral axis 
+    '''
+
+    #-------------------------------------------------------------------------------------------------------------------------
+    #Iinitialization
     parser = argparse.ArgumentParser(description='NaMap. A naive mapmaker written in Python for BLASTPol and BLAST-TNG', \
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
@@ -202,6 +236,7 @@ if __name__ == "__main__":
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
     convolution, std = P['gaussian_convolution'], P['std']
+    #-------------------------------------------------------------------------------------------------------------------------
 
     if(not P['coadd']):
 
@@ -212,23 +247,30 @@ if __name__ == "__main__":
 
         for id, dect in enumerate(kid_num):
 
-            dect = (dect,)
-            #det_data, coord1_data, coord2_data, hwp_data, lst, lat =  ld.data_value(filepath, dect, filepath, coord1, coord2, experiment, lst, lat, hwp, first_frame, num_frames+first_frame)
+            dect = (dect,) #Work with list comprehension
+
+            #-------------------
+            #Load the data
             dataload = ld.data_value(filepath, dect, filepath, coord1, coord2, experiment, lst, lat, hwp, first_frame, num_frames, xystage, telemetry)
             det_data, coord1_data, coord2_data, hwp_data, lst, lat, spf_data, spf_coord, hwp_spf, lat_spf = dataload.values()
-
+            #--------------------
+            #Synchronise the data
             zoomsyncdata = ld.frame_zoom_sync(det_data, spf_data, spf_data, coord1_data, coord2_data, spf_coord, spf_coord, 
                                 first_frame, num_frames+first_frame, experiment, lst,lat,lat_spf, lat_spf,
                                 offset, dect, filepath, hwp_data, hwp_spf, hwp_spf, xystage)
             timemap, detslice, coord1slice, coord2slice, hwpslice, lstslice, latslice = zoomsyncdata.sync_data()
+            #--------------------
 
-            if coord1.lower() == 'xel': coord1slice = coord1slice*np.cos(np.radians(coord2slice))
+            if coord1.lower() == 'xel': coord1slice = coord1slice*np.cos(np.radians(coord2slice)) #Needs to be modify !
 
-            if(hwp is not None and experiment.lower() == 'blastpol'): hwpslice = (hwpslice-0.451)*(-360.)
+            if(hwp is not None and experiment.lower() == 'blastpol'): hwpslice = (hwpslice-0.451)*(-360.) #Needs to be modify !
 
             if P['detector_table'] is not None:
-                dettable = ld.det_table(dect, experiment, P['detector_table'])
+                #--------------------
+                #Needs to be modify !
+                dettable = ld.det_table(dect, experiment, P['detector_table']) 
                 det_off, noise_det, grid_angle, pol_angle_offset, resp = dettable.loadtable()
+                #--------------------
             else: 
                 det_off = np.zeros((np.size(dect),2))
                 noise_det = np.ones(np.size(dect))
@@ -242,15 +284,18 @@ if __name__ == "__main__":
                 if(P['pointing_table'] is not None):               
                     xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
                     xsc_offset = xsc_file.read_file()
-                #--------------------
                 else: xsc_offset = np.zeros(2)
                 corr = pt.apply_offset(coord1slice, coord2slice, datatype_coord, \
                                     xsc_offset, det_offset = det_off, lst = lstslice, \
                                     lat = latslice)
                 coord1slice, coord2slice = corr.correction()
+                #--------------------
+
             #elif(coord1.lower() == 'ra'): coord1slice = coord1slice*15. #Conversion between hours to degree ##!!!!
             
             if P['telescope_coordinate'] or P['I_only'] is False:
+                #--------------------
+                #Needs to be modify !
                 parallactic = np.zeros_like(coord1slice)
                 if np.size(np.shape(detslice)) == 1:
                     tel = pt.utils(coord1slice/15., coord2slice, lstslice, latslice)
@@ -264,6 +309,7 @@ if __name__ == "__main__":
                             tel = pt.utils(coord1slice[j]/15., coord2slice[j], \
                                         lstslice, latslice)
                             parallactic[j,:] = tel.parallactic_angle()
+                #--------------------
             else:
                 if np.size(np.shape(detslice)) == 1:
                     parallactic = 0.
@@ -275,12 +321,14 @@ if __name__ == "__main__":
 
 
             #---------------------------------
+            #Clean the TOD
             det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, dect,
                                     polynomialorder, despike_bool, sigma, prominence)
             cleaned_data = det_tod.data_clean()
-
-
+            #--------------------
+            #Needs to be modify ! How to implement the respons ? 
             if np.size(resp) > 1:
+            
                 if experiment.lower() == 'blast-tng':
                     cleaned_data = np.multiply(cleaned_data, np.reshape(1/resp, (np.size(1/resp), 1)))
                 else:
@@ -290,12 +338,16 @@ if __name__ == "__main__":
                     cleaned_data /= resp
                 else:
                     cleaned_data *= resp
+            #--------------------
 
-            pol_angle = np.radians(parallactic+2*hwpslice+(grid_angle-2*pol_angle_offset))
+            #--------------------
+            #Needs to be modify
+            pol_angle = np.radians(parallactic+2*hwpslice+(grid_angle-2*pol_angle_offset)) 
             #if np.size(np.shape(coord1slice)) != 1: pol_angle = np.reshape(pol_angle, np.size(pol_angle))
-
             pol_angle = np.zeros_like(cleaned_data)
+            #--------------------
 
+            #Create the maps
             maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], (cleaned_data,), coord1slice, coord2slice, \
                         convolution, std, P['I_only'], pol_angle=pol_angle, noise=noise_det, \
                         telcoord = P['telescope_coordinate'], parang=parallactic)
@@ -316,6 +368,9 @@ if __name__ == "__main__":
             
             crpix_new = np.array([crpix1_new, crpix2_new])
 
+            #---------------------------------
+            #Plot the maps
+
             if P['I_only']:
                 map2d(data = map_value, coord1=coord1slice, coord2=coord1slice, crval=P['crval'], ctype=P['ctype'], pixnum=P['pixnum'], \
                     telcoord=P['telescope_coordinate'], crpix=crpix_new, cdelt=P['cdelt'], projection=proj, xystage=xystage, \
@@ -329,7 +384,9 @@ if __name__ == "__main__":
                         det_name=dect, idx=idx_list[i])
 
             plt.show()
+            #---------------------------------
 
+    #-------------------------------------------------------------------------------------------------------------------------
     else: 
         dataload = ld.data_value(filepath, kid_num, filepath, coord1, coord2, experiment, lst, lat, hwp, first_frame, num_frames, kid_num, telemetry)
         det_data, coord1_data, coord2_data, hwp_data, lst, lat, spf_data, spf_coord, hwp_spf, lat_spf = dataload.values()
