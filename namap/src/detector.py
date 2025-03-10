@@ -6,13 +6,25 @@ import h5py
 from IPython import embed 
 
 def loaddata(file, field, num_frames=None, first_frame=None):
-    '''
+    """
+    Load the data from a .hdf5 
     Equivalent to d.getdata()
-    file : the name of the hdf5 file
-    field: the field to be loaded
-    num_frame: the number of frames to load, with N=spf samples in each frame.
-    first_frame: the first frame to load. 
-    ''' 
+    Parameters
+    ----------
+    file: string
+        the name of the .hdf5 file
+    field: string
+        the field to be loaded
+    num_frame: int
+        the number of frames to load, with N=spf samples in each frame.
+    first_frame: int
+        the first frame to load. 
+
+    Returns
+    -------
+    data: array
+        values stores in field, from first_frame*spf to (first_frame+num_frames)*spf. 
+    """    
     H = h5py.File(file, "a")
     f = H[field]
     if(('spf' in f.keys()) and (num_frames is not None) and (first_frame is not None)):

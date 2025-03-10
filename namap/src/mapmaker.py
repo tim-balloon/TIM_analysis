@@ -545,7 +545,6 @@ class mapmaking(object):
 
         return finalmap_I, finalmap_Q, finalmap_U
 
-
     def convolution(self, std, map_value):
 
         '''
