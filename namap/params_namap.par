@@ -2,7 +2,7 @@
 
 ### Data Paths Parameters
 experiment = 'BLAST-TNG' #Experiment to be analyzed, right now BLASTPol or BLAST-TNG
-hdf5_file = '/home/mvancuyck/Desktop/NaMap/master.hdf5' #Path for detector data
+hdf5_file = 'master.hdf5' #Path for detector data
 kid_num = (1,2,3,4,5) #Roach number corrispondent to the detector(s) to be analyzed.
 coadd = False
 
