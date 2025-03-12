@@ -271,7 +271,7 @@ class mapmaking(object):
             angle = angle
 
         print('in one dect')
-        embed()
+        #embed()
         value =self.map_param(crpix=crpix, idxpixel = idxpixel, value=value, noise=noise, angle=angle)
 
         I_flat = np.zeros(len(value[0]))
@@ -325,7 +325,7 @@ class mapmaking(object):
             # mapvalues = self.map_singledetector_Ionly(crpix = crpix, value=self.data[i],noise=1/self.weight[i],\
             #                                           angle=self.polangle[i], idxpixel = idxpixel)
             print('in multi')
-            embed()
+            #embed()
             value = self.map_param(crpix=crpix, idxpixel = idxpixel, value=self.data[i], noise=1/self.weight[i], angle=self.polangle[i])
 
             num_temp_flat = np.zeros(len(value[0]))
