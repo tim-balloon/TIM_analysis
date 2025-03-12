@@ -638,7 +638,7 @@ class MainWindowTab(QTabWidget):
         self.lst = self.tab1.lstslice
         self.lat = self.tab1.latslice
 
-\
+
         pb.setCurrentAction('Processing Data')
         pb.setValue(25)
 
