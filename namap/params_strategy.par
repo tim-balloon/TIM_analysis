@@ -37,12 +37,12 @@ T_duration=1 #hour , duration of the scan
 dt= 9.25e-7 #hour , defines the aquisition rate. 
 
 #Array parameters
+detectors_name_file = 'config/TIM_kid_table.tsv'
 nb_pixel_HW = 64
 offset_HW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the LF
 nb_pixel_LW = 51
 offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the HF
 arrays_separation = 0.3 #[deg]
-detectors_name_file = '/home/mvancuyck/Desktop/TIM_analysis/scan_strategy/dicts_dir/TIM_det_names.p'
 
 #Fits file containing the mock sky how of which we generates the TOD
 path = 'fits_and_hdf5/'

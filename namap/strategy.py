@@ -34,6 +34,7 @@ import os
 import tracemalloc
 import time
 from progress.bar import Bar
+import pandas as pd
 
 import argparse
 
@@ -117,6 +118,7 @@ def save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, det_na
     for i, (name, coord) in enumerate(zip(('RA', 'DEC'), (scan_path_sky[:,0],scan_path_sky[:,1]))):
         grp = H.create_group(name)
         grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
 
     for detector, (offset, name) in enumerate(zip(pixel_offset, det_names)):
         grp = H.create_group(f'kid{name}_roach')
@@ -225,6 +227,7 @@ if __name__ == "__main__":
         Compute mapping efficiency
         add noise and atmosphere in TOD
         make the simIM version
+        LST LAT timestreams
     '''
 
     #------------------------------------------------------------------------------------------
@@ -331,6 +334,6 @@ if __name__ == "__main__":
     simu_sky_path = P['path']+P['file']
     positions_y, positions_x, samples = gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, ra, dec)
     tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
-    det_names_dict = pickle.load(open(P['detectors_name_file'], 'rb'))
-    save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, det_names_dict['det_name_HF'], spf=spf)
+    det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+    save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T_trim, det_names_dict['det_name_HF'], spf=spf)
     #----------------------------------------
