@@ -236,7 +236,6 @@ if __name__ == "__main__":
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
     convolution, std = P['gaussian_convolution'], P['std']
-    embed()
     #-------------------------------------------------------------------------------------------------------------------------
 
     if(not P['coadd']):
