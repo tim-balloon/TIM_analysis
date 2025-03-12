@@ -38,7 +38,7 @@ def timeFractionAbove(hmap, level):
     hits = hmap.flatten()
     return np.sum(hits[hits>level])/np.sum(hits)
 
-def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.2, acc = 0.005, scan_v=0.05, dt= 0.01):
+def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
     """
     Function that generates the local scaning pattern.
     Currently can only generate closed loop    
@@ -69,16 +69,23 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.2, acc = 0.005, scan_v=0.
     t: array
         time during the scan, in second angle
     """ 
+    #Compute Number of Vertical Steps 
     ver_N = int(alt_size//alt_step)
 
-    scan_time = az_size/scan_v
-    turn_time = 2*scan_v/acc
+    #Compute Time for Scan and Turns
+    scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
+    turn_time = 2*scan_v/acc #Time required to perform a turn (deceleration, reversal, acceleration).
 
+    #Generate Azimuth Acceleration Pattern (a):
+    #The motion consists of acceleration, constant velocity, and deceleration, forming a symmetric back-and-forth oscillation in azimuth.
     a = np.concatenate((np.ones(int(turn_time/dt))*acc,np.zeros(int(scan_time/dt))))
     a = np.concatenate((a,-1*a))
-    a = np.tile(a,ver_N) 
-
+    #The sequence is repeated for each altitude step (ver_N times).
+    a = np.tile(a,ver_N)
+    #Generate Altitude Acceleration Pattern
     acc_alt = alt_step/(turn_time/2)**2
+    #The altitude changes slightly during turns, using a small acceleration.
+    #A similar acceleration pattern is applied to a2 to control altitude transitions.
     a2 = np.concatenate((np.ones(int(turn_time/dt/2))*acc_alt,-1*np.ones(int(turn_time/dt/2))*acc_alt,np.zeros(int(scan_time/dt))))
     a2 = np.concatenate((np.tile(a2,ver_N),np.tile(-1*a2,ver_N)))
 
@@ -86,15 +93,18 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.2, acc = 0.005, scan_v=0.
 
     t = np.arange(0,len(a))*dt
 
+    #Compute Azimuth (az) and Altitude (alt) Coordinates:
+    #Computed by integrating acceleration to get velocity, then integrating velocity to get position.
     v = np.cumsum(a)*dt-scan_v
     az = np.cumsum(v)*dt
 
     v2 = np.cumsum(a2)*dt
     alt  = np.cumsum(v2)*dt
 
+    #Measures the fraction of time spent scanning at constant speed vs. turning.
     scan_eff = np.sum(flag)/len(az)
     
-    return az,alt,flag, scan_eff ,t 
+    return az,alt,flag  
 
 def genScanPath(T, alt, az, flag, plot=False):
     """    
@@ -124,15 +134,9 @@ def genScanPath(T, alt, az, flag, plot=False):
     
     coor[:,0] = az[idx]-np.mean(az)
     coor[:,1] = alt[idx]-np.mean(alt)
-
-    if(plot):
-        plt.figure()
-        plt.plot(az-np.mean(az), alt-np.mean(alt), 'or')
-        plt.plot(coor[:,0],coor[:,1],'ob')
-        plt.show()
-    #flag      = flag[idx]
-
-    return coor,  flag
+    flag      = flag[idx]
+    
+    return coor,flag
 
 def pixelOffset(pixel_num, pixel_pitch):
     """
@@ -192,12 +196,12 @@ def genPointingPath(T, scan_path, HA, lat, dec):
     -------
     pixel_path: nd array
         the coordinates timestream of the pointing of each pixel, in degrees
-    """ 
+    """     
     alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1])
     azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])
     
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
-    ha_point  = hourAngle(np.degrees(azi), np.degrees(alt), lat)
+    ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
     
     return np.vstack((np.degrees(ha_point-HA*np.pi/12),np.degrees(dec_point))).T
 

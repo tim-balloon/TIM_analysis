@@ -4,7 +4,7 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord
 
-#--- Dan Functions ----
+#--- Dan Functions ---- 
 
 def zenithAngle(dec,lat,HA):
     """
