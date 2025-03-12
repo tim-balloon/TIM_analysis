@@ -1,4 +1,4 @@
-#NAMAP parameters
+#NAMAP parameters 
 
 ### Data Paths Parameters
 experiment = 'BLAST-TNG' #Experiment to be analyzed, right now BLASTPol or BLAST-TNG
