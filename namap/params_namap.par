@@ -1,49 +1,48 @@
 #NAMAP parameters 
 
 ### Data Paths Parameters
-experiment = 'BLAST-TNG' #Experiment to be analyzed, right now BLASTPol or BLAST-TNG
-hdf5_file = 'master.hdf5' #Path for detector data
-kid_num = (1,2,3,4,5) #Roach number corrispondent to the detector(s) to be analyzed.
+hdf5_file = 'fits_and_hdf5/TOD_pySIDES_from_uchuu_TIM_tile0_1deg_1deg_res20arcsec_dnu4.0GHz_CII_de_Looze_smoothed_MJy_sr.hdf5' #Path for TOD data
+
+detector_table = 'config/TIM_kid_table.tsv'
+
+kid_num = ('A_432', 'A_549', 'A_603') #ID of the detector(s) to be analyzed.
+#Can be a single detector, e.g., ('A_779',),  a list of detector, e.g, ('A_779', 'A_655', 'A_244') or and entire array 'all' 
+#Need to add an option to get all detectors of a feedline or of a frequency. 
+
+num_frames=2000 #integration time in seconds to be loaded. If None, load the whole timestream
+first_frame=500 #Starting time in second to loaded
+
+#if True, will compute the TOD dispersion and plot the inverse variance weighted map.
+noise_det = False
+
+#if True, the data of detectors are coadded. Else, the code produce a map for each detector. 
 coadd = False
 
-detector_table = None #Path for the detector table
-pointing_table = None #Path for the star camera offset table
 correction = False
-
-#Detector name to be analyzed.Detector name to be analyzed. 
-            #Can be a single detector, a list of detector or and entire array. For this option just ask for ###_array, where \
-            ### is the wavelenght of the array to be analyzed. For telemetry data detector use a number between 1 to 5. \
-            #For hard drive data use the real detector number, e.g. 0002 or 0964.
-
-telemetry = True #For BLAST-TNG, specify if the data are coming from telemetry, so mole, or if they are coming from hard drives
+#if correction is True, will load the pointing offset from this table
+pointing_table = None #Path for the star camera offset table
+time_offset = 0 #Time offset between detector data and coordinates
 
 ### Astronometry Parameter
-ctype = 'RA and DEC' #['RA and DEC', 'AZ and EL', CROSS-EL and EL,'XY Stage'], Choice of coordinate system to draw a map
+telemetry = False #Specify if the data are coming from telemetry, so mole, or if they are coming from hard drives
 telescope_coordinate = False #Use of telescope coordinates to draw a map
-I_only = True
+xystage = False
+
+ctype = 'RA and DEC' #['RA and DEC', 'AZ and EL', CROSS-EL and EL,'XY Stage'], choice of coordinate system to draw a map
+lat=False
+lst=False
+
 crpix = np.asarray([50, 50])
 cdelt = np.asarray([0.1, 0.1]) #Pixel size along the two axis in degree. 
 crval = np.asarray([230.  , -55.79]) #Value of the reference pixel in degree and its associated pixel number.
 pixnum = np.asarray([100., 100.]) #Number of pixels along the two axis. The input needs to be written as XX YY
-hwp=None 
-lat=None
-lst=None
-xystage = False
 
 gaussian_convolution = False #
 std = 0 #STD of the gaussian used for the convolution. The value is in arcsec
-pol_angle_offset = 0 #one for each dect
 
-### Data parameters
-noise_det = False
-num_frames=7383
-first_frame=72273
-
-### Preprocessing data analysis
+### Preprocessing data analysis parameters
 highpassfreq = 0.1 #Cutoff frequency for high-pass filter detector data
 polynomialorder = 5 #Polynomial order used to fit the TOD to detrend data
-time_offset = None #Time delay between pointing solution and detector data
 despike = True #Despike flag. If called, two possible parameters can be explicited. 
 sigma=5        #The first is the height in sigma unit for the peak, 
 prominence=5   #and the second is the prominence in sigma unit for the peak
-det_offset = None
