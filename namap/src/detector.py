@@ -193,7 +193,7 @@ class despike():
         '''
 
         print('in replace peak')
-        embed()
+        #embed()
 
         x_inter = np.array([], dtype = 'int')
 
