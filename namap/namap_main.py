@@ -206,6 +206,11 @@ if __name__ == "__main__":
 
     P = load_params(args.params)
 
+    num_frames, first_frame = P['num_frames'], P['first_frame']
+
+    lat, lst = P['lat'], P['lst']
+    telemetry = P['telemetry']
+
     if P['ctype'] == 'RA and DEC':
         coord1 = str('RA')
         coord2 = str('DEC')
@@ -223,221 +228,141 @@ if __name__ == "__main__":
         coord2 = str('Y')
         xystage = True
 
-    experiment = P['experiment']
-    if experiment.lower() == 'blastpol': xystage=False
     filepath = P['hdf5_file']
     kid_num = P['kid_num']
-    num_frames , first_frame = P['num_frames'], P['first_frame']
-    hwp, lat, lst = P['hwp'], P['lat'], P['lst']
-    offset = P['time_offset']
-    telemetry = P['telemetry']
+    
+    
+    #Cleaning data parameters
     highpassfreq = P['highpassfreq']
     polynomialorder = P['polynomialorder']
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
-    convolution, std = P['gaussian_convolution'], P['std']
+
+    #Beam convolution parameters
+    convolution, std = P['gaussian_convolution'], P['std'] 
     #-------------------------------------------------------------------------------------------------------------------------
+    
+    #-------------------
+    #Load the data
+    dataload = ld.data_value(filepath, kid_num, filepath, coord1, coord2, lst, lat, first_frame, num_frames, xystage, telemetry)
+    det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lat_spf = dataload.values()
+    #--------------------
 
-    if(not P['coadd']):
+    #Synchronise the data
+    zoomsyncdata = ld.frame_zoom_sync(filepath, det_data, spf_data, spf_data, coord1_data, coord2_data, spf_coord, spf_coord, 
+                                      first_frame, num_frames+first_frame,  lst,lat,lat_spf, lat_spf, P['time_offset'], xystage,)
+    
+    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
 
-        if(P['det_offset'] is None): det_off   = np.zeros((np.size(kid_num),2))
-        if(not P['noise_det']):      noise_det = np.ones(np.size(kid_num))
-        grid_angle = np.zeros(np.size(kid_num))
-        resp = np.ones(np.size(kid_num))
+    #Do some corrections
+    if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
 
-        for id, dect in enumerate(kid_num):
+    #load the table
+    dettable = ld.det_table(kid_num, P['detector_table']) 
+    det_off, noise_det, resp = dettable.loadtable()
+    #--------------------
 
-            dect = (dect,) #Work with list comprehension
-
-            #-------------------
-            #Load the data
-            dataload = ld.data_value(filepath, dect, filepath, coord1, coord2, experiment, lst, lat, hwp, first_frame, num_frames, xystage, telemetry)
-            det_data, coord1_data, coord2_data, hwp_data, lst, lat, spf_data, spf_coord, hwp_spf, lat_spf = dataload.values()
+    if(P['correction']): 
+        if(P['correction'] and P['pointing_table'] is not None):               
             #--------------------
-            #Synchronise the data
-            zoomsyncdata = ld.frame_zoom_sync(det_data, spf_data, spf_data, coord1_data, coord2_data, spf_coord, spf_coord, 
-                                first_frame, num_frames+first_frame, experiment, lst,lat,lat_spf, lat_spf,
-                                offset, dect, filepath, hwp_data, hwp_spf, hwp_spf, xystage)
-            timemap, detslice, coord1slice, coord2slice, hwpslice, lstslice, latslice = zoomsyncdata.sync_data()
+            #Needs to be modify !
+            xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+            xsc_offset = xsc_file.read_file()
+            #--------------------
+        else: xsc_offset = np.zeros(2)
+        corr = pt.apply_offset(coord1slice, coord2slice, xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice)
+        coord1slice, coord2slice = corr.correction()
+
+    if(False):
+
+        #--------------------
+
             #--------------------
 
-            if coord1.lower() == 'xel': coord1slice = coord1slice*np.cos(np.radians(coord2slice)) #Needs to be modify !
-
-            if(hwp is not None and experiment.lower() == 'blastpol'): hwpslice = (hwpslice-0.451)*(-360.) #Needs to be modify !
-
-            if P['detector_table'] is not None:
-                #--------------------
-                #Needs to be modify !
-                dettable = ld.det_table(dect, experiment, P['detector_table']) 
-                det_off, noise_det, grid_angle, pol_angle_offset, resp = dettable.loadtable()
-                #--------------------
-            else: 
-                det_off = np.zeros((np.size(dect),2))
-                noise_det = np.ones(np.size(dect))
-                grid_angle = np.zeros(np.size(dect))
-                pol_angle_offset = np.zeros(np.size(dect))
-                resp = np.ones(np.size(dect))
-
-            if(P['correction']): 
-                #--------------------
-                #Needs to be modify !
-                if(P['pointing_table'] is not None):               
-                    xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-                    xsc_offset = xsc_file.read_file()
-                else: xsc_offset = np.zeros(2)
-                corr = pt.apply_offset(coord1slice, coord2slice, datatype_coord, \
-                                    xsc_offset, det_offset = det_off, lst = lstslice, \
-                                    lat = latslice)
-                coord1slice, coord2slice = corr.correction()
-                #--------------------
-
-            #elif(coord1.lower() == 'ra'): coord1slice = coord1slice*15. #Conversion between hours to degree ##!!!!
-            
-            if P['telescope_coordinate'] or P['I_only'] is False:
-                #--------------------
-                #Needs to be modify !
-                parallactic = np.zeros_like(coord1slice)
-                if np.size(np.shape(detslice)) == 1:
+        #elif(coord1.lower() == 'ra'): coord1slice = coord1slice*15. #Conversion between hours to degree ##!!!!
+        
+        if P['telescope_coordinate'] or P['I_only'] is False:
+            #--------------------
+            #Needs to be modify !
+            parallactic = np.zeros_like(coord1slice)
+            if np.size(np.shape(detslice)) == 1:
+                tel = pt.utils(coord1slice/15., coord2slice, lstslice, latslice)
+                parallactic = tel.parallactic_angle()
+            else:
+                if np.size(np.shape(coord1slice)) == 1:
                     tel = pt.utils(coord1slice/15., coord2slice, lstslice, latslice)
                     parallactic = tel.parallactic_angle()
                 else:
-                    if np.size(np.shape(coord1slice)) == 1:
-                        tel = pt.utils(coord1slice/15., coord2slice, lstslice, latslice)
-                        parallactic = tel.parallactic_angle()
-                    else:
-                        for j in range(np.size(np.shape(detslice))):
-                            tel = pt.utils(coord1slice[j]/15., coord2slice[j], \
-                                        lstslice, latslice)
-                            parallactic[j,:] = tel.parallactic_angle()
-                #--------------------
+                    for j in range(np.size(np.shape(detslice))):
+                        tel = pt.utils(coord1slice[j]/15., coord2slice[j], \
+                                    lstslice, latslice)
+                        parallactic[j,:] = tel.parallactic_angle()
+            #--------------------
+        else:
+            if np.size(np.shape(detslice)) == 1:
+                parallactic = 0.
             else:
-                if np.size(np.shape(detslice)) == 1:
+                if np.size(np.shape(coord1slice)) == 1:
                     parallactic = 0.
                 else:
-                    if np.size(np.shape(coord1slice)) == 1:
-                        parallactic = 0.
-                    else:
-                        parallactic = np.zeros_like(detslice)
+                    parallactic = np.zeros_like(detslice)
 
 
-            #---------------------------------
-            #Clean the TOD
-            det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, dect,
-                                    polynomialorder, despike_bool, sigma, prominence)
-            cleaned_data = det_tod.data_clean()
-            #--------------------
-            #Needs to be modify ! How to implement the respons ? 
-            if np.size(resp) > 1:
-            
-                if experiment.lower() == 'blast-tng':
-                    cleaned_data = np.multiply(cleaned_data, np.reshape(1/resp, (np.size(1/resp), 1)))
-                else:
-                    cleaned_data = np.multiply(cleaned_data, np.reshape(resp, (np.size(resp), 1)))
-            else:
-                if experiment.lower() == 'blast-tng':
-                    cleaned_data /= resp
-                else:
-                    cleaned_data *= resp
-            #--------------------
-
-            #--------------------
-            #Needs to be modify
-            pol_angle = np.radians(parallactic+2*hwpslice+(grid_angle-2*pol_angle_offset)) 
-            #if np.size(np.shape(coord1slice)) != 1: pol_angle = np.reshape(pol_angle, np.size(pol_angle))
-            pol_angle = np.zeros_like(cleaned_data)
-            #--------------------
-
-            #Create the maps
-            maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], (cleaned_data,), coord1slice, coord2slice, \
-                        convolution, std, P['I_only'], pol_angle=pol_angle, noise=noise_det, \
-                        telcoord = P['telescope_coordinate'], parang=parallactic)
-
-            maps.wcs_proj()
-            proj = maps.proj
-            map_value = maps.map2d()
-            
-            w = maps.w
-            x_min_map = np.floor(np.amin(w[:,0]))
-            y_min_map = np.floor(np.amin(w[:,1]))
-            index1, = np.where(w[:,0]<0)
-            index2, = np.where(w[:,1]<0)
-            if np.size(index1) > 1: crpix1_new  = (P['crpix'][0]-x_min_map)
-            else: crpix1_new = copy.copy(P['crpix'][0])
-            if np.size(index2) > 1: crpix2_new  = (P['crpix'][1]-y_min_map)
-            else: crpix2_new = copy.copy(P['crpix'][1])
-            
-            crpix_new = np.array([crpix1_new, crpix2_new])
-
-            #---------------------------------
-            #Plot the maps
-
-            if P['I_only']:
-                map2d(data = map_value, coord1=coord1slice, coord2=coord1slice, crval=P['crval'], ctype=P['ctype'], pixnum=P['pixnum'], \
-                    telcoord=P['telescope_coordinate'], crpix=crpix_new, cdelt=P['cdelt'], projection=proj, xystage=xystage, \
-                    det_name=dect, idx='I')
-            else:
-                idx_list = ['I', 'Q', 'U']
-
-                for i in range(len(idx_list)):
-                    map2d(map_value, coord1=coord1slice, coord2=coord1slice,  crval=P['crval'], ctype=P['ctype'], pixnum=P['pixnum'], \
-                        telcoord=P['telescope_coordinate'], crpix=crpix_new, cdelt=P['cdelt'], projection=proj, xystage=xystage, \
-                        det_name=dect, idx=idx_list[i])
-
-            plt.show()
-            #---------------------------------
-
-    #-------------------------------------------------------------------------------------------------------------------------
-    else: 
-        dataload = ld.data_value(filepath, kid_num, filepath, coord1, coord2, experiment, lst, lat, hwp, first_frame, num_frames, kid_num, telemetry)
-        det_data, coord1_data, coord2_data, hwp_data, lst, lat, spf_data, spf_coord, hwp_spf, lat_spf = dataload.values()
-        
-        if experiment.lower() == 'blastpol': roach_number=None
-        else: roach_number = kid_num
-        
-        zoomsyncdata = ld.frame_zoom_sync(det_data, spf_data, spf_data, coord1_data, coord2_data, spf_coord, spf_coord,
-                                        first_frame, num_frames+first_frame,  experiment,
-                                        lst,lat,lat_spf, lat_spf, offset, roach_number, filepath, 
-                                        hwp_data, hwp_spf, hwp_spf, xystage)
-        
-        timemap, detslice, coord1slice, coord2slice, hwpslice, lstslice, latslice = zoomsyncdata.sync_data()
-
-        if coord1.lower() == 'xel': coord1slice = [x * np.cos(np.radians(y)) for x,y in zip(coord1slice, coord2slice)] 
-
-        if(hwp is not None and experiment.lower() == 'blastpol'): hwpslice = (hwpslice-0.451)*(-360.)
-
-        if P['detector_table'] is not None:
-            dettable = ld.det_table(P['detector_table'], experiment, P['detector_table'])
-            det_off, noise_det, grid_angle, pol_angle_offset, resp = dettable.loadtable()
-        else:
-        
-            det_off = np.zeros((np.size(kid_num),2))
-            noise_det = np.ones(np.size(kid_num))
-            grid_angle = np.zeros(np.size(kid_num))
-            pol_angle_offset = np.zeros(np.size(kid_num))
-            resp = np.ones(np.size(kid_num))
-
-        parallactic = [np.zeros_like(slice) for slice in detslice]
-
-        det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, kid_num,
+        #---------------------------------
+        #Clean the TOD
+        det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, dect,
                                 polynomialorder, despike_bool, sigma, prominence)
         cleaned_data = det_tod.data_clean()
+        #--------------------
+        #Needs to be modify ! How to implement the respons ? 
+        if np.size(resp) > 1:
         
-        pol_angle = [np.zeros_like(slice) for slice in cleaned_data]
+            if experiment.lower() == 'blast-tng':
+                cleaned_data = np.multiply(cleaned_data, np.reshape(1/resp, (np.size(1/resp), 1)))
+            else:
+                cleaned_data = np.multiply(cleaned_data, np.reshape(resp, (np.size(resp), 1)))
+        else:
+            if experiment.lower() == 'blast-tng':
+                cleaned_data /= resp
+            else:
+                cleaned_data *= resp
+        #--------------------
 
-        maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], cleaned_data, coord1slice, coord2slice, \
+        #Create the maps
+        maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], (cleaned_data,), coord1slice, coord2slice, \
                     convolution, std, P['I_only'], pol_angle=pol_angle, noise=noise_det, \
                     telcoord = P['telescope_coordinate'], parang=parallactic)
 
         maps.wcs_proj()
         proj = maps.proj
         map_value = maps.map2d()
-
+        
         w = maps.w
+        x_min_map = np.floor(np.amin(w[:,0]))
+        y_min_map = np.floor(np.amin(w[:,1]))
+        index1, = np.where(w[:,0]<0)
+        index2, = np.where(w[:,1]<0)
+        if np.size(index1) > 1: crpix1_new  = (P['crpix'][0]-x_min_map)
+        else: crpix1_new = copy.copy(P['crpix'][0])
+        if np.size(index2) > 1: crpix2_new  = (P['crpix'][1]-y_min_map)
+        else: crpix2_new = copy.copy(P['crpix'][1])
+        
+        crpix_new = np.array([crpix1_new, crpix2_new])
 
-        crpix_new = P['crpix'] #np.array([crpix1_new, crpix2_new])
+        #---------------------------------
+        #Plot the maps
 
         if P['I_only']:
             map2d(data = map_value, coord1=coord1slice, coord2=coord1slice, crval=P['crval'], ctype=P['ctype'], pixnum=P['pixnum'], \
                 telcoord=P['telescope_coordinate'], crpix=crpix_new, cdelt=P['cdelt'], projection=proj, xystage=xystage, \
-                det_name=0, idx='I')
+                det_name=dect, idx='I')
+        else:
+            idx_list = ['I', 'Q', 'U']
+
+            for i in range(len(idx_list)):
+                map2d(map_value, coord1=coord1slice, coord2=coord1slice,  crval=P['crval'], ctype=P['ctype'], pixnum=P['pixnum'], \
+                    telcoord=P['telescope_coordinate'], crpix=crpix_new, cdelt=P['cdelt'], projection=proj, xystage=xystage, \
+                    det_name=dect, idx=idx_list[i])
+
         plt.show()
+        #---------------------------------
