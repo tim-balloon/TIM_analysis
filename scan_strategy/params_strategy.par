@@ -9,22 +9,40 @@ latittude =  -77.83
 
 #Constant elevation scan strategy parameters
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
+
+
+#----- Scan parameters -----
+#Choose the scan to use: 
+scan='loop' #'loop', 'raster'
+
+#Cst elevation scan parameters
 stripe_size = 0.25 #[deg] Extent in RA of the scan. 
 nb_rows=5 #How many step in elevation should be taken. 
 dy = 0.01 #[deg] Step in elevation
-T_duration=15 #hour angle, duration of the scan
-dt= 0.1 #second angle, defines the acauisition rate.
-spf=3
-theta = 0 #[deg] angle of detectors
 
+#Loop scan parameters
+az_size=0.2
+alt_size=0.08
+alt_step=0.02
+acc=0.05
+scan_v=0.05
+dt_scan=0.001
+
+theta = 0 #[deg] angle of detectors
 f_range = 0.6
+#---------------------------
+
+#Time parameters
+T_duration=1 #hour , duration of the scan
+dt= 9.25e-7 #hour , defines the aquisition rate. 
 
 #Array parameters
 nb_pixel_HW = 64
-offset_HW = 0.014  #[deg] separation in angle between 2 consecutive pixels for the LF
+offset_HW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the LF
 nb_pixel_LW = 51
 offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the HF
 arrays_separation = 0.3 #[deg]
+detectors_name_file = '/home/mvancuyck/Desktop/TIM_analysis/scan_strategy/dicts_dir/TIM_det_names.p'
 
 #Fits file containing the mock sky how of which we generates the TOD
 path = 'fits_and_hdf5/'

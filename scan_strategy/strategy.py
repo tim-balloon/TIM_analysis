@@ -19,12 +19,10 @@ import os
 import astropy.units as u
 import matplotlib
 import scipy.constants as cst
-from IPython import embed
 # Set plot parameters
 
 import pygetdata as gd
 import numpy as np
-from IPython import embed
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -91,7 +89,7 @@ def load_params(path):
 
     return params
 
-def save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, spf=3):
+def save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, det_names, spf=3):
     """
     Generate the tod for one array of TIM detectors and save it in the .hdf5 format. 
 
@@ -120,12 +118,18 @@ def save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, spf=3)
         grp = H.create_group(name)
         grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
 
-    for detector, offset in enumerate(pixel_offset):
-        grp = H.create_group(f'kid{detector}_roachN')
+    for detector, (offset, name) in enumerate(zip(pixel_offset, det_names)):
+        grp = H.create_group(f'kid{name}_roach')
         grp.create_dataset('data', data=samples[detector,:], compression='gzip', compression_opts=9)
         grp.create_dataset('spf', data=spf)
         grp.create_dataset('pixel_offset', data=pixel_offset)
 
+        for comp in ('I', 'Q'): 
+            grp = H.create_group(f'{comp}_kid{name}_roach') #conversion factor = 1 Jy/Hz
+            grp.create_dataset('data', data=samples[detector,:] / np.sqrt(2), compression='gzip', compression_opts=9)
+            grp.create_dataset('spf', data=spf)
+            grp.create_dataset('pixel_offset', data=pixel_offset)
+        
     grp = H.create_group('time')
     grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
     grp.create_dataset('spf', data=spf)
@@ -219,9 +223,6 @@ if __name__ == "__main__":
         Add the second array of detectors
         Produce spectral TOD (One frequency so far)
         Compute mapping efficiency
-        Get the right acquisition rate
-        Make cst elevation scan decelerate and turn instead of vertical ascenscion 
-        set properly the spf 
         add noise and atmosphere in TOD
         make the simIM version
     '''
@@ -236,7 +237,7 @@ if __name__ == "__main__":
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-
+    
     #The coordinates of the field
     name=P['name_field']
     c=SkyCoord.from_name(name)
@@ -255,30 +256,37 @@ if __name__ == "__main__":
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
 
-    #Scan parameters
-    stripe_size = P['stripe_size'] #the lenght of one constant elevation strip in degree
-    dy = P['dy'] #the step in elevation between two consecutive constant elevation strip in degree
-    nb_rows = P['nb_rows'] #the number of step to be done
-    T_duration = P['T_duration'] * 3600 #second angle, duration of the scan.
-    dt = P['dt']*np.pi/3.14 #second angle, such as dt is not rational. Aquisition rate. 
-
-    theta = np.radians(P['theta'])
-
     #Pixel offsets from the center of the field of view in degree. 
     pixel_offset_HW = pixelOffset(P['nb_pixel_HW'], P['offset_HW']) 
     pixel_offset_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW']) 
     pixel_offset = pixel_offset_HW
+
+    theta = np.radians(P['theta'])
+    
     #----------------------------------------
     #Generate the sacan path
-    T = np.arange(0,T_duration,dt)
-    HA = np.arange(-T_duration/2,T_duration/2,dt) / 3600 # hours angle
-    az, alt = az_scan_custom(np.radians(stripe_size),np.radians(dy),nb_rows)
-    az = np.degrees(az); alt=np.degrees(alt)
-    scan_path, _  = genScanPath(T, alt, az, np.zeros(len(alt)))   
-    scan_path_sky = genPointingPath(T, scan_path, HA, lat, dec)
+    T_duration = P['T_duration'] 
+    dt = P['dt']*np.pi/3.14 
+    T = np.arange(0,T_duration,dt) *3600
+    HA = 15*np.arange(-T_duration/2,T_duration/2,dt)  # hours angle
+
+    if(P['scan']=='loop'): 
+        az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=P['dt_scan'])
+        scan_path, scan_flag = genScanPath(T, alt, az, flag)
+        scan_path = scan_path[scan_flag==1] 
+        T_trim = T[scan_flag==1]
+        HA_trim = HA[scan_flag==1]
+    elif(P['scan']=='raster'):
+        az, alt = az_scan_custom(np.radians(P['stripe_size']),np.radians(P['dy']),P['nb_rows'])
+        az = np.degrees(az); alt=np.degrees(alt)
+        scan_path, scan_flag = genScanPath(T, alt, az, np.ones(len(alt)))
+        T_trim = T
+        HA_trim = HA
+
+    scan_path_sky = genPointingPath(T_trim, scan_path, HA_trim, lat, dec)
     pixel_paths  = genPixelPath(scan_path, pixel_offset, theta)
-    pointing_paths = [genPointingPath(T, pixel_path, HA, lat, dec) for pixel_path in pixel_paths]
-    xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,)
+    pointing_paths = [genPointingPath(T_trim, pixel_path, HA_trim, lat, dec) for pixel_path in pixel_paths]
+    xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,) 
     #----------------------------------------
     #scan route
     BS = 10; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS); mk = 3; lw=1
@@ -317,11 +325,12 @@ if __name__ == "__main__":
     axp.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
     fig.tight_layout()
     plt.savefig("scan_route.png")
-    plt.show()
     #----------------------------------------
     #Generate the TOds and save it in hdf5
+    spf = int(1/(dt*3600)) #Hz
     simu_sky_path = P['path']+P['file']
     positions_y, positions_x, samples = gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, ra, dec)
     tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
-    save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, spf=P['spf'])
+    det_names_dict = pickle.load(open(P['detectors_name_file'], 'rb'))
+    save_tod_one_array(tod_file, scan_path_sky, samples, pixel_offset, T, det_names_dict['det_name_HF'], spf=spf)
     #----------------------------------------
