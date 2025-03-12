@@ -7,7 +7,7 @@ from IPython import embed
 import src.detector as det 
 import h5py
 
-
+ 
 def loaddata(file, field, num_frames=None, first_frame=None):
     """
     Load the data from a .hdf5 

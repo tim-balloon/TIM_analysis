@@ -5,7 +5,7 @@ import src.detector as det
 import src.loaddata as ld
 import src.detector as tod
 import src.mapmaker as mp
-import src.pointing as pt 
+import src.pointing as pt  
 import copy
 from astropy import wcs 
 import os
@@ -236,6 +236,7 @@ if __name__ == "__main__":
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
     convolution, std = P['gaussian_convolution'], P['std']
+    embed()
     #-------------------------------------------------------------------------------------------------------------------------
 
     if(not P['coadd']):
