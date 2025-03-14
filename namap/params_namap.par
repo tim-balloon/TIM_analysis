@@ -7,7 +7,7 @@ hdf5_file = 'fits_and_hdf5/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir
 detector_table = 'config/TIM_kid_table.tsv' 
 
 #--- Choose detectors to analyse ---
-kid_num =   'all' #ID of the detector(s) to be analyzed.
+kid_num = 'all' #ID of the detector(s) to be analyzed.
 #Can be a single detector, e.g., ('A_603',),  a list of detector, e.g, ('A_432', 'A_549', 'A_603') or the entire array 'all' 
 #Need to add an option to get all detectors of a feedline or of a frequency. 
 
