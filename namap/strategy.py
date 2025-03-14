@@ -107,6 +107,18 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
         the ra coordinate of the field center
     dec: float
         the dec coordinate of the field center
+    spf: int
+        the number of samples per frame
+    tod_file: string 
+        name of the output hdf5 file     
+    P: dict
+        the parameter
+    samples: 2d array
+        TOD amplitudes of each detector
+    pixel_offset: array
+        position of each pixel on the array. 
+    T: array
+        time timestreams
 
     Returns
     -------
@@ -256,32 +268,12 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
 
     return positions_y, positions_x, samples
 
-
-    """
-    Generate the tod for one array of TIM detectors and save it in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file     
-    scan_path_sky: nd array
-        coordinates of the pointing path of each detector
-    samples: 2d array
-        TOD amplitudes of each detector
-    pixel_offset: array
-        position of each pixel on the array. 
-    T: array
-        hour angle in degree
-
-    Returns
-    -------
-    H: hdf5
-        save the output hdf5 file.
-    """ 
-
-
 if __name__ == "__main__":
     '''
+    If you want to modify this code, please create your own branch. 
+
+    Instructions: 
+
     1st: git clone from TIM_analysis/namap, mathilde branch or main branch if it exist. 
 
     2nd: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits
