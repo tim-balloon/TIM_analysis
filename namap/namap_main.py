@@ -24,41 +24,16 @@ import matplotlib.pyplot as plt
 import tracemalloc
 import astropy.table as tb
 
-def load_params(path, force_pysides_path = ''):
-
-    """
-    Return as a dictionary the parameters stores in a .par file
-    
-    Parameters
-    ----------
-    path: string
-        name of the .par file       
-    Returns
-    -------
-    params: dictionary
-        dictionary containing the loaded parameters
-    """    
-    file = open(path)
-
-    params = {}
-    for line in file:
-        line = line.strip()
-        if not line.startswith("#"):
-            no_comment = line.split('#')[0]
-            key_value = no_comment.split("=")
-            if len(key_value) == 2:
-                params[key_value[0].strip()] = key_value[1].strip()
-
-    for key in params.keys():
-        params[key] = eval(params[key])
-
-    return params
 
 
 if __name__ == "__main__":
 
     '''
-    1st: git clone from TIM_analysis/namap, mathilde branch or main branch if it exist. 
+    If you want to modify this code, please create your own branch. 
+
+    Instructions: 
+
+    1st: git clone from TIM_analysis/namap, mathilde branch or main branch if it exists. 
 
     (Optional, needed for 4th A) 2nd: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
     and put it in namap/fits_and_hdf5/
@@ -90,13 +65,13 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Iinitialization
-    parser = argparse.ArgumentParser(description='NaMap. A naive mapmaker written in Python for BLASTPol and BLAST-TNG', \
+    parser = argparse.ArgumentParser(description='NaMap. A naive mapmaker written in Python for TIM', \
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
     parser.add_argument('params', help=".par file with params", default = None)
     args = parser.parse_args()
 
-    P = load_params(args.params)
+    P = ld.load_params(args.params)
 
     num_frames, first_frame = P['num_frames'], P['first_frame']
 
@@ -162,7 +137,9 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
 
     #--------------------
-    #Needs to be implemented. So far, I just load the coordinates timestreams for each pixel directly corrected of their offset
+    #Needs to be implemented. 
+    # So far, I just load the coordinates timestreams for each pixel directly corrected of their offset.
+    #Normally, should just load the coordinates timestream of the central pixel and apply the offsets of the other detectors
     '''
     if(P['correction'] and P['pointing_table'] is not None):               
             #--------------------
@@ -182,7 +159,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     detslice = det_data
 
     #--------------------
-    #Need to be implemented ! So far, set parallactic to 0.
+    #Need to be implemented ! So far, set parallactic angle to 0.
     parallactic=[]
     if not P['telescope_coordinate'] and lstslice is not None and latslice is not None:
         #--------------------
@@ -196,7 +173,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
             parallactic.append( np.zeros_like(c1) )
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
-    
+    #So far, nothing is done as our timestreams are noiseless.     
     det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
 
@@ -206,9 +183,9 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #--------------------
     
     #Create the maps
-    #!!!! Change the crval if you change the field coordinates used to gen the timestreams. 
+    #!!!! Change the crval in the .par if you change the field coordinates used to gen the timestreams. 
     #Pixnum option to limit the size of the map needs implementation. 
-    # P['Power_only'] generates only the sqrt(I**2+Q**2) maps. I and Q maps need implementations. 
+    # P['Power_only'] is use to generate only the sqrt(I**2+Q**2) maps. I and Q maps need implementations. 
     #telcoord option needs implementation. 
     maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], P['pixnum'], cleaned_data, coord1slice, coord2slice, convolution, std, 
                    Ionly=P['Power_only'], coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
