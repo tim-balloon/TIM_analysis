@@ -8,27 +8,35 @@ import src.detector as det
 import h5py
 import matplotlib.pyplot as plt
  
+def load_params(path, force_pysides_path = ''):
 
-def loadspf(file, field):
     """
-    Load the sample per frame of a field from a .hdf5 
+    Return as a dictionary the parameters stores in a .par file
+    
     Parameters
     ----------
-    file: string
-        the name of the .hdf5 file
-    field: string
-        the field for which to get the spf
+    path: string
+        name of the .par file       
     Returns
     -------
-    spf: int
-        number of sample per frame
+    params: dictionary
+        dictionary containing the loaded parameters
     """    
-    H = h5py.File(file, "a")
-    f = H[field]
-    if('spf' in f.keys()): spf = f['spf'][()]
-    else: spf = None
-    H.close()
-    return spf
+    file = open(path)
+
+    params = {}
+    for line in file:
+        line = line.strip()
+        if not line.startswith("#"):
+            no_comment = line.split('#')[0]
+            key_value = no_comment.split("=")
+            if len(key_value) == 2:
+                params[key_value[0].strip()] = key_value[1].strip()
+
+    for key in params.keys():
+        params[key] = eval(params[key])
+
+    return params
 
 class data_value():
     
@@ -90,6 +98,27 @@ class data_value():
         self.telemetry = telemetry
         self.roach_number = roach_number
  
+    def loadspf(file, field):
+        """
+        Load the sample per frame of a field from a .hdf5 
+        Parameters
+        ----------
+        file: string
+            the name of the .hdf5 file
+        field: string
+            the field for which to get the spf
+        Returns
+        -------
+        spf: int
+            number of sample per frame
+        """    
+        H = h5py.File(file, "a")
+        f = H[field]
+        if('spf' in f.keys()): spf = f['spf'][()]
+        else: spf = None
+        H.close()
+        return spf
+    
     def loaddata(file, field, num_frames=None, first_frame=None):
         """
         Load the data from a .hdf5 
@@ -135,8 +164,6 @@ class data_value():
             Coord 1 timestream of a detector
         coord2_data: array
             Coord 2 timestream of a detector
-        hwp_data: array
-            HWP
         lst: array
             longitude timestream of a detector
         lat: array
@@ -145,8 +172,6 @@ class data_value():
             the number of saqmple per frame of data. 
         spf_coord: int
             the number of saqmple per frame of coord. 
-        hwp_spf: int
-            the number of saqmple per frame of hwp. 
         lat_spf: int
             the number of saqmple per frame of lat. 
 
@@ -166,12 +191,12 @@ class data_value():
             kidutils = det.kidsutils()
             det_data.append( data_value.loaddata(self.det_path, f'kid{kid}_roach', num, first_frame) )#kidutils.KIDmag(I_data, Q_data))
             # Assume all the data have the same spf            
-            spf_data = loadspf(self.det_path, f'I_kid{kid}_roach')
+            spf_data = data_value.loadspf(self.det_path, f'I_kid{kid}_roach')
 
             #---------------------------------------------------------------------------------
             coord1_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_RA', num, first_frame) )
             coord2_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_DEC', num, first_frame) )
-            spf_coord = loadspf(self.coord_path, self.coord2_name, )
+            spf_coord = data_value.loadspf(self.coord_path, self.coord2_name, )
             #---------------------------------------------------------------------------------
         
         if (self.lat_file_type and self.lst_file_type):
@@ -221,22 +246,34 @@ class frame_zoom_sync():
         ----------
         det_path: string
             Path of the detector dirfile
-        det_name: string
-            Detector name to be analyzed
-        coord_path: string
-            Path of the coordinates dirfile
-        coord1_name: string
-            Coordinates 1 name, e.g. RA or AZ
-        coord2_name: string
-            Coordinates 2 name
-        lst: bool
-            if True, load the LST  coordinate
-        lat: bool
-            if True, load the LAT  coordinate
+        det_data: list
+            list of detector timestreams
+        det_sample_frame: int 
+            sample per frame of detector timestreams
+        det_fs: int 
+            sample per frame of detector timestreams
+        coord1_data: list
+            list of coordinate 1 timestreams
+        coord2_data: list
+            list of coordinate 2 timestreams
+        coord_fs: int
+            sample per frame of coordinate timestreams
+        coord_sample_frame: int
+            sample per frame of coordinate timestreams
+        lst_data: list
+            list of lst coordinate timestreams
+        lat_data: list
+            list of lat coordinate timestreams
         startframe:
             Starting frame to be analyzed
+        lstlatfreq: float
+            sample per frame of coordinate timestreams
+        lstlat_sample_frame: float
+            sample per frame of coordinate timestreams
         numframes:
             Ending frame to be analyzed
+        offset: array
+            time offsets of the detectors
 
         Returns
         -------
@@ -295,11 +332,11 @@ class frame_zoom_sync():
 
         Parameters
         ----------
-
+        telemetry: bool
+            to use coordinates from mole or not
         Returns
         -------
         """    
-        embed()
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
         print(num,first_frame)
@@ -375,15 +412,12 @@ class frame_zoom_sync():
 
 class xsc_offset():
     """
-    #Needs to be modify !
     class to read star camera offset files
     Parameters
     ----------
     Returns
     -------
     """    
-
-
     def __init__(self, xsc, frame1, frame2):
 
         self.xsc = xsc #Star Camera number

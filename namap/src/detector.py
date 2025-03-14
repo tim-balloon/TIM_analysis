@@ -383,15 +383,22 @@ class detector_trend():
         return -fitteddata+zero_data
 
 class kidsutils():
-
     '''
     Class containing useful functions for KIDs
+    Parameters
+    ----------
+    Returns
+    -------
     '''
 
     def rotatePhase(self, I, Q):
 
         '''
         Rotate phase for a KID
+        Parameters
+        ----------
+        Returns
+        -------
         '''
 
         X = I+1j*Q
@@ -407,6 +414,10 @@ class kidsutils():
         '''
         Compute the phase of a KID. This is proportional to power, in particular
         Power = Phase/Responsivity
+        Parameters
+        ----------
+        Returns
+        -------
         '''
 
         phibar = np.arctan2(np.mean(Q),np.mean(I))
@@ -419,6 +430,10 @@ class kidsutils():
 
         ''' 
         Compute the magnitude response of a KID
+        Parameters
+        ----------
+        Returns
+        -------
         '''
 
         return np.sqrt(I**2+Q**2 )
@@ -429,6 +444,10 @@ class kidsutils():
         data: values that need to be interpolated
         bins: bins of data coming from the pps signal
         sampling: frequency sampling of the detectors 
+        Parameters
+        ----------
+        Returns
+        -------
         '''
 
         start = np.append(0, np.cumsum(bins[:-1]))
@@ -440,6 +459,14 @@ class kidsutils():
         return (data[idx_plus.astype(int)]-data[idx.astype(int)])*(idx-idx.astype(int))+data[idx.astype(int)]
      
     def det_time(self, path, roach_number, frames, ctime_start, ctime_end, sampling):
+        '''
+        get the time timestreams. 
+        Need implementation for TIM
+        Parameters
+        ----------
+        Returns
+        -------
+        '''
 
         roach_string_ctime = ['ctime_packet_roach' + f'{roach}' for roach in roach_number] #roach_string_ctime = 'ctime_packet_roach'+str(int(roach_number))
         pps_roach_string = ['pps_count_roach' + f'{roach}' for roach in roach_number] #pps_roach_string = 'pps_count_roach'+str(int(roach_number))
@@ -471,7 +498,7 @@ class kidsutils():
                 ctime_roach = ctime_roach[:-bins[-1]]
                 
             ctime_roach =ctime_roach* 1e-2
-            ctime_roach += 1570000000 #AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAah
+            ctime_roach += 1570000000
             pps_duration =  pps[-1]-pps[0]+1
             pps_final =  pps[0]+np.arange(0, pps_duration, 1/sampling) 
             ctime_roach = self.interpolation_roach(ctime_roach, bins[bins>350], sampling)
