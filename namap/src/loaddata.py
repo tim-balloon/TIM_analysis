@@ -89,8 +89,7 @@ class data_value():
 
         self.telemetry = telemetry
         self.roach_number = roach_number
-
-    
+ 
     def loaddata(file, field, num_frames=None, first_frame=None):
         """
         Load the data from a .hdf5 
@@ -111,8 +110,6 @@ class data_value():
         data: array
             values stores in field, from first_frame*spf to (first_frame+num_frames)*spf. 
         """    
-        fF=file
-        file = 'fits_and_hdf5/TOD_pySIDES_from_uchuu_TIM_tile0_1deg_1deg_res20arcsec_dnu4.0GHz_CII_de_Looze_smoothed_MJy_sr.hdf5'
 
         if os.path.isfile(file): H = h5py.File(file, "a")
         else: print('no file')
@@ -159,22 +156,24 @@ class data_value():
         print(num,first_frame)
         kid_num  = self.det_name
 
-
         det_data = []
+        coord1_data = []
+        coord2_data = []
 
         for kid in kid_num: 
-            I_data = data_value.loaddata(self.det_path, f'I_kid{kid}_roach', num, first_frame)
-            Q_data = data_value.loaddata(self.det_path, f'Q_kid{kid}_roach', num, first_frame)
+            #I_data = data_value.loaddata(self.det_path, f'I_kid{kid}_roach', num, first_frame)
+            #Q_data = data_value.loaddata(self.det_path, f'Q_kid{kid}_roach', num, first_frame)
             kidutils = det.kidsutils()
-            det_data.append(kidutils.KIDmag(I_data, Q_data))
+            det_data.append( data_value.loaddata(self.det_path, f'kid{kid}_roach', num, first_frame) )#kidutils.KIDmag(I_data, Q_data))
             # Assume all the data have the same spf            
             spf_data = loadspf(self.det_path, f'I_kid{kid}_roach')
 
-        #---------------------------------------------------------------------------------
-        coord1_data = data_value.loaddata(self.coord_path, self.coord1_name, num, first_frame)
-        coord2_data = data_value.loaddata(self.coord_path, self.coord2_name, num, first_frame)
-        spf_coord = loadspf(self.coord_path, self.coord2_name, )
-        #---------------------------------------------------------------------------------
+            #---------------------------------------------------------------------------------
+            coord1_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_RA', num, first_frame) )
+            coord2_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_DEC', num, first_frame) )
+            spf_coord = loadspf(self.coord_path, self.coord2_name, )
+            #---------------------------------------------------------------------------------
+        
         if (self.lat_file_type and self.lst_file_type):
             
             lat = data_value.loaddata(self.coord_path, 'lat',num, first_frame)
@@ -183,6 +182,7 @@ class data_value():
 
             return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord,lat_spf
         else:
+        
             return det_data, coord1_data, coord2_data, None, None, spf_data, spf_coord,  0
 
 class convert_dirfile():
@@ -269,49 +269,6 @@ class frame_zoom_sync():
             self.bufferframe = int(100)
 
         
-
-    def frame_zoom(self, data, sample_frame, fs, fps, offset = None):
-        """
-        Not used
-        Selecting the frames of interest and associate a timestamp for each value.
-
-        Parameters
-        ----------
-        data: array
-            amplitude timestreams
-        sample_frame: int
-            all the spf?
-        fs: int
-            all the spf?
-        fps: int
-            all the spf?
-        offset: float
-            time offset ? 
-
-        Returns
-        -------
-        """    
-
-        frames = fps.copy()
-
-        frames[0] = fps[0]*sample_frame
-        if fps[1] == -1:
-            frames[1] = len(data)*sample_frame
-        else:
-            frames[1] = fps[1]*sample_frame+1
-
-        if offset is not None:
-            delay = offset*np.floor(fs)/1000.
-            frames = frames.astype(float)+delay
-
-        if len(np.shape(data)) == 1:
-            time = (np.arange(np.diff(frames))+frames[0])/np.floor(fs)
-            return time, data[int(frames[0]):int(frames[1])]
-        else:
-            time = np.arange(len(data[0, :]))/np.floor(fs)
-            time = time[int(frames[0]):int(frames[1])]
-            return  time, data[:,int(frames[0]):int(frames[1])]
-
     def coord_int(self, coord1, coord2, time_acs, time_det):
         """
         Not used
@@ -342,7 +299,7 @@ class frame_zoom_sync():
         Returns
         -------
         """    
-
+        embed()
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
         print(num,first_frame)
@@ -474,11 +431,11 @@ class det_table():
         for i, kid in enumerate(self.name):
 
             index, = np.where(btable['Name'] == kid)
-            det_off[i, 1] = btable['EL'][index] 
-            det_off[i, 0] = btable['XEL'][index] 
+            det_off[i, 0] = btable['EL'][index] 
+            det_off[i, 1] = btable['XEL'][index] 
 
             noise[i] = btable['WhiteNoise'][index]
-            resp[i] = btable['Resp.'][index]*-1.
+            resp[i] = btable['Resp.'][index]#*-1.
 
 
         return det_off, noise, resp
