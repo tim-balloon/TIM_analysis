@@ -3,6 +3,7 @@ from scan_fcts import pixelOffset
 from strategy import load_params
 import argparse
 import numpy as np
+import os
 
 random.seed(42)   # Fixes the seed for Python's random module
 np.random.seed(42)  # Fixes the seed for NumPy
@@ -15,6 +16,10 @@ def generate_strings(n=64):
     return sorted(strings)
 
 if __name__ == "__main__":
+    '''
+    Do python gen_det_names.py params_strategy.par
+    before running strategy.py or namap_main.py
+    '''
 
     random.seed(42)   # Fixes the seed for Python's random module
     np.random.seed(42)  # Fixes the seed for NumPy
@@ -43,12 +48,13 @@ if __name__ == "__main__":
         raise ValueError("Not enough pixel offsets for detector names.")
 
     # Save as a TSV file
-    file = 'config/TIM_kid_table.tsv'
+    # Define the output file path
+    file = P['detectors_name_file']    
     with open(file, 'w') as f:
         f.write("Name\tResp.\tWhiteNoise\ttime offset\tEL\tXEL\n")  # Column headers
         for name,  r,n,t, e, xe in zip(det_name_HF, resp, noise,time_offset, EL, XEL):
             f.write(f"{name}\t{r:4f}\t{n:4f}\t{t:4f}\t{e:4f}\t{xe:4f}\n")  # Tab-separated values
 
     import pandas as pd
-    df = pd.read_csv(file, sep='\t')
+    df = pd.read_csv(os.getcwd()+'/'+file, sep='\t')
     print(df.head())  # Show first 5 rows
