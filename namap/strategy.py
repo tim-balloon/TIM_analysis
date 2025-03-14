@@ -205,10 +205,6 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
     grp.create_dataset('spf', data=spf)
     H.close()
 
-    d = {'wcs':wcs,
-         'xbins':xbins,
-         'ybins':ybins}
-    pickle.dump(d, open('wcs.p', 'wb'))
 
     '''
     embed()
@@ -286,7 +282,15 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
 
 if __name__ == "__main__":
     '''
+    1st: git clone from TIM_analysis/namap, mathilde branch or main branch if it exist. 
+
+    2nd: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits
+    and put it in /fits_and_hdf5/
+    
+    3rd: generate the KIDs file: python gen_det_names.py params_strategy.par
+
     To run: python strategy.py params_strategy.par
+
     Left to be done:
         Add the second array of detectors
         Produce spectral TOD (One frequency so far)
@@ -399,9 +403,8 @@ if __name__ == "__main__":
     #----------------------------------------
     #Generate the TOds and save it in hdf5
     spf = int(1/(dt*3600)) #Hz
-    simu_sky_path = P['path']+P['file']
-    tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
+    simu_sky_path =os.getcwd()+'/'+P['path']+P['file']
+    tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
 
     positions_y, positions_x, samples = gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky, ra, dec, spf, tod_file, P,T_trim)
-
     #----------------------------------------
