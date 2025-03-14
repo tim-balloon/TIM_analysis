@@ -10,7 +10,6 @@ latittude =  -77.83
 #Constant elevation scan strategy parameters
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
 
-
 #----- Scan parameters -----
 #Choose the scan to use: 
 scan='loop' #'loop', 'raster'
@@ -34,7 +33,7 @@ f_range = 0.6
 
 #Time parameters
 T_duration=1 #hour , duration of the scan
-dt= 9.25e-7 #hour , defines the aquisition rate. 
+dt= 9.25e-7 #hour , defines the aquisition rate. (9.25e-7h acquisition period correspond to 300Hz)
 
 #Array parameters
 detectors_name_file = 'config/TIM_kid_table.tsv'
