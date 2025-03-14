@@ -11,11 +11,20 @@ class maps():
 
     '''
     Wrapper class for the wcs_word class and the mapmaking class.
-    In this way in the gui.py only one class is called
+    Parameters
+    ----------
+    Returns
+    -------
     '''
 
     def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, Ionly=True, coadd=False, noise=1., telcoord=False, parang=None):
-
+        '''
+        Create an instance of maps
+        Parameters
+        ----------
+        Returns
+        -------
+        '''
 
         self.ctype = ctype             #see wcs_world for explanation of this parameter
         self.crpix = crpix             #see wcs_world for explanation of this parameter
@@ -38,42 +47,14 @@ class maps():
         else:
             self.parang = parang
 
-        if(False):
-            import pickle
-            d = pickle.load(open('wcs.p', 'rb'))
-            wcs = d['wcs']
-            xbins = d['xbins']
-            ybins = d['ybins']
-            positions_x = []
-            positions_y = []
-            samples = []
-            for detector, (name, pointing_paths_X, pointing_paths_Y, value)  in enumerate(zip(kid_num, coord1slice, coord2slice,cleaned_data)):
-                y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(pointing_paths_X, pointing_paths_Y) #pointing_paths_X[first_frame*spf:(first_frame+num_frames)*spf], pointing_paths_Y[first_frame*spf:(first_frame+num_frames)*spf])    
-                samples.append(value) #np.asarray(values.astype(float))[int(first_frame*spf):int((first_frame+num_frames)*spf)])
-                positions_x.append( x_pixel_coords)
-                positions_y.append( y_pixel_coords)
-            norm, edges = np.histogramdd(sample=(np.concatenate(positions_x), np.concatenate(positions_y)), bins=(xbins,ybins),  )
-            hist, edges = np.histogramdd(sample=(np.concatenate(positions_x), np.concatenate(positions_y)),  bins=(xbins,ybins), weights=np.concatenate(samples))
-            hist /= norm
-            fig, axs = plt.subplots(1,2 ,figsize=(8,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
-            imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', cmap='cividis' )
-            count = axs[1].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
-            for ax in (axs[0], axs[1]):
-                lon = ax.coords[0]
-                lat = ax.coords[1]
-                lat.set_major_formatter('d.d')
-                lon.set_major_formatter('d.d')
-                lon.set_axislabel('RA')
-                lat.set_axislabel('Dec')
-                if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
-            plt.subplots_adjust(wspace=0, hspace=0)
-            plt.show()
-            
-
     def wcs_proj(self):
 
         '''
         Function to compute the projection and the pixel coordinates
+        Parameters
+        ----------
+        Returns
+        -------
         '''
         wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.telcoord)
         proj, w = wcsworld.world(self.coord1,self.coord2, self.parang)
@@ -84,9 +65,13 @@ class maps():
 
         '''
         Function to generate the maps using the pixel coordinates to bin
+        Parameters
+        ----------
+        Returns
+        -------
         '''
         mapmaker = mapmaking(self.data, self.noise, len(self.data), self.proj, self.coadd)
-        if(self.Ionly): Pow_map = mapmaker.map_Ionly(self.crpix,coadd=self.coadd)
+        if(self.Ionly): Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
 
         if not self.convolution: return Pow_map
         else:
@@ -99,7 +84,11 @@ class maps():
         """
         Plot the map out of the data timestreams.     
         Parameters
-        ----------   
+        ---------- 
+        data_maps: list
+            list of maps to plot
+        kid_num: list: 
+            names of the kids used to generate the list of maps.   
         Returns
         -------
         """    
@@ -197,6 +186,11 @@ class wcs_world():
 
     '''
     Class to generate a wcs using astropy routines.
+
+    Parameters
+    ----------
+    Returns
+    -------
     '''
     def __init__(self, ctype, crpix, cdelt, crval, telcoord=False):
 
@@ -211,6 +205,20 @@ class wcs_world():
         '''
         Function for creating a wcs projection and a pixel coordinates 
         from sky/telescope coordinates
+        Parameters
+        ----------
+        coord1: list
+            list of timestreams of sky coordinates 1 
+        coord2: list
+            list of timestreams of sky coordinates 2
+        parang: array
+            list of parallactic angle in degree. 
+        Returns
+        -------
+        world: list
+            pixel projection of coord1 and coord2 given w
+        w: wcs object
+            the world coordinate system object of Astropy
         '''        
 
         w = wcs.WCS(naxis=2)
@@ -233,8 +241,12 @@ class wcs_world():
 class mapmaking(object):
 
     '''
-    Class to generate the maps. For more information about the system to be solved
-    check Moncelsi et al. 2012
+    Class to generate the maps. 
+    Parameters
+    ----------
+    Returns
+    -------
+    
     '''
 
     def __init__(self, data, weight, number, pixelmap, coadd):
@@ -245,10 +257,22 @@ class mapmaking(object):
         self.pixelmap = pixelmap       #Coordinates of each point in the TOD in pixel coordinates
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
 
-    def map_Ionly(self, crpix, coadd=False, value=None, noise=None, pixelmap = None):
+    def map_Ionly(self, coadd=False, value=None, noise=None, pixelmap = None):
         
         '''
-        Function to reshape the previous array to create a 2D map
+        Function to create the 2D map
+        Parameters
+        ----------
+        coadd: bool
+            to return the coadd map between all detectors or the individual maps. 
+        value: list
+            amplitude timestreams of the detectors
+        noise: array
+            list of the noise in the detectors
+        pixelmap: list
+            list of pixel coordinates timestreams of the detectors
+        Returns
+        -------
         '''
         if value is None: value = self.data.copy()
         else: value = value
@@ -305,7 +329,6 @@ class mapmaking(object):
         else: 
             norm, edges = np.histogramdd(sample=(np.concatenate(coord1samples), np.concatenate(coord2samples)), bins= (X_edges, Y_edges)  )
             hist, edges = np.histogramdd(sample=(np.concatenate(coord1samples), np.concatenate(coord2samples)),  bins= (X_edges, Y_edges), weights=np.concatenate(samples))
-            #w = np.where(norm !=0 )
             hist /= norm
             return hist.T
 
@@ -313,7 +336,12 @@ class mapmaking(object):
 
         '''
         Function to convolve the maps with a gaussian.
-        STD is in pixel values
+        Parameters
+        ----------
+        std: float
+            std of the gaussian in pixel values
+        Returns
+        -------
         '''
 
         kernel = Gaussian2DKernel(x_stddev=std)
