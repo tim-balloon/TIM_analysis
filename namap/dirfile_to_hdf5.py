@@ -19,89 +19,6 @@ import tracemalloc
 import time
 from progress.bar import Bar
 
-def check(d):
-
-  """
-  Check if all the entries on the dirfile are of known types.
-  Parameters
-  ----------
-  d: string, 
-      the name of the dirfile       
-  Returns
-  -------
-  """
-  
-  for f, field in enumerate(d.field_list()):
-
-  dect = d.entry(field)
-
-  item_str =field.decode(encoding="utf-8")
-  
-  if dect.field_type == gd.RAW_ENTRY: 
-    print(item_str, dect.spf)
-  elif(dect.field_type == gd.PHASE_ENTRY): 
-    try:
-        #print(dect.in_fields, dect.shift)
-        print(field,(dect.in_fields, dect.shift))
-    except IOError as e:
-      # Handle IOError and continue
-      print(f"IOError for field {field}: {e}")
-    except Exception as e:
-      # Handle other unexpected errors (optional)
-      print(f"Unexpected error for field {field}: {e}")
-  
-  elif(dect.field_type == gd.BIT_ENTRY):
-    try:
-        #print(dect.in_fields[0],dect.bitnum,dect.numbits)
-        print(field,(dect.in_fields,dect.bitnum,dect.numbits))
-
-    except IOError as e:
-      # Handle IOError and continue
-      print(f"IOError for field {field}: {e}")
-    except Exception as e:
-      # Handle other unexpected errors (optional)
-      print(f"Unexpected error for field {field}: {e}")
-  
-  elif(dect.field_type == gd.LINCOM_ENTRY): 
-    try:
-        print(dect.n_fields, dect.m, dect.b,)
-    except IOError as e:
-      # Handle IOError and continue
-      print(f"IOError for field {field}: {e}")
-    except Exception as e:
-      # Handle other unexpected errors (optional)
-      print(f"Unexpected error for field {field}: {e}")
-  
-  elif(dect.field_type == gd.DIVIDE_ENTRY): 
-    try:
-        print(dect.in_fields[0],dect.in_fields[1])
-
-    except IOError as e:
-      # Handle IOError and continue
-      print(f"IOError for field {field}: {e}")
-    except Exception as e:
-      # Handle other unexpected errors (optional)
-      print(f"Unexpected error for field {field}: {e}")
-
-  elif(dect.field_type == gd.LINTERP_ENTRY): 
-    print(dect.table, dect.in_fields[0])
-
-  elif(dect.field_type == gd.MPLEX_ENTRY): 
-    print(dect.in_fields, dect.count_val, dect.period)
-
-  elif(dect.field_type == gd.SINDIR_ENTRY): 
-    print(dect.in_fields)
-
-  elif(dect.field_type == gd.STRING_ENTRY): 
-    print(field)
-
-  elif(dect.field_type == gd.SARRAY_ENTRY): 
-    print(dect.array_len)
-
-  elif(dect.field_type == gd.INDEX_ENTRY): 
-    print(field)
-
-  else: print(f'{f} {field} is of type {dect.field_type_name}')
     
 def hdf5_loaddata(file, field, num_frames=7383, first_frame=72273):
     """
@@ -158,7 +75,7 @@ def dirfile_to_hdf5(dirfile, hdf5file, list_keys, fmin=0, fmax=-1):
   d = gd.dirfile(dirfile, gd.RDONLY)
   bar = Bar('Saving fields from dirfile to hdf5: ', max=len(d.field_list()[fmin:fmax]))
 
-  H = h5py.File(hdf5file, "a")
+  H = h5py.File(hdf5file, "w")
   H.create_dataset('nframes', data=d.nframes)
 
   for f, field in enumerate(d.field_list()):
