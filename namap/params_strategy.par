@@ -46,7 +46,7 @@ arrays_separation = 0.3 #[deg]
 
 #Fits file containing the mock sky how of which we generates the TOD
 path = 'fits_and_hdf5/'
-file='pySIDES_from_uchuu_TIM_tile0_1deg_1deg_res20arcsec_dnu4.0GHz_CII_de_Looze_smoothed_MJy_sr.fits'
+file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 
 
 
