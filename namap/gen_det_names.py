@@ -9,6 +9,7 @@ random.seed(42)   # Fixes the seed for Python's random module
 np.random.seed(42)  # Fixes the seed for NumPy
 
 def generate_strings(n=64):
+    
     strings = set()
     while len(strings) < n:
         rand_digits = f"{random.randint(0, 999):03d}"
