@@ -1,7 +1,7 @@
 import numpy as np
 import gc
 from astropy import wcs
-
+from IPython import embed
 import src.quaternion as quat
 
 class utils(object):
@@ -139,14 +139,41 @@ class convert_to_telescope(object):
         return np.degrees(x_tel), np.degrees(y_tel)
 
 class apply_offset(object):
-
-    '''
+    """
     Class to apply the offset to different coordinates
-    '''
+
+    Parameters
+    ----------
+    Returns
+    -------
+    """    
 
     def __init__(self, coord1, coord2, ctype, xsc_offset, det_offset = np.array([0.,0.]),\
                  lst = None, lat = None):
+        
+        """
+        Return an instance of the apply_offset class
 
+        Parameters
+        ----------
+        coord1: array
+            Array of coordinate 1
+        coord2: array
+            Array of coordinate 2
+        ctype: array
+            Ctype of the map
+        xsc_offset: tuple
+            Offset with respect to star cameras in xEL and EL
+        det_offset: 2d array
+            Offset with respect to the central detector in xEL and EL
+        lst: array
+            Local Sideral Time array
+        lat: array
+            Latitude array
+        ----------
+        Returns
+        -------
+        """    
         self.coord1 = coord1                    #Array of coordinate 1
         self.coord2 = coord2                    #Array of coordinate 2
         self.ctype = ctype                      #Ctype of the map
@@ -154,19 +181,49 @@ class apply_offset(object):
         self.det_offset = det_offset            #Offset with respect to the central detector in xEL and EL
         self.lst = lst                          #Local Sideral Time array
         self.lat = lat                          #Latitude array
+        
 
     def correction(self):
+        """
+        Apply offset
+        Parameters
+        ----------
+        coord1: array
+            Array of coordinate 1
+        coord2: array
+            Array of coordinate 2
+        ctype: array
+            Ctype of the map
+        xsc_offset: tuple
+            Offset with respect to star cameras in xEL and EL
+        det_offset: 2d array
+            Offset with respect to the central detector in xEL and EL
+        lst: array
+            Local Sideral Time array
+        lat: array
+            Latitude array
+        ----------
+        Returns
+        ra_corrected: array
+            corrected array of RA coordinates
+        dec_corrected: array
+            corrected array of Dec coordinates
+        -------
+        """    
 
+        ra_corrected = []
+        dec_corrected = []
         if self.ctype.lower() == 'ra and dec':
+            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
+                ra_corrected.append( self.coord1[i]+ offset_ra )
+                dec_corrected.append( self.coord2[i]+ offset_dec )
 
+        if self.ctype.lower() == 'ra and dec' and self.lst is not None and self.lat is not None:
             conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat)
-
             az, el = conv2azel.radec2azel()
-
             xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
             #xEL_corrected = xEL-self.xsc_offset[0]
             #EL_corrected = el+self.xsc_offset[1]
-            
             ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
             dec_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
 
@@ -176,20 +233,14 @@ class apply_offset(object):
                 xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
                 det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
                 off_quat = quaternion.product(det_quat, xsc_quat)
-
                 xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
-
                 print('OFFSET', xEL_offset, EL_offset)
-
                 xEL_corrected_temp = xEL-xEL_offset
                 EL_corrected_temp = el+EL_offset
                 AZ_corrected_temp = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
-
                 conv2radec = utils(AZ_corrected_temp, EL_corrected_temp, \
                                    self.lst, self.lat)
-
                 ra_corrected[i,:], dec_corrected[i,:] = conv2radec.azel2radec()
-
                 # hour_angle = np.radians((self.lst-self.coord1)*15)
                 # print('hour', hour_angle)
                 # index, = np.where(hour_angle<0)
@@ -207,34 +258,23 @@ class apply_offset(object):
             del EL_corrected_temp
             del AZ_corrected_temp
             gc.collect()
-
             return ra_corrected, dec_corrected
 
         elif self.ctype.lower() == 'az and el':
-
-            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
-            az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
-
-            for i in range(int(np.size(self.det_offset)/2)):
-            
-                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
-
-                az_corrected[i, :] = (self.coord1*np.cos(self.coord2)-self.xsc_offset[i]-\
-                                      self.det_offset[i, 0])/np.cos(el_corrected)
-
+            el_corrected = []
+            az_corrected = []
+            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
+                el_corrected.append( self.coord2+self.xsc_offset[1]+offset_dec)
+                az_corrected.append( (self.coord1*np.cos(self.coord2)-self.xsc_offset[i]-\
+                                      offset_ra)/np.cos(el_corrected))
             return az_corrected, el_corrected
 
         else:
-
-            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
-            xel_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
-
-            for i in range(int(np.size(self.det_offset)/2)):
-
-                xel_corrected[i, :] = self.coord1-self.xsc_offset[0]-self.det_offset[i, 0]
-                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
-
-
+            el_corrected = []
+            xel_corrected = []
+            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
+                xel_corrected.append( self.coord1-self.xsc_offset[0]+offset_ra )
+                el_corrected.append( self.coord2+self.xsc_offset[1]+offset_dec )
             return xel_corrected,el_corrected
 
 class compute_offset(object):

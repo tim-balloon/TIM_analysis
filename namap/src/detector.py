@@ -59,42 +59,23 @@ class data_cleaned():
         '''
         Function to return the cleaned TOD as numpy array
         '''
-        cleaned_data = [np.zeros_like(slice) for slice in self.data]
-
-
-
-        if np.size(self.detlist) == 1:
-            det_data = detector_trend(self.data[0])
+        cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
+        for i, data in enumerate(self.data):
+            det_data = detector_trend(data)
             if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
-            #else: residual_data = self.data[0]
+            else: residual_data = data.copy()
 
-            #if self.despike is True:
-            desp = despike(residual_data)
-            data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
-            #else: data_despiked = residual_data.copy()
-
-            #if self.cutoff != 0:
-            filterdat = filterdata(data_despiked, self.cutoff, self.fs)
-            cleaned_data = filterdat.ifft_filter(window=True)
-            #else: cleaned_data = data_despiked
-
-            return cleaned_data
-
-        else:
-            for i in range(np.size(self.detlist)):
-                i=0
-                det_data = detector_trend(self.data[i])
-                #det_data = detector_trend(self.data[0])
-
-                residual_data = det_data.fit_residual(order=self.polynomialorder)
-
+            if self.despike :
                 desp = despike(residual_data)
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
+            else: data_despiked = residual_data.copy()
 
+            if self.cutoff != 0:
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs)
-                cleaned_data2 = filterdat.ifft_filter(window=True)
+                cleaned_data.append( filterdat.ifft_filter(window=True) )
+            else: cleaned_data.append( data_despiked )
 
-            return cleaned_data
+        return cleaned_data
         
 class despike():
 
@@ -347,16 +328,17 @@ class detector_trend():
         '''
         Function to fit a trend line to a TOD
         '''
+        embed()
 
         x = np.arange(len(self.data))
 
-        y_fin = np.array([])
         index_exclude = np.array([], dtype=int)
 
         if np.size(edge) == 1:
             p = np.polyfit(x, self.data, order)
             poly = np.poly1d(p)
             y_fin = poly(x)
+        '''
         else:
             if np.size(delay) == 1:
                 delay = np.ones(np.size(edge)+1)*delay
@@ -381,6 +363,7 @@ class detector_trend():
                         zeros = np.zeros(int(delay[i+1]))
                         y_fin = np.append(y_fin, zeros)
                         index_exclude = np.append(index_exclude, np.arange(delay[i+1])+edge)
+        '''
 
         return y_fin, index_exclude.astype(int)
     
