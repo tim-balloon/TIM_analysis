@@ -1,22 +1,24 @@
 """
 simulations/python/sim_tools_tod.py
-
 Contains necessary function for performing TOD simulations.
 """
 
 import numpy as np, sys, os, warnings
 
 def detector_noise_model(noise_level, fknee, alphaknee, total_samples, sample_freq):
+
     """
-    TOD noise model (1/f, white noise, and total)
-    P(f) = A^2 \left[ 1+ \left( \frac{f_{\rm knee}}{f}\right)^{\alpha_{\rm knee}} \right]
-    
+    TOD noise model (1/f, white noise, and total).
+
+    .. math::
+        P(f) = A^2 \left[ 1+ \left( \\frac{f_{\\rm knee}}{f}\\right)^{\\alpha_{\\rm knee}} \\right].
+
     Parameters
     ----------
     noise_level: float
         White noise level (A in the above equation) for the detector.
     fknee: float
-        Knee frequency for 1/f  (f_knee in the above equation) .
+        Knee frequency for 1/f  (f_knee in the above equation).
     alphaknee: float
         Slope for 1/f (alpha_knee in the above equation).
     total_samples: int
@@ -47,8 +49,10 @@ def get_correlated_powspec(rho, powspec1, powespec2):
 
     """
     Returns correalted noise given rho and the auto-power spectrum of two detectors.
-    corr_powspec P_{ij} = \rho_{ij} \sqrt{P_{ii} P_{jj}}
     
+    .. math::
+        P_{ij} = \\rho_{ij} \sqrt{P_{ii} P_{jj}}
+
     Parameters
     ----------
     rho: float
@@ -66,4 +70,4 @@ def get_correlated_powspec(rho, powspec1, powespec2):
 
     corr_powspec = rho * np.sqrt( powspec1 * powespec2)
     
-    return corr_powspec
+    return corr_powspec 
