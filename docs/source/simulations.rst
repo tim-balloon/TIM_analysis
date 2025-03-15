@@ -1,7 +1,8 @@
 Simulations package
 ===================
 
-flatsky.py
+sim_tools_flatsky.py
+sim_tools_tod.py
 --------------------------
 
 .. automodule:: flatsky

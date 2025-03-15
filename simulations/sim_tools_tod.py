@@ -67,28 +67,3 @@ def get_correlated_powspec(rho, powspec1, powespec2):
     corr_powspec = rho * np.sqrt( powspec1 * powespec2)
     
     return corr_powspec
-
-def perform_tod_sims():
-
-    """
-    Returns TOD simulations
-    corr_powspec P_{ij} = \rho_{ij} \sqrt{P_{ii} P_{jj}}
-    
-    Parameters
-    ----------
-    rho: float
-        Correlation coefficient (rho_ij).
-    powspec1: array
-        Power spectrum 1 (P_ii).
-    powspec2: array
-        Power spectrum 2 (P_jj).
-
-    Returns
-    -------
-    corr_powspec: array
-        Cross-power spectrum.
-    """
-
-    corr_powspec = rho * np.sqrt( powspec1 * powespec2)
-    
-    return corr_powspec    
