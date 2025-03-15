@@ -16,6 +16,7 @@
       <script src="_static/documentation_options.js?v=5929fcd5"></script>
       <script src="_static/doctools.js?v=9a2dae69"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -50,6 +51,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.make_gaussian_realisations"><code class="docutils literal notranslate"><span class="pre">make_gaussian_realisations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.map2cl"><code class="docutils literal notranslate"><span class="pre">map2cl()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#sim_tools_flatsky.radial_profile"><code class="docutils literal notranslate"><span class="pre">radial_profile()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-sim_tools_tod">sim_tools_tod.py</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_tod.detector_noise_model"><code class="docutils literal notranslate"><span class="pre">detector_noise_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sim_tools_tod.get_correlated_powspec"><code class="docutils literal notranslate"><span class="pre">get_correlated_powspec()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -164,36 +170,9 @@ default is zero.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="sim_tools_flatsky.make_gaussian_realisations">
-<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_realisations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.make_gaussian_realisations" title="Link to this definition"></a></dt>
-<dd><p>return (correlated) Gaussian realisations of flat sky maps with an underlying power spectrum
-defined by cl_dict.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>el</strong> (<em>array</em>) – Multipoles over which the power spectrium is defined.</p></li>
-<li><p><strong>cl_dict</strong> (<em>dictionary</em>) – Contains the auto- and cross-power spectra of multiple bands.
-Keys are simple band incides.
-Keys must be 00, 11, 01 for 2 maps;
-Keys must be 00, 11, 22, 01, 02, 12 for 3 maps; and so on
-where
-00 - 90x90 auto.
-11 - 150x150 auto.
-22 - 220x220 auto.
-01 - 90x150 cross.
-02 - 90x220 cross.
-12 - 150x220 cross.</p></li>
-<li><p><strong>map_shape</strong> (<em>array_like</em><em>, </em><em>shape</em><em> (</em><em>2 x 1</em><em>)</em>) – dimension on the flatskymap.</p></li>
-<li><p><strong>pixel_res_radians</strong> (<em>float</em>) – map pixel resolution in radians.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>sim_maps</strong> – Correlated simulated maps.
-returns N maps for N(N+1)/2 spectra.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>array</p>
-</dd>
-</dl>
+<span class="sig-prename descclassname"><span class="pre">sim_tools_flatsky.</span></span><span class="sig-name descname"><span class="pre">make_gaussian_realisations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">el</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cl_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_res_radians_or_inv_samp_freq</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_flatsky.make_gaussian_realisations" title="Link to this definition"></a></dt>
+<dd><p>#names to be changed
+pixel_res_radians –&gt; something that is common for tod and sim.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -267,6 +246,62 @@ radprf[:,2] = radial bin errors.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>array.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-sim_tools_tod">
+<span id="sim-tools-tod-py"></span><h2>sim_tools_tod.py<a class="headerlink" href="#module-sim_tools_tod" title="Link to this heading"></a></h2>
+<p>simulations/python/sim_tools_tod.py
+Contains necessary function for performing TOD simulations.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="sim_tools_tod.detector_noise_model">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_tod.</span></span><span class="sig-name descname"><span class="pre">detector_noise_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noise_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fknee</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alphaknee</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_freq</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_tod.detector_noise_model" title="Link to this definition"></a></dt>
+<dd><p>TOD noise model (1/f, white noise, and total).</p>
+<div class="math notranslate nohighlight">
+\[P(f) = A^2 \left[ 1+ \left( \frac{f_{\rm knee}}{f}\right)^{\alpha_{\rm knee}} \right].\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>noise_level</strong> (<em>float</em>) – White noise level (A in the above equation) for the detector.</p></li>
+<li><p><strong>fknee</strong> (<em>float</em>) – Knee frequency for 1/f  (f_knee in the above equation).</p></li>
+<li><p><strong>alphaknee</strong> (<em>float</em>) – Slope for 1/f (alpha_knee in the above equation).</p></li>
+<li><p><strong>total_samples</strong> (<em>int</em>) – Total TOD samples.</p></li>
+<li><p><strong>sample_freq</strong> (<em>float</em>) – Sampling frequency of the TOD.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>freq</strong> (<em>array</em>) – TOD frequencies length = total_samples</p></li>
+<li><p><strong>noise_powspec</strong> (<em>array</em>) – Noise power spectrum.</p></li>
+<li><p><strong>noise_powspec_one_over_f</strong> (<em>array</em>) – 1/f portion of the noise power spectrum.</p></li>
+<li><p><strong>noise_powspec_white</strong> (<em>array</em>) – White noise portion of the noise power spectrum.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="sim_tools_tod.get_correlated_powspec">
+<span class="sig-prename descclassname"><span class="pre">sim_tools_tod.</span></span><span class="sig-name descname"><span class="pre">get_correlated_powspec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">powspec1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">powespec2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#sim_tools_tod.get_correlated_powspec" title="Link to this definition"></a></dt>
+<dd><p>Returns correalted noise given rho and the auto-power spectrum of two detectors.</p>
+<div class="math notranslate nohighlight">
+\[P_{ij} = \rho_{ij} \sqrt{P_{ii} P_{jj}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em>) – Correlation coefficient (rho_ij).</p></li>
+<li><p><strong>powspec1</strong> (<em>array</em>) – Power spectrum 1 (P_ii).</p></li>
+<li><p><strong>powspec2</strong> (<em>array</em>) – Power spectrum 2 (P_jj).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>corr_powspec</strong> – Cross-power spectrum.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
 </dd>
 </dl>
 </dd></dl>
