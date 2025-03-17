@@ -57,23 +57,23 @@ class data_value():
         Parameters
         ----------
         det_path: string
-            Path of the detector dirfile
-        det_name: string
-            Detector name to be analyzed
+            Path of the TOD .hdf5
+        det_name: list of string
+            Detector names to be analyzed
         coord_path: string
-            Path of the coordinates dirfile
+            Path of the coordinates .hdf5
         coord1_name: string
             Coordinates 1 name, e.g. RA or AZ
         coord2_name: string
             Coordinates 2 name
         lst: bool
-            if True, load the LST  coordinate
+            if True, load the LST coordinate
         lat: bool
-            if True, load the LAT  coordinate
+            if True, load the LAT coordinate
         startframe:
             Starting frame to be analyzed
         numframes:
-            Ending frame to be analyzed
+            Total number of frames to be analyzed
 
         Returns
         -------
@@ -122,7 +122,7 @@ class data_value():
     def loaddata(file, field, num_frames=None, first_frame=None):
         """
         Load the data from a .hdf5 
-        Equivalent to d.getdata()
+        Equivalent to d.getdata() of Dirfile
         Parameters
         ----------
         file: string
@@ -184,15 +184,16 @@ class data_value():
         det_data = []
         coord1_data = []
         coord2_data = []
+        kidutils = det.kidsutils()
 
         for kid in kid_num: 
+            #if you have I and Q timestreams: 
             #I_data = data_value.loaddata(self.det_path, f'I_kid{kid}_roach', num, first_frame)
             #Q_data = data_value.loaddata(self.det_path, f'Q_kid{kid}_roach', num, first_frame)
-            kidutils = det.kidsutils()
-            det_data.append( data_value.loaddata(self.det_path, f'kid{kid}_roach', num, first_frame) )#kidutils.KIDmag(I_data, Q_data))
+            #det_data.append( kidutils.KIDmag(I_data, Q_data) )
+            det_data.append(data_value.loaddata(self.det_path, f'kid{kid}_roach', num, first_frame))
             # Assume all the data have the same spf            
             spf_data = data_value.loadspf(self.det_path, f'I_kid{kid}_roach')
-
             #---------------------------------------------------------------------------------
             coord1_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_RA', num, first_frame) )
             coord2_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_DEC', num, first_frame) )
@@ -203,29 +204,13 @@ class data_value():
             
             lat = data_value.loaddata(self.coord_path, 'lat',num, first_frame)
             lst = data_value.loaddata(self.coord_path, 'lst',num, first_frame)
-            lat_spf = loadspf(self.coord_path, 'lst')
+            lat_spf = data_value.loadspf(self.coord_path, 'lst')
 
             return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord,lat_spf
         else:
         
             return det_data, coord1_data, coord2_data, None, None, spf_data, spf_coord,  0
 
-class convert_dirfile():
-
-    '''
-    Class for converting TODs from dirfile value to real value, 
-    considering a linear conversion
-    '''
-
-    def __init__(self, data, param1, param2):
-
-        self.data = data        #DIRFILE TOD
-        self.param1 = param1    #gradient of the conversion
-        self.param2 = param2    #intercept of the conversion
-
-    def conversion(self):
-
-        self.data = self.param1*self.data+self.param2
 
 class frame_zoom_sync():
     """
@@ -308,14 +293,24 @@ class frame_zoom_sync():
         
     def coord_int(self, coord1, coord2, time_acs, time_det):
         """
-        Not used
         Interpolates the coordinates values to compensate for the smaller frequency sampling
 
         Parameters
         ----------
-
+        coord1: array
+            coord1 timestram
+        coord2: array
+            coord1 timestram
+        time_acs: array
+            time timestream of coord1 amd coord2
+        time_det: array
+            the time timestream to which the coords are resampled. 
         Returns
         -------
+        coord1_int: array
+            the resampled coord1 timestream
+        coord2_int: array
+            the resampled coord1 timestream
         """    
 
         coord1_int = interp1d(time_acs, coord1, kind='linear')
@@ -324,9 +319,7 @@ class frame_zoom_sync():
         return coord1_int(time_det), coord2_int(time_det)
 
     def sync_data(self, telemetry=False):
-        """
-        #Needs to be modify !
-        
+        """        
         Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
         and the associated time
 
@@ -336,6 +329,18 @@ class frame_zoom_sync():
             to use coordinates from mole or not
         Returns
         -------
+        dettime: list
+            list of time timestreams of the detectors
+        self.det_data: list
+            list of synchronized amplitude timestreams 
+        coord1_inter_list: list
+            list of synchronized coord1 timestsreams
+        coord2_inter_list: list 
+            list of synchronized coord2 timestsreams
+        lst_inter: list
+            list of synchronized lst coord2 timestsreams
+        lat_inter
+            list of synchronized lat coord2 timestsreams
         """    
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
@@ -419,6 +424,19 @@ class xsc_offset():
     -------
     """    
     def __init__(self, xsc, frame1, frame2):
+        """
+        Create an instance of xsc_offset
+        Parameters
+        xcs: string
+            pointing table file
+        frame1: int
+            the 1st frame to be loaded 
+        frame2: int
+            the last frame to be loaded 
+        ----------  
+        Returns
+        -------
+        """
 
         self.xsc = xsc #Star Camera number
         self.frame1 = frame1 #Starting frame
@@ -429,6 +447,10 @@ class xsc_offset():
         '''
         Function to read a star camera offset file and return the coordinates 
         offset
+        Parameters
+        ----------  
+        Returns
+        -------
         '''
 
         path = os.getcwd()+'/xsc_'+str(int(self.xsc))+'.txt'
@@ -446,15 +468,43 @@ class det_table():
 
     '''
     Class to read detector tables.
+    Parameters
+    ----------  
+    Returns
+    -------
     '''
 
     def __init__(self, dets, pathtable):
-
+        '''
+        Create an instance of the class det_table
+        Parameters
+        ----------  
+        Returns
+        -------
+        '''
         self.name = dets
         self.pathtable = pathtable
 
     def loadtable(self):
+        '''
+        Load the parameters for the requested detectors
 
+        Parameters
+        ----------  
+        dets: list
+            list of the detectors name for which to fetch the info from the table
+        pathtable: string
+            the name of the detector table. 
+
+        Returns
+        -------
+        det_off:  list
+            list of the offsets of the requested detectors
+        noise: list
+            list of white noise of the requested detectors
+        resp:  list
+            list of response of the requested detectors
+        '''
         det_off = np.zeros((np.size(self.name), 2))
         noise = np.ones(np.size(self.name))
         resp = np.zeros(np.size(self.name))
@@ -470,7 +520,6 @@ class det_table():
 
             noise[i] = btable['WhiteNoise'][index]
             resp[i] = btable['Resp.'][index]#*-1.
-
 
         return det_off, noise, resp
 
