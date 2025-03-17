@@ -90,10 +90,10 @@ def load_params(path):
 
     return params
 
-def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky, ra, dec, spf, tod_file, P,T, plot=True):
+def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths):
 
     """
-    Generate the tod for one array of TIM detectors and save it in the .hdf5 format. 
+    Generate the tod for one array of TIM detectors. 
 
     Parameters
     ----------
@@ -103,27 +103,22 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
         pixel position on the array wrt the central pixel, in degrees
     pointing_paths: 2d array
         coordinates of the scan path, for the central pixe, in degrees
-    ra: float
-        the ra coordinate of the field center
-    dec: float
-        the dec coordinate of the field center
-    spf: int
-        the number of samples per frame
-    tod_file: string 
-        name of the output hdf5 file     
-    P: dict
-        the parameter
-    samples: 2d array
-        TOD amplitudes of each detector
-    pixel_offset: array
-        position of each pixel on the array. 
-    T: array
-        time timestreams
-
     Returns
     -------
-    H: hdf5
-        save the output hdf5 file.
+    wcs: astropy.wcs.wcs.WCS
+        The wcs used to generate the TODs
+    map: 2d array
+        the sky map used to generate the amplitude TODs
+    hist: 2d array
+        the reconstructed sky map given the pointing paths 
+    norm: 2d array
+        the hitmap
+    samples: list
+        list of the amplitude timestreams of each detectors
+    positions_x: list
+        list of RA coordinates timestreams of each detectors
+    positions_y: list
+        list of DEC coordinates timestreams of each detectors 
     """ 
 
     #Generate the TOD given a simulated sky
@@ -169,55 +164,7 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
     hist, edges = np.histogramdd(sample=(positions_x.ravel(), positions_y.ravel()),  bins=(xbins,ybins), weights=samples.ravel())
     hist /= norm
 
-    fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
-    imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-    img = axs[1].imshow(map, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-    count = axs[2].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
-    
-    for ax in (axs[0], axs[1], axs[2]):
-        lon = ax.coords[0]
-        lat = ax.coords[1]
-        lat.set_major_formatter('d.d')
-        lon.set_major_formatter('d.d')
-        lon.set_axislabel('RA')
-        lat.set_axislabel('Dec')
-        if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
-    
-    plt.subplots_adjust(wspace=0, hspace=0)
-    plt.show()
-    det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-    det_names = det_names_dict['Name']
-    H = h5py.File(tod_file, "w")
-
-    for i, (name, coord) in enumerate(zip(('RA', 'DEC'), (scan_path_sky[:,0],scan_path_sky[:,1]))):
-        grp = H.create_group(name)
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-
-    for detector, (offset, name, pointing) in enumerate(zip(pixel_offset, det_names, pointing_paths)):
-        grp = H.create_group(f'kid{name}_roach')
-        grp.create_dataset('data', data=samples[detector,:], compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-        grp.create_dataset('pixel_offset', data=pixel_offset)
-
-        grp = H.create_group(f'kid{name}_RA')    
-        grp.create_dataset('data', data=pointing[:,0])
-
-        grp = H.create_group(f'kid{name}_DEC')    
-        grp.create_dataset('data', data=pointing[:,1])
-
-        for comp in ('I', 'Q'): 
-            grp = H.create_group(f'{comp}_kid{name}_roach') #conversion factor = 1 Jy/Hz
-            grp.create_dataset('data', data=samples[detector,:] / np.sqrt(2), compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
-            grp.create_dataset('pixel_offset', data=pixel_offset)
-        
-    grp = H.create_group('time')
-    grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
-    grp.create_dataset('spf', data=spf)
-    H.close()
-
-
+    return wcs, map, hist, norm, samples, positions_x, positions_y
     '''
     embed()
     
@@ -266,8 +213,63 @@ def gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky,
         plt.show()
     '''
 
-    return positions_y, positions_x, samples
+def save_tod_in_hdf5(tod_file, det_names, samples, scan_path_sky, pixel_offset, pointing_paths, T, spf):
+    """
+    Save the tod for one array of TIM detectors in the .hdf5 format. 
 
+    Parameters
+    ----------
+    tod_file: string 
+        name of the output hdf5 file   
+    det_names: list
+        list of names for the detectors, same lenght as pixel_offset
+    samples: list
+        list of amplitude timestreams.  
+    scan_path_sky: 2d array
+        (ra, dec) coordinates timestreams of the center pixel
+    pixel_offset: array
+        position of each pixel on the array with respect to the center pixel 
+    pointing_paths: 2d array
+        coordinates of the scan path, for the central pixe, in degrees
+    T: array
+        time timestreams
+    spf: int
+        the number of samples per frame
+
+    Returns
+    -------
+    """ 
+    
+    H = h5py.File(tod_file, "w")
+
+    for i, (name, coord) in enumerate(zip(('RA', 'DEC'), (scan_path_sky[:,0],scan_path_sky[:,1]))):
+        grp = H.create_group(name)
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
+
+    for detector, (offset, name, pointing) in enumerate(zip(pixel_offset, det_names, pointing_paths)):
+        grp = H.create_group(f'kid{name}_roach')
+        grp.create_dataset('data', data=samples[detector,:], compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
+        grp.create_dataset('pixel_offset', data=pixel_offset)
+
+        grp = H.create_group(f'kid{name}_RA')    
+        grp.create_dataset('data', data=pointing[:,0])
+
+        grp = H.create_group(f'kid{name}_DEC')    
+        grp.create_dataset('data', data=pointing[:,1])
+
+        for comp in ('I', 'Q'): 
+            grp = H.create_group(f'{comp}_kid{name}_roach') #conversion factor = 1 Jy/Hz
+            grp.create_dataset('data', data=samples[detector,:] / np.sqrt(2), compression='gzip', compression_opts=9)
+            grp.create_dataset('spf', data=spf)
+            grp.create_dataset('pixel_offset', data=pixel_offset)
+        
+    grp = H.create_group('time')
+    grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
+    grp.create_dataset('spf', data=spf)
+    H.close()
+    
 if __name__ == "__main__":
     '''
     If you want to modify this code, please create your own branch. 
@@ -397,6 +399,25 @@ if __name__ == "__main__":
     spf = int(1/(dt*3600)) #Hz
     simu_sky_path =os.getcwd()+'/'+P['path']+P['file']
     tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
-
-    positions_y, positions_x, samples = gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths, scan_path_sky, ra, dec, spf, tod_file, P,T_trim)
+    wcs, map, hist, norm, samples, positions_x, positions_y =  gen_tod_one_array(simu_sky_path, pixel_offset,pointing_paths,)
     #----------------------------------------
+
+    fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
+    imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
+    img = axs[1].imshow(map, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
+    count = axs[2].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
+    for ax in (axs[0], axs[1], axs[2]):
+        lon = ax.coords[0]
+        lat = ax.coords[1]
+        lat.set_major_formatter('d.d')
+        lon.set_major_formatter('d.d')
+        lon.set_axislabel('RA')
+        lat.set_axislabel('Dec')
+        if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
+    plt.subplots_adjust(wspace=0, hspace=0)
+    plt.show()
+
+    det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+    det_names = det_names_dict['Name']
+
+    save_tod_in_hdf5(tod_file, det_names, samples, scan_path_sky, pixel_offset, pointing_paths,  scan_path_sky, T_trim, spf)
