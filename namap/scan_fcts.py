@@ -38,6 +38,157 @@ def timeFractionAbove(hmap, level):
     hits = hmap.flatten()
     return np.sum(hits[hits>level])/np.sum(hits)
 
+def genLocalPath_cst_el_scan_zigzag(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
+
+    """
+    Function that generates the local scaning pattern.
+    Currently can only generate closed loop    
+    Parameters
+    ----------
+    az_size: float
+        azimuth angular size, in degrees   
+    alt_size: float
+        altitude angular size, in degrees
+    alt_step: float
+        step in altitude angle, in degrees
+    acc: float
+        acceleration in second angle 
+    scan_v: float
+        angular speed of the scan, in deg/sec
+    dt: float
+        time step in second angle 
+    Returns
+    -------
+    az: array
+        azimuth scan path coordinates, in degrees
+    alt: array
+        altitude scan path coordinates, in degrees
+    flag: array
+        constant scan speed part.
+    scan_eff: array
+        scan efficiency: the ratio between the constant scan speed part and not constant scan speed part
+    t: array
+        time during the scan, in second angle
+    """ 
+
+    #----
+    #Compute Number of Vertical Steps 
+    ver_N = int(alt_size//alt_step)
+    #Compute Time for Scan and Turns
+    scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
+    turn_time = 2*scan_v/acc #Time required to perform a turn (deceleration, reversal, acceleration)
+    #Generate Azimuth Acceleration Pattern (a):
+    #The motion consists of acceleration, constant velocity, and deceleration, forming a symmetric back-and-forth oscillation in azimuth.
+    a = np.concatenate((np.ones(int(turn_time/dt))*acc,np.zeros(int(scan_time/dt))))
+    a = np.concatenate((a,-1*a))
+    #The sequence is repeated for each altitude step (ver_N times).
+    a = np.tile(a,ver_N)
+    #Generate Altitude Acceleration Pattern
+    acc_alt = alt_step/(turn_time/2)**2   
+    #The altitude changes slightly during turns, using a small acceleration.
+    #A similar acceleration pattern is applied to a2 to control altitude transitions.
+    cycles_per_scan = 1
+    oscillation = np.tile(
+        np.concatenate([
+            np.ones(int(turn_time / dt / 2)) * acc_alt,
+            np.ones(int(turn_time / dt / 2)) * -acc_alt
+        ]), cycles_per_scan
+    )
+    # Ensure no extra oscillation at the ends of azimuth scan
+    a3 = np.concatenate((oscillation, np.zeros(int(scan_time / dt))))
+    a3 = np.concatenate((a3, a3))  # No altitude change on the leftward scan
+    a3 = np.tile(a3, ver_N)
+
+    #Compute Azimuth (az) and Altitude (alt) Coordinates:
+    #Computed by integrating acceleration to get velocity, then integrating velocity to get position.
+    v = np.cumsum(a)*dt-scan_v
+    az = np.cumsum(v)*dt
+    v2 = np.cumsum(a3)*dt
+    alt  = np.cumsum(v2)*dt
+
+    flag = np.where(a==0,1,0) #constant scan speed part
+    t = np.arange(0,len(a))*dt
+
+    return az,alt,flag  
+
+def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
+
+    """
+    Function that generates the local scaning pattern.
+    Currently can only generate closed loop    
+    Parameters
+    ----------
+    az_size: float
+        azimuth angular size, in degrees   
+    alt_size: float
+        altitude angular size, in degrees
+    alt_step: float
+        step in altitude angle, in degrees
+    acc: float
+        acceleration in second angle 
+    scan_v: float
+        angular speed of the scan, in deg/sec
+    dt: float
+        time step in second angle 
+    Returns
+    -------
+    az: array
+        azimuth scan path coordinates, in degrees
+    alt: array
+        altitude scan path coordinates, in degrees
+    flag: array
+        constant scan speed part.
+    scan_eff: array
+        scan efficiency: the ratio between the constant scan speed part and not constant scan speed part
+    t: array
+        time during the scan, in second angle
+    """ 
+
+    #----
+    #Compute Number of Vertical Steps 
+    ver_N = int(alt_size//alt_step)
+
+    #Compute Time for Scan and Turns
+    scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
+    turn_time = 2*scan_v/acc #Time required to perform a turn (deceleration, reversal, acceleration).
+
+    #Generate Azimuth Acceleration Pattern (a):
+    #The motion consists of acceleration, constant velocity, and deceleration, forming a symmetric back-and-forth oscillation in azimuth.
+    a = np.concatenate((np.ones(int(turn_time/dt))*acc,np.zeros(int(scan_time/dt))))
+    a = np.concatenate((a,-1*a))
+    #The sequence is repeated for each altitude step (ver_N times).
+    a = np.tile(a,ver_N)
+    #Generate Altitude Acceleration Pattern
+    acc_alt = alt_step/(turn_time/2)**2   
+
+    #The altitude changes slightly during turns, using a small acceleration.
+    #A similar acceleration pattern is applied to a2 to control altitude transitions.
+    cycles_per_scan = 1#int(scan_time / (2 * turn_time))  # Number of oscillations per scan
+    oscillation = np.tile(
+        np.concatenate([
+            np.ones(int(turn_time / dt / 2)) * acc_alt,
+            np.ones(int(turn_time / dt / 2)) * -acc_alt
+        ]), cycles_per_scan
+    )
+    # Ensure no extra oscillation at the ends of azimuth scan
+    a3 = np.concatenate((oscillation, np.zeros(int(scan_time / dt))))
+    #a3 = np.concatenate((a3, -1 * a3))  # Repeat for downward scan
+    a3 = np.concatenate((a3, np.zeros_like(a3)))  # No altitude change on the leftward scan
+    a3 = np.tile(a3, ver_N)
+    #a3 = np.tile(a3,ver_N)
+
+    #Compute Azimuth (az) and Altitude (alt) Coordinates:
+    #Computed by integrating acceleration to get velocity, then integrating velocity to get position.
+    v = np.cumsum(a)*dt-scan_v
+    az = np.cumsum(v)*dt
+    v2 = np.cumsum(a3)*dt
+    alt  = np.cumsum(v2)*dt
+
+    flag = np.where(a==0,1,0) #constant scan speed part
+    t = np.arange(0,len(a))*dt
+
+    return az,alt,flag  
+
 def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
     """
     Function that generates the local scaning pattern.
@@ -69,6 +220,7 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.
     t: array
         time during the scan, in second angle
     """ 
+    #----
     #Compute Number of Vertical Steps 
     ver_N = int(alt_size//alt_step)
 
@@ -138,7 +290,7 @@ def genScanPath(T, alt, az, flag, plot=False):
     
     return coor,flag
 
-def pixelOffset(pixel_num, pixel_pitch):
+def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
     Function that  gernerates the pixel offset vs pointing center
     Parameters
@@ -154,10 +306,11 @@ def pixelOffset(pixel_num, pixel_pitch):
     """ 
     yoffsets = (np.arange(0,pixel_num)-pixel_num/2)*pixel_pitch
 #     offsets = np.vstack((np.zeros(pixel_num),yoffsets)).T
+    xoffsets = np.ones(len(yoffsets)) * pixel_array_separation
     
-    return yoffsets
+    return yoffsets, xoffsets
 
-def genPixelPath(pointing_path, pixel_offset, theta):
+def genPixelPath(pointing_path, pixel_offset, pixel_shift, theta):
     """
     Function that gernerates the pointing time stream for each pixel
     Parameters
@@ -174,14 +327,14 @@ def genPixelPath(pointing_path, pixel_offset, theta):
         the coordinates timestream of the pointing of each pixel, in degrees
     """ 
     pixel_path = []
-    for pixel in pixel_offset:   
-        pixel_w_time = np.append( pixel*np.sin(theta), pixel*np.cos(theta),)
-#         print(pixel_w_time)
+    for pixel, xpixel in zip(pixel_offset, pixel_shift):  
+        pixel_w_time = np.array([xpixel * np.cos(theta) - pixel * np.sin(theta), 
+                                 xpixel * np.sin(theta) + pixel * np.cos(theta)])  # Apply rotation
+        #pixel_w_time = np.append( pixel*np.sin(theta), pixel*np.cos(theta))
         pixel_path.append(pointing_path+pixel_w_time) 
-        
     return pixel_path
 
-def genPointingPath(T, scan_path, HA, lat, dec):
+def genPointingPath(T, scan_path, HA, lat, dec,ra):
     """
     Function that takes local paths and generates the pointing on sky vs time.
     Parameters
@@ -190,8 +343,6 @@ def genPointingPath(T, scan_path, HA, lat, dec):
         coordinates timestream of the pointing
     pixel_offset: float
         spatial distance between adjacent pixels in degrees
-    theta: float
-        angle in degree
     Returns
     -------
     pixel_path: nd array
@@ -202,10 +353,12 @@ def genPointingPath(T, scan_path, HA, lat, dec):
     
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
-    
-    return np.vstack((np.degrees(ha_point-HA*np.pi/12),np.degrees(dec_point))).T
+    path = np.vstack((np.degrees(ha_point-HA*np.pi/12),np.degrees(dec_point))).T
+    path[:,0] += ra
 
-def binMap(pointing_paths, res=0.02, f_range=1,dec=0):
+    return path
+
+def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
     
     """
     Binning the pointing into 2d array
@@ -233,7 +386,7 @@ def binMap(pointing_paths, res=0.02, f_range=1,dec=0):
     x_res = res
     y_res = x_res
 
-    xedges = np.arange(-x_range, x_range+x_res, x_res)
+    xedges = ra+np.arange(-x_range, x_range+x_res, x_res)
     yedges = dec+np.arange(-y_range, y_range+y_res, y_res)
 
     pointings = np.concatenate([pixel for pixel in pointing_paths])
