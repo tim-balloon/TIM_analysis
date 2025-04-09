@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 simulations/python/sim_tools_flatsky.py
 
@@ -134,157 +135,6 @@ def cl_to_cl2d(el, cl, map_shape, pixel_res_radians, left = 0., right = 0.):
     cl2d = np.interp(el_grid.flatten(), el, cl, left = left, right = right).reshape(el_grid.shape)
     return cl2d
 
-def make_gaussian_realisations(el, cl_dict, map_shape, pixel_res_radians):
-
-    """
-    return (correlated) Gaussian realisations of flat sky maps with an underlying power spectrum
-    defined by cl_dict.
-
-    Parameters
-    ----------
-    el: array
-        Multipoles over which the power spectrium is defined.
-    cl_dict: dictionary
-        Contains the auto- and cross-power spectra of multiple bands.
-        Keys are simple band incides.
-        Keys must be 00, 11, 01 for 2 maps; 
-        Keys must be 00, 11, 22, 01, 02, 12 for 3 maps; and so on
-        where
-        00 - 90x90 auto.
-        11 - 150x150 auto.
-        22 - 220x220 auto.
-        01 - 90x150 cross.
-        02 - 90x220 cross.
-        12 - 150x220 cross.
-    map_shape: array_like, shape (2 x 1)
-        dimension on the flatskymap.        
-    pixel_res_radians: float
-        map pixel resolution in radians.
-
-    Returns
-    -------
-    sim_maps: array
-        Correlated simulated maps.
-        returns N maps for N(N+1)/2 spectra.
-
-    """
-
-    #----------------------------------------
-    #refine cl_dict to remove redundant spectra.
-    cl_dict_mod = {} 
-    for keyname in cl_dict:
-        keyname_rev = keyname[::-1]
-        if keyname_rev in cl_dict_mod: continue
-        cl_dict_mod[keyname] = cl_dict[keyname]
-    cl_dict = cl_dict_mod
-    #----------------------------------------
-
-
-    #----------------------------------------
-    #solve quadratic equation to get the number of maps
-    """
-    For "N" maps, we will have N (N +1)/2 = total spectra which is total_spec
-    (N^2 + N)/2 = total_spec
-    N^2 + N - 2 * total_spec = 0
-    a = 1, b = 1, c = - (2 * total_spec)
-    solution is: N = ( -b + np.sqrt( b**2 - 4 * a * c) ) / (2 * a)
-    """
-
-    total_spec = len( cl_dict )
-    a, b, c = 1, 1, -2 * total_spec
-    total_maps = int( ( -b + np.sqrt( b**2 - 4 * a * c) ) / (2 * a) )
-    assert total_maps == int(total_maps)
-    #----------------------------------------
-
-    #----------------------------------------
-    #map stuff
-    ny, nx = map_shape
-    dx = dy = pixel_res_radians
-
-    #norm stuff of maps
-    norm = np.sqrt(1./ (dx * dy))
-    #----------------------------------------
-
-    #----------------------------------------
-    #gauss reals
-    gauss_reals_fft_arr = []
-    for iii in range(total_maps):
-        curr_gauss_reals = np.random.standard_normal([nx,ny])
-        curr_gauss_reals_fft = np.fft.fft2( curr_gauss_reals )
-        gauss_reals_fft_arr.append( curr_gauss_reals_fft )
-    gauss_reals_fft_arr = np.asarray( gauss_reals_fft_arr )
-    #----------------------------------------
-
-    #----------------------------------------
-    tmpcl = list( cl_dict.values() )[0]
-    ndim_for_cl = np.ndim( tmpcl )
-    assert ndim_for_cl in [1, 2]
-
-    if ndim_for_cl == 1: #1d to 2D spec
-        cl_twod_dic = {}
-        for ij in cl_dict:
-            i, j = ij
-            curr_cl_twod = cl_to_cl2d(el, cl_dict[(i,j)], map_shape, pixel_res_radians)
-            cl_twod_dic[(i,j)] = cl_twod_dic[(j,i)] = np.copy( curr_cl_twod )
-    elif ndim_for_cl == 2:
-        cl_twod_dic = {}
-        for ij in cl_dict:
-            i, j = ij
-            cl_twod_dic[(i,j)] = cl_twod_dic[(j,i)] = np.copy( cl_dict[(i,j)] )
-    #----------------------------------------
-    
-    #----------------------------------------
-    #get FFT amplitudes of reals now. Appendix of https://arxiv.org/pdf/0801.4380
-    map_index_combs = []
-    for i in range(total_maps):
-        for j in range(total_maps):
-            key = [j, i]
-            key_rev = [i, j]
-            if key_rev in map_index_combs: continue            
-            map_index_combs.append( key )
-
-    tij_dic = {}
-    for ij in map_index_combs:
-        i, j = ij
-        kinds = np.arange(j)
-        if i == j:
-            t1 = cl_twod_dic[(i,j)]
-            t2 = np.zeros( (ny, nx) )
-            for k in kinds:
-                t2 = t2 + tij_dic[(i,k)]**2.
-            tij_dic[(i,j)] = tij_dic[(j,i)]= np.sqrt( t1-t2 )
-        elif i>j:
-            t1 = cl_twod_dic[(i,j)]
-            t2 = np.zeros( (ny, nx) )
-            for k in kinds: #range(j-1):
-                t2 += tij_dic[(i,k)] * tij_dic[(j,k)]
-            t3 = tij_dic[(j,j)]
-            tij_dic[(i,j)] = (t1-t2)/t3
-    for ij in tij_dic: #remove nans
-        tij_dic[ij][np.isnan(tij_dic[ij])] = 0.
-    #----------------------------------------
-                
-    #----------------------------------------
-    #FFT amplitudes times gauss reals and ifft back
-    sim_maps = []
-    for i in range(total_maps):
-        if i == 0:
-            curr_map_fft = gauss_reals_fft_arr[i] * tij_dic[(i,i)]            
-        else:
-            curr_map_fft = np.zeros( (ny, nx) )
-            for a in range(total_maps): #loop over tij_dic
-                if a>i: continue
-                curr_map_fft = curr_map_fft + gauss_reals_fft_arr[a] * tij_dic[(i,a)]
-        curr_map_fft = curr_map_fft * norm
-        curr_map = np.fft.ifft2( curr_map_fft ).real
-        curr_map = curr_map - np.mean( curr_map )
-        sim_maps.append( curr_map )
-    #----------------------------------------
-
-    sim_maps = np.asarray( sim_maps )
-
-    return sim_maps    
-
 
 def apod_mask(x_grid, y_grid, mask_radius, perform_apod = True, mask_shape = 'circle', taper_radius_fac = 6.):
 
@@ -328,12 +178,9 @@ def apod_mask(x_grid, y_grid, mask_radius, perform_apod = True, mask_shape = 'ci
         radius = np.sqrt( (x_grid**2. + y_grid**2.) )
         inds_to_mask = np.where((radius<=mask_radius))
     elif mask_shape == 'sqaure':
-        inds_to_mask = np.where( (abs(x_grid)>mask_radius) & (abs(y_grid)>mask_radius))
+        inds_to_mask = np.where( (abs(x_grid)<mask_radius) & (abs(y_grid)<mask_radius))
 
-    if apod_mask:
-        mask[inds_to_mask[0], inds_to_mask[1]] = 1.
-    else:
-        mask[inds_to_mask[0], inds_to_mask[1]] = 0.
+    mask[inds_to_mask[0], inds_to_mask[1]] = 0.
 
     taper_radius = mask_radius * taper_radius_fac #
     if perform_apod:
@@ -417,6 +264,192 @@ def radial_profile(z, xy = None, minbin = 0., maxbin = 10., binsize = 1., get_er
 
     return radprf
 
+def make_gaussian_realisations(el, cl_dict, sim_shape, pixel_res_radians_or_inv_samp_freq):
+
+    '''
+    #names to be changed
+    pixel_res_radians --> something that is common for tod and sim.
+    '''
+
+
+    """
+    return (correlated) Gaussian realisations of flat sky maps with an underlying power spectrum
+    defined by cl_dict.
+
+    Parameters
+    ----------
+    el: array
+        Multipoles over which the power spectrium is defined.
+    cl_dict: dictionary
+        Contains the auto- and cross-power spectra of multiple bands.
+        Keys are simple band incides.
+        Keys must be 00, 11, 01 for 2 maps; 
+        Keys must be 00, 11, 22, 01, 02, 12 for 3 maps; and so on
+        where
+        00 - 90x90 auto.
+        11 - 150x150 auto.
+        22 - 220x220 auto.
+        01 - 90x150 cross.
+        02 - 90x220 cross.
+        12 - 150x220 cross.
+    sim_shape: array_like, shape (N x 1)
+        dimension of the sims.        
+    pixel_res_radians_or_inv_samp_freq: float
+        map pixel resolution in radians or
+        inv tod sampling frequency
+
+    Returns
+    -------
+    sim_arr: array
+        Correlated simulated maps.
+        returns N maps for N(N+1)/2 spectra.
+
+    """
+
+    #----------------------------------------
+    #refine cl_dict to remove redundant spectra.
+    cl_dict_unique = {} 
+    for keyname in cl_dict:
+        keyname_rev = keyname[::-1]
+        if keyname_rev in cl_dict_unique: continue
+        curr_cl = cl_dict[keyname]
+        curr_cl[np.isinf(curr_cl) | np.isnan(curr_cl)] = 0.
+        cl_dict_unique[keyname] = curr_cl
+    #cl_dict = cl_dict_mod
+    #----------------------------------------
+
+
+    #----------------------------------------
+    #solve quadratic equation to get the number of maps
+    """
+    For "N" maps, we will have N (N +1)/2 = total spectra which is total_spec
+    (N^2 + N)/2 = total_spec
+    N^2 + N - 2 * total_spec = 0
+    a = 1, b = 1, c = - (2 * total_spec)
+    solution is: N = ( -b + np.sqrt( b**2 - 4 * a * c) ) / (2 * a)
+    """
+
+    total_spec = len( cl_dict_unique )
+    a, b, c = 1, 1, -2 * total_spec
+    total_sims = int( ( -b + np.sqrt( b**2 - 4 * a * c) ) / (2 * a) )
+    assert total_sims == int(total_sims)
+    #----------------------------------------
+
+    #----------------------------------------
+    #map stuff
+    sim_dim = np.ndim( sim_shape )
+    if sim_dim == 2: #maps
+        fftvar = np.fft.fft2
+        ifftvar = np.fft.ifft2
+        ny, nx = sim_shape
+        dx = dy = pixel_res_radians_or_inv_samp_freq
+
+        #norm stuff of maps
+        norm = np.sqrt(1./ (dx * dy))
+    else: #tod
+        fftvar = np.fft.fft
+        ifftvar = np.fft.ifft
+        nx = sim_shape[0]
+        dx = pixel_res_radians_or_inv_samp_freq
+
+        #norm stuff of tods
+        norm = np.sqrt(1./ dx**2)
+    #----------------------------------------
+
+    #----------------------------------------
+    #gauss reals
+    gauss_reals_fft_arr = []
+    for iii in range(total_sims):
+        if sim_dim == 2:
+            curr_gauss_reals = np.random.standard_normal([nx,ny])
+        else:
+            curr_gauss_reals = np.random.standard_normal(nx)
+        curr_gauss_reals_fft = fftvar( curr_gauss_reals )
+        gauss_reals_fft_arr.append( curr_gauss_reals_fft )
+    gauss_reals_fft_arr = np.asarray( gauss_reals_fft_arr )
+    #----------------------------------------
+
+    #----------------------------------------
+    tmpcl = list( cl_dict.values() )[0]
+    ndim_for_cl = np.ndim( tmpcl )
+    assert ndim_for_cl in [1, 2]
+
+
+    if sim_dim == 2:
+        if ndim_for_cl == 1: #1d to 2D spec
+            pspec_dic_for_sims = {}
+            for ij in cl_dict:
+                i, j = ij
+                curr_cl_twod = cl_to_cl2d(el, cl_dict[(i,j)], sim_shape, pixel_res_radians)
+                pspec_dic_for_sims[(i,j)] = pspec_dic_for_sims[(j,i)] = np.copy( curr_cl_twod )
+        elif ndim_for_cl == 2:
+            pspec_dic_for_sims = {}
+            for ij in cl_dict:
+                i, j = ij
+                pspec_dic_for_sims[(i,j)] = pspec_dic_for_sims[(j,i)] = np.copy( cl_dict[(i,j)] )
+    else:
+        pspec_dic_for_sims = cl_dict
+    #----------------------------------------
+    
+    #----------------------------------------
+    #get FFT amplitudes of reals now. Appendix of https://arxiv.org/pdf/0801.4380
+    map_index_combs = []
+    for i in range(total_sims):
+        for j in range(total_sims):
+            key = [j, i]
+            key_rev = [i, j]
+            if key_rev in map_index_combs: continue            
+            map_index_combs.append( key )
+
+    tij_dic = {}
+    for ij in map_index_combs:
+        i, j = ij
+        kinds = np.arange(j)
+        if i == j:
+            t1 = pspec_dic_for_sims[(i,j)]
+            ##t2 = np.zeros( (ny, nx) )
+            t2 = np.zeros_like( t1 ) #check me again
+            for k in kinds:
+                t2 = t2 + tij_dic[(i,k)]**2.
+            tij_dic[(i,j)] = tij_dic[(j,i)]= np.sqrt( t1-t2 )
+        elif i>j:
+            t1 = pspec_dic_for_sims[(i,j)]
+            ##t2 = np.zeros( (ny, nx) )
+            t2 = np.zeros_like( t1 ) #check me again
+            for k in kinds: #range(j-1):
+                t2 += tij_dic[(i,k)] * tij_dic[(j,k)]
+            t3 = tij_dic[(j,j)]
+            tij_dic[(i,j)] = (t1-t2)/t3
+    for ij in tij_dic: #remove nans
+        tij_dic[ij][np.isnan(tij_dic[ij])] = 0.
+    #----------------------------------------
+                
+    #----------------------------------------
+    #FFT amplitudes times gauss reals and ifft back
+    sim_arr = []
+    for i in range(total_sims):
+        if i == 0:
+            curr_sim_fft = gauss_reals_fft_arr[i] * tij_dic[(i,i)]
+        else:
+            if sim_dim == 2:
+                curr_sim_fft = np.zeros( (ny, nx) )
+            elif sim_dim == 1:
+                curr_sim_fft = np.zeros( nx )
+            for a in range(total_sims): #loop over tij_dic
+                if a>i: continue
+                curr_sim_fft = curr_sim_fft + gauss_reals_fft_arr[a] * tij_dic[(i,a)]
+        curr_sim_fft = curr_sim_fft * norm
+        curr_sim = ifftvar( curr_sim_fft ).real
+        curr_sim = curr_sim - np.mean( curr_sim )
+        sim_arr.append( curr_sim )
+    #----------------------------------------
+
+    sim_arr = np.asarray( sim_arr )
+
+    return sim_arr    
+
 ################################################################################################################
 ################################################################################################################
 ################################################################################################################
+=======
+>>>>>>> 116ef40c0c5adba8f06cc3730e260b2c872f2c4f
