@@ -186,7 +186,6 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     flag = np.where(a==0,1,0) #constant scan speed part
     t = np.arange(0,len(a))*dt
-
     return az,alt,flag  
 
 def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
@@ -349,11 +348,11 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra):
         the coordinates timestream of the pointing of each pixel, in degrees
     """     
     alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1])
-    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])
-    
+    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])    
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
     path = np.vstack((np.degrees(ha_point-HA*np.pi/12),np.degrees(dec_point))).T
+    #plt.plot(np.degrees(ha_point-HA*np.pi/12)[:359818//3],np.degrees(dec_point)[:359818//3])
     path[:,0] += ra
 
     return path

@@ -401,16 +401,15 @@ if __name__ == "__main__":
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
     dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    T = np.arange(0,T_duration,dt) *3600
+    T = np.arange(0,T_duration,dt) * 3600
     HA = 15*np.arange(-T_duration/2,T_duration/2,dt)  # hours angle
     #load the observing date to generate the local sideral time (lst) coordinates. 
     start_time = Time(P['launch_date'], scale="utc")
-
     #----------------------------------------
     #Generate the scan path for the center of the arrays. 
-    if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=P['dt_scan'])
-    if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=P['dt_scan'])
-    if(P['scan']=='zigzag'): az, alt, flag = genLocalPath_cst_el_scan_zigzag(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=P['dt_scan'])
+    if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
+    if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
+    if(P['scan']=='zigzag'): az, alt, flag = genLocalPath_cst_el_scan_zigzag(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
     scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only constant scan speed part of the pointing. 
     T_trim = T            #[scan_flag==1]
@@ -464,7 +463,7 @@ if __name__ == "__main__":
     axp.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
     #Generate the TODs and save Them in hdf5
     spf = int(1/(dt*3600)) #sample per frame defined here as the acquisition rate in Hz. 
@@ -518,36 +517,35 @@ if __name__ == "__main__":
     save_lst_lat(tod_file, lst, lat, 1)
     save_az_el(tod_file, azimuths, elevations, 1)
     #----------------------------------------------------------------------------  
-    """
+    
     #example noise model for auto- and cross-power between detectors
     freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(P["tod_noise_level"], P["fknee"], P["alphaknee"], len(T_trim), 1/(dt*3600))
     cross_noise_powspec = sim_tools_tod.get_correlated_powspec(P["rho_one_over_f"], noise_powspec_one_over_f, noise_powspec_one_over_f)
     noise_powspec_dic = {}
     for i in range(total_detectors):
         for j in range(total_detectors):
-            if i == j:
-                noise_powspec_dic[i, j] = noise_powspec
-            else:
-                noise_powspec_dic[i, j] = cross_noise_powspec
+            if i == j:  noise_powspec_dic[i, j] = noise_powspec
+            else:       noise_powspec_dic[i, j] = cross_noise_powspec
+
     fsval = 14
     ax = plt.subplot(111, yscale = 'log', xscale = 'log')
     plt.plot( freq, noise_powspec, label = r'Total', color = 'black' )
     plt.plot( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
     plt.plot( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-    plt.xlabel(r'Freqeuency [Hz]', fontsize = fsval)
+    plt.xlabel(r'Frequency [Hz]', fontsize = fsval)
     plt.ylabel(r'Noise power NET ', fontsize = fsval)
     plt.grid(True, lw = 0.2, alpha = 0.2, which = 'both')
     plt.ylim(1e-1, 1e11)
     plt.legend(loc = 1, fontsize = fsval - 2)
     plt.show()
 
+    '''
     tod_sims_dic = {}
     pspec_dic_sims = {}
     for sim_no in range( nsims ):
         print('Sim = %s of %s' %(sim_no+1, nsims))
-        tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq, noise_powspec_dic, len(T_trim), (dt*3600))
-        ###print( tod_sim_arr.shape ); ##sys.exit()
-        
+        tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq, noise_powspec_dic, (1,len(T_trim)), (dt*3600))
+
         #get the sim spectra now.
         curr_sim_pspec_dic = {}
         for (cntr1, tod1) in enumerate( tod_sim_arr ):
@@ -579,7 +577,7 @@ if __name__ == "__main__":
                     
                 curr_sim_pspec_dic[(cntr1, cntr2)] = [freq, curr_spec]
         pspec_dic_sims[sim_no] = curr_sim_pspec_dic
-    """
+    '''
     #----------------------------------------
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
@@ -619,6 +617,7 @@ if __name__ == "__main__":
         bar.next()
     bar.finish
     print('')
+    
           
     #Same block to save the TODs as above, but for the LW array. 
     bar = Bar('Generate the LW TODs', max=len(freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ]))

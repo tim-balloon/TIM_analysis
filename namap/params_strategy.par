@@ -33,7 +33,7 @@ launch_date = "2026-01-01 00:00:00"
 #----- Sky simulation -----
 #Fits file containing the mock sky out of which we generates the TOD
 path = 'fits_and_hdf5/'
-file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
+file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_CII_de_Looze_smoothed_MJy_sr.fits'
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
 #---------------------------
 
@@ -50,7 +50,7 @@ dt_scan=0.001
 #---------------------------
 
 #----- Noise ---------------
-nsim_noise = 10
+nsim_noise = 1
 #rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
 tod_noise_level = 5e-1 #in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
 fknee = 0.5 ##0.05 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
