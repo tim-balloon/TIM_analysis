@@ -56,11 +56,10 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
         Implement spectral axis 
 
     The different par: 
-     params_namap.par: generates the coadd map of all the (64 so far) detectors 
-     params_namap_5det.par: generates the coadd map of 5 detectors 
-     params_namap_5det_ind.par: generates the individual maps of 5 detectors 
-     params_namap_1det_ind.par: generates the individual map of the central detector
-
+    params_namap.par: generates the coadd map of all the (64 so far) detectors 
+    params_namap_5det.par: generates the coadd map of 5 detectors 
+    params_namap_5det_ind.par: generates the individual maps of 5 detectors 
+    params_namap_1det_ind.par: generates the individual map of the central detector
     '''
 
     #-------------------------------------------------------------------------------------------------------------------------
@@ -103,7 +102,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     if(kid_num=='all'): 
         btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-        kid_num = btable['Name'] 
+        filtered = btable[btable['Frequency'] == P['frequency']]
+        kid_num = filtered['Name']
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
