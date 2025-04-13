@@ -23,8 +23,6 @@ import astropy.units as u
 import matplotlib
 import scipy.constants as cst
 # Set plot parameters
-import sim_tools_tod
-import sim_tools_flatsky
 import sys
 
 import pygetdata as gd
@@ -356,15 +354,6 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
 
-    #get params for sim generation
-
-    #sim specs
-    nsims = P['nsim_noise']
-
-    #define some detectors
-    total_detectors = 2*P["nb_channels_per_array"]
-    detector_array = np.arange( total_detectors )
-
     #The coordinates of the field
     name=P['name_field']
     c=SkyCoord.from_name(name)
@@ -463,7 +452,7 @@ if __name__ == "__main__":
     axp.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}.png")
-    plt.close()
+    plt.show()
     #----------------------------------------
     #Generate the TODs and save Them in hdf5
     spf = int(1/(dt*3600)) #sample per frame defined here as the acquisition rate in Hz. 
@@ -516,68 +505,7 @@ if __name__ == "__main__":
     print(f"Generate the lst and lat in {np.round((time.time() - start),2)}"+'s')
     save_lst_lat(tod_file, lst, lat, 1)
     save_az_el(tod_file, azimuths, elevations, 1)
-    #----------------------------------------------------------------------------  
-    
-    #example noise model for auto- and cross-power between detectors
-    freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(P["tod_noise_level"], P["fknee"], P["alphaknee"], len(T_trim), 1/(dt*3600))
-    cross_noise_powspec = sim_tools_tod.get_correlated_powspec(P["rho_one_over_f"], noise_powspec_one_over_f, noise_powspec_one_over_f)
-    noise_powspec_dic = {}
-    for i in range(total_detectors):
-        for j in range(total_detectors):
-            if i == j:  noise_powspec_dic[i, j] = noise_powspec
-            else:       noise_powspec_dic[i, j] = cross_noise_powspec
 
-    fsval = 14
-    ax = plt.subplot(111, yscale = 'log', xscale = 'log')
-    plt.plot( freq, noise_powspec, label = r'Total', color = 'black' )
-    plt.plot( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-    plt.plot( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-    plt.xlabel(r'Frequency [Hz]', fontsize = fsval)
-    plt.ylabel(r'Noise power NET ', fontsize = fsval)
-    plt.grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-    plt.ylim(1e-1, 1e11)
-    plt.legend(loc = 1, fontsize = fsval - 2)
-    plt.show()
-
-    '''
-    tod_sims_dic = {}
-    pspec_dic_sims = {}
-    for sim_no in range( nsims ):
-        print('Sim = %s of %s' %(sim_no+1, nsims))
-        tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq, noise_powspec_dic, (1,len(T_trim)), (dt*3600))
-
-        #get the sim spectra now.
-        curr_sim_pspec_dic = {}
-        for (cntr1, tod1) in enumerate( tod_sim_arr ):
-            for (cntr2, tod2) in enumerate( tod_sim_arr ):
-                if cntr2<cntr1: continue
-                    
-                if (0):
-                    ax = plt.subplot(111)
-                    plt.plot( tod1 )
-                    plt.show(); sys.exit()
-                
-                freq = np.fft.fftfreq(len(T_trim), (dt*3600)) #TOD frequencies.
-                curr_spec = ( np.fft.fft(tod1) * (dt*3600) * np.conj( np.fft.fft(tod2) * (dt*3600) ) / len(T_trim)  ).real
-
-                if (0):
-                    inds = np.where(freq>0)
-                    curr_noise_powspec = noise_powspec_dic[(cntr1, cntr2)]
-                    fsval = 14
-                    ax = plt.subplot(111, yscale = 'log', xscale = 'log')
-                    plt.plot( freq[inds], curr_noise_powspec[inds], label = r'Input', color = 'black' )
-                    plt.plot( freq[inds], curr_spec[inds], color = 'orangered', label = r'Sims' )
-                    plt.xlabel(r'Freqeuency [Hz]', fontsize = fsval)
-                    plt.ylabel(r'Noise power NET $\mu$K$^{2}$ seconds', fontsize = fsval)
-                    plt.grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-                    #ylim(5e4, 1e8); 
-                    plt.xlim(1e-2, 1e2)
-                    plt.legend(loc = 1, fontsize = fsval - 2)
-                    plt.show(); ##sys.exit()
-                    
-                curr_sim_pspec_dic[(cntr1, cntr2)] = [freq, curr_spec]
-        pspec_dic_sims[sim_no] = curr_sim_pspec_dic
-    '''
     #----------------------------------------
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)

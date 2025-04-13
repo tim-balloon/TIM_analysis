@@ -103,7 +103,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     if(kid_num=='all'): 
         btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-        kid_num = btable['Name']
+        kid_num = btable['Name'] 
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
