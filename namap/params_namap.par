@@ -8,8 +8,8 @@ detector_table = 'config/TIM_kid_table.tsv'
 
 #--- Choose detectors to analyse ---
 kid_num = 'all' #ID of the detector(s) to be analyzed.
+frequency = '715.0'
 #Can be a single detector, e.g., ('A_603',),  a list of detector, e.g, ('A_432', 'A_549', 'A_603') or the entire array 'all' 
-#Need to add an option to get all detectors of a feedline or of a frequency. 
 
 #--- Chose the data in the time dimension ---
 num_frames=3500 #integration time in seconds to be loaded. 
@@ -25,7 +25,6 @@ Power_only = True #To plot power amplitude map. So far the only option, but we c
 #--- Include noise ---
 #if True, will compute the TOD dispersion and plot the inverse variance weighted map. Yet to be implemented
 noise_det = False
-
 
 #--- Correct for the poiting offset ---
 #There is no pointing offset from simulated TOD so far. 
