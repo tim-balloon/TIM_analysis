@@ -135,7 +135,7 @@ def gen_tod(wcs, Map, ybins, xbins, pixel_offset, pointing_paths):
     positions_x = np.zeros((len(pixel_offset), len(pointing_paths[0][:,0])))
     positions_y = np.zeros((len(pixel_offset), len(pointing_paths[0][:,0])))
     samples = np.zeros((len(pixel_offset), len(pointing_paths[0][:,0])))
-
+    
     for detector, offset in enumerate(pixel_offset):
         
         #data = map_f.sample(position_series + offset, properties=idxs)
@@ -240,7 +240,7 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, po
     H = h5py.File(tod_file, "a")
 
     for detector, (offset, shift, name, pointing) in enumerate(zip(pixel_offset, pixel_shift, det_names, pointing_paths)):
-        namegrp = f'kid{name}_roach'
+        namegrp = f'kid_{name}_roach'
         if namegrp not in H:
             grp = H.create_group(namegrp)
             grp.create_dataset('data', data=samples[detector,:], compression='gzip', compression_opts=9)
@@ -249,12 +249,12 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, po
             grp.create_dataset('pixel_offset_x', data=shift)
             grp.create_dataset('frequency', data=shift)
 
-        namegrp = f'kid{name}_RA'
+        namegrp = f'kid_{name}_RA'
         if namegrp not in H:
             grp = H.create_group(namegrp)    
             grp.create_dataset('data', data=pointing[:,0])
             grp.create_dataset('spf', data=spf)
-        namegrp = f'kid{name}_DEC'
+        namegrp = f'kid_{name}_DEC'
         if namegrp not in H:
             grp = H.create_group(namegrp)    
             grp.create_dataset('data', data=pointing[:,1])
@@ -312,7 +312,31 @@ def save_az_el(tod_file, azimuths, elevations, spf):
     -------
     """ 
     H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('azimuth', 'elevation'), (azimuths,elevations))):
+    for i, (name, coord) in enumerate(zip(('AZ', 'EL'), (azimuths,elevations))):
+        namegrp = name
+        if namegrp not in H:
+            grp = H.create_group(namegrp)
+            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+            grp.create_dataset('spf', data=spf)
+    H.close() 
+
+def save_PA(tod_file, PA, spf):
+    """
+    Save the parallactic angle in the .hdf5 format. 
+
+    Parameters
+    ----------
+    tod_file: string 
+        name of the output hdf5 file  
+    PA: array
+        the parallactic angle timestream 
+    spf: int
+        the number of samples per frame
+    Returns
+    -------
+    """ 
+    H = h5py.File(tod_file, "a")
+    for i, (name, coord) in enumerate(zip(('PA',), (PA,))):
         namegrp = name
         if namegrp not in H:
             grp = H.create_group(namegrp)
@@ -342,7 +366,6 @@ if __name__ == "__main__":
         Problem in HA to be fixed. 
         Make sure that TOD are generated with right periode. 
     '''
-
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
     parser = argparse.ArgumentParser(description="strategy parameters",
@@ -391,14 +414,14 @@ if __name__ == "__main__":
     T_duration = P['T_duration'] 
     dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     T = np.arange(0,T_duration,dt) * 3600
-    HA = 15*np.arange(-T_duration/2,T_duration/2,dt)  # hours angle
-    #load the observing date to generate the local sideral time (lst) coordinates. 
-    start_time = Time(P['launch_date'], scale="utc")
+    HA = 15*np.arange(-T_duration/2,T_duration/2,dt) #degrees
+
     #----------------------------------------
     #Generate the scan path for the center of the arrays. 
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='zigzag'): az, alt, flag = genLocalPath_cst_el_scan_zigzag(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
+
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
     scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only constant scan speed part of the pointing. 
     T_trim = T            #[scan_flag==1]
@@ -485,95 +508,75 @@ if __name__ == "__main__":
     #Create the world coordinate object. 
     wcs = WCS(hdr, naxis=2) 
     #----------------------------------------
-    #Local Sideral Time: 
-    # Define the observation start and end time
-    print('Generate the lst and lat coordinates')
+    #load the observing date to generate the local sideral time (lst) coordinates. 
+    #obs_start_time = Time(P['launch_date'], scale="utc")
     start = time.time()
-    T_lst = T[::300]/3600 #1Hz sampling
-    times = start_time + T_lst * u.h
-    scan_sky_trim = scan_path_sky[::300,:]
-    # Convert each RA/Dec to Alt/Az at the corresponding time
-    altaz_frame = AltAz(obstime=times, location=mcmurdo)
-    skycoords = SkyCoord(ra=scan_sky_trim[:,0]*u.deg, dec=scan_sky_trim[:,1]*u.deg, frame="icrs")
-    altaz_coords = skycoords.transform_to(altaz_frame)
-    # Extract Azimuth and Elevation
-    azimuths = altaz_coords.az
-    elevations = altaz_coords.alt
-    # Compute the Local Sidereal Time (LST) for each time
-    lst = [time.sidereal_time("apparent", longitude=lon).value for time in times]
+    ra_path=scan_path_sky[:,0]
+    dec_path=scan_path_sky[:,1]
+    lst = (ra_path + HA) / 15 #hour angle
     lat = np.ones(len(lst)) * lat
-    print(f"Generate the lst and lat in {np.round((time.time() - start),2)}"+'s')
-    save_lst_lat(tod_file, lst, lat, 1)
-    save_az_el(tod_file, azimuths, elevations, 1)
-
-    #----------------------------------------
+    latr = np.radians(lat)
+    decr = np.radians(dec_path)
+    HAr = np.radians(HA)
+    el = np.arcsin(np.sin(decr)*np.sin(latr)+np.cos(decr)*np.cos(latr)*np.cos(HAr))
+    az = np.arcsin(-np.sin(HAr)*np.cos(decr)/np.cos(el))
+    #Parrallactic angle
+    y_pa = np.cos(latr)*np.sin(HAr)
+    x_pa = np.sin(latr)*np.cos(decr)-np.cos(HAr)*np.cos(latr)*np.sin(decr)
+    PA = np.arctan2(y_pa, x_pa)
+    save_lst_lat(tod_file, lst, lat, spf)
+    save_az_el(tod_file, np.degrees(az), np.degrees(el), spf)
+    save_PA(tod_file, np.degrees(PA), spf)
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
+    #----------------------------------------
+
     #Finally, we save the TODs of each pixel, depending on their frequency band. 
-    #We first save the TODs of pixels in the HW array. 
+    #We first save the TODs of pixels in the HW array, then in the LW array. 
     start = time.time()
-    bar = Bar('Generate the HW TODs', max=len(freqs[:P['nb_channels_per_array']]))
-    #Select the pointing path for pixels belonging to the HW array.
-    pointing_paths_to_save = pointing_paths[:P['nb_pixel_HW']]
-    #Then, for each frequency bandpass: 
-    for f, F in enumerate(freqs[:P['nb_channels_per_array']]):
-        #Select the frequency channel out of which the TODs will be sampled. 
-        Map = cube[f,:,:]
-        #Samples the TODs from Map given the pointing paths
-        wcs, map, hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, ybins, xbins, pixel_offset_HW, pointing_paths_to_save)
-        #----------------------------------------
-        fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
-        imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-        img = axs[1].imshow(map, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-        count = axs[2].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
-        for ax in (axs[0], axs[1], axs[2]):
-            lon = ax.coords[0]
-            lat = ax.coords[1]
-            lat.set_major_formatter('d.d')
-            lon.set_major_formatter('d.d')
-            lon.set_axislabel('RA')
-            lat.set_axislabel('Dec')
-            if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
-        plt.subplots_adjust(wspace=0, hspace=0)
-        plt.savefig(os.getcwd()+'/plot/'+f'freq{F.value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-        plt.close()
-        #----------------------------------------
-        #Select the right names of the detectors in the name list. 
-        names = det_names[f * P['nb_pixel_HW'] : (f + 1) * P['nb_pixel_HW']]
-        #Save the TODs.
-        save_tod_in_hdf5(tod_file, names, samples, pixel_offset_HW, pixel_shift_HW, pointing_paths_to_save, P['detectors_name_file'], F, spf)
-        bar.next()
-    bar.finish
-    print('')
+
+    for array, freqs_of_array, pointing_paths_to_save, pixel_offset_array, pixel_shift_array in zip(('HW', 'LW'), 
+                                                           (freqs[:P['nb_channels_per_array']], freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ] ),
+                                                           (pointing_paths[:P['nb_pixel_HW']],  pointing_paths[P['nb_pixel_HW']:]),
+                                                           (pixel_offset_HW, pixel_offset_LW),
+                                                           (pixel_shift_HW, pixel_shift_LW)):
+        
+        bar = Bar(f'Generate the {array} TODs', max=len(freqs_of_array))
+        #Then, for each frequency bandpass: 
+        for f, F in enumerate(freqs_of_array):
+            #Select the frequency channel out of which the TODs will be sampled. 
+            if(array=='LW'): Map = cube[f+P['nb_channels_per_array'],:,:]
+            else: Map = cube[f,:,:]
+            #Samples the TODs from Map given the pointing paths ofppixels in an array seing the same frequency (but different beams).
+            wcs, map, hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, ybins, xbins, pixel_offset_array, pointing_paths_to_save)
+            #----------------------------------------
+            fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
+            imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
+            img = axs[1].imshow(map, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
+            count = axs[2].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
+            for ax in (axs[0], axs[1], axs[2]):
+                lon = ax.coords[0]
+                lat = ax.coords[1]
+                lat.set_major_formatter('d.d')
+                lon.set_major_formatter('d.d')
+                lon.set_axislabel('RA')
+                lat.set_axislabel('Dec')
+                if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
+            plt.subplots_adjust(wspace=0, hspace=0)
+            plt.savefig(os.getcwd()+'/plot/'+f'freq{F.value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
+            plt.close()
+            #----------------------------------------
+            #Select the right names of the detectors in the name list. 
+            if(array=='HW'): names = det_names[f * P['nb_pixel_HW'] : (f + 1) * P['nb_pixel_HW']]
+            else:
+                index = P['nb_pixel_HW'] * P['nb_channels_per_array']
+                names = det_names[index +f * P['nb_pixel_LW'] :index + (f + 1) * P['nb_pixel_LW']]
+            #Save the TODs.
+            save_tod_in_hdf5(tod_file, names, samples, pixel_offset_array, pixel_shift_array, pointing_paths_to_save, P['detectors_name_file'], F, spf)
+            bar.next()
+        bar.finish
+        print('')
     
-          
-    #Same block to save the TODs as above, but for the LW array. 
-    bar = Bar('Generate the LW TODs', max=len(freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ]))
-    pointing_paths_to_save = pointing_paths[P['nb_pixel_HW']:]
-    for f, F in enumerate(freqs[P['nb_channels_per_array']:P['nb_channels_per_array']*2]):
-        Map = cube[P['nb_channels_per_array']+f,:,:]
-        wcs, map, hist, norm, samples, positions_x, positions_y =  gen_tod(wcs, Map, ybins, xbins, pixel_offset_LW, pointing_paths_to_save)
-        #----------------------------------------
-        fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
-        imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-        img = axs[1].imshow(map, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
-        count = axs[2].imshow(norm, interpolation='nearest', origin='lower', cmap='binary' )
-        for ax in (axs[0], axs[1], axs[2]):
-            lon = ax.coords[0]
-            lat = ax.coords[1]
-            lat.set_major_formatter('d.d')
-            lon.set_major_formatter('d.d')
-            lon.set_axislabel('RA')
-            lat.set_axislabel('Dec')
-            if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
-        plt.subplots_adjust(wspace=0, hspace=0)
-        plt.savefig(os.getcwd()+'/plot/'+f'freq{F.value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-        plt.close()
-        #----------------------------------------
-        #Save the TODs in .hdf5 
-        index = P['nb_pixel_HW'] * P['nb_channels_per_array']
-        names = det_names[index +f * P['nb_pixel_LW'] :index + (f + 1) * P['nb_pixel_LW']]
-        save_tod_in_hdf5(tod_file, names, samples, pixel_offset_LW, pixel_shift_LW, pointing_paths_to_save, P['detectors_name_file'], F, spf)
-        bar.next()
-    bar.finish
     print(f"Generate the TODs in {np.round((time.time() - start),2)}"+'s')
+    #----------------------------------------
+
