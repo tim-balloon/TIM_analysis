@@ -1,6 +1,8 @@
 import numpy as np
 from TIM_scan_strategy import *
 from IPython import embed
+from astropy.coordinates import SkyCoord, EarthLocation, AltAz, ICRS
+
 
 def hitsPerSqdeg(total_hits, area, res):
     """
@@ -333,7 +335,8 @@ def genPixelPath(pointing_path, pixel_offset, pixel_shift, theta):
         pixel_path.append(pointing_path+pixel_w_time) 
     return pixel_path
 
-def genPointingPath(T, scan_path, HA, lat, dec,ra):
+def genPointingPath(T, scan_path, HA, lat, dec,ra, azel=False):
+
     """
     Function that takes local paths and generates the pointing on sky vs time.
     Parameters
@@ -348,14 +351,109 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra):
         the coordinates timestream of the pointing of each pixel, in degrees
     """     
     alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1])
-    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])    
+    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0]) 
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
     path = np.vstack((np.degrees(ha_point-HA*np.pi/12),np.degrees(dec_point))).T
-    #plt.plot(np.degrees(ha_point-HA*np.pi/12)[:359818//3],np.degrees(dec_point)[:359818//3])
     path[:,0] += ra
+    azel_path = np.vstack((np.degrees(elevationAngle(dec,lat,HA)),np.degrees(azimuthAngle(dec,lat,HA)))).T
 
-    return path
+    if(azel): return path, azel_path
+    else: return path
+
+def genPointingPath_mod(scan_path, HA, lat, dec,ra, azel=False):
+    """
+    Function that takes local paths and generates the pointing on sky vs time.
+    Parameters
+    ----------
+    T: array
+        coordinates timestream of the pointing
+    pixel_offset: float
+        spatial distance between adjacent pixels in degrees
+    Returns
+    -------
+    pixel_path: nd array
+        the coordinates timestream of the pointing of each pixel, in degrees
+    """    
+    HAr = HA * np.pi / 12 # Hour angle [rad]
+    decr = np.radians(dec)  # DEC offset due to scanning [rad]
+    latr = np.radians(lat)             # Observer latitude [rad]
+    # Precompute trigonometric terms
+    sin_dec = np.sin(decr)
+    cos_dec = np.cos(decr)
+    sin_lat = np.sin(latr)
+    cos_lat = np.cos(latr)
+    cos_HA = np.cos(HAr)
+    sin_HA = np.sin(HAr)
+
+    el_namap = np.arcsin(sin_dec*sin_lat+cos_lat*cos_dec*cos_HA) 
+    az_namap = np.arccos((sin_dec-sin_lat*np.sin(el_namap))/(cos_lat*np.cos(el_namap)))
+    index, = np.where(sin_HA>0)
+    az_namap[index] = 2*np.pi - az_namap[index]
+    el_tot = el_namap + np.radians(scan_path[:, 1])
+    az_tot = az_namap + np.radians(scan_path[:, 0])
+
+    sin_el_tot = np.sin(el_tot)
+    sin_az_tot = np.sin(az_tot)
+    cos_el_tot = np.cos(el_tot)
+    cos_az_tot = np.cos(az_tot)
+
+    sin_dec_namap = sin_el_tot*sin_lat+cos_lat*cos_el_tot*cos_az_tot
+    dec_namap = np.arcsin(sin_dec_namap)
+    cos_dec_namap = np.cos(dec_namap)
+    hour_angle = np.arccos((sin_el_tot-sin_lat*sin_dec_namap)/(cos_lat*cos_dec_namap))
+    index, = np.where(sin_az_tot > 0)
+    hour_angle[index] =  - hour_angle[index]
+    ra_namap = HA*15 - np.degrees(hour_angle) 
+    index, = np.where(ra_namap<0)
+    path = np.vstack((ra_namap+ra,np.degrees(dec_namap))).T
+    azel_path = np.vstack((np.degrees(az_tot),np.degrees(el_tot))).T
+
+    if(azel): return path, azel_path
+    else: return path
+
+    '''
+    times = np.arange(0,len(T),300)
+    for t in times: 
+        fig, axs = plt.subplots(1,2,figsize=(8,5), dpi=160,)
+        axs[0].plot(azi[:t], alt[:t])
+        axs[0].set_xlabel('az');axs[0].set_ylabel('el')
+        axs[0].set_xlim(-2.1,2.1); axs[0].set_ylim(0.39, 0.7)
+        axs[0].set_title(f'HA={HA[t]:2f}deg')
+
+        axs[1].set_xlabel('az pattern');axs[1].set_ylabel('el pattern')
+        axs[1].plot(path[:t,0], path[:t,1])
+        axs[1].set_xlim(52.7,53.5); axs[1].set_ylim(-27.69,-27.9)
+        
+        fig.tight_layout();fig.savefig(f'plot/b_frame_t{t:2f}.png')
+        plt.close()
+    '''
+    '''
+    fig, axs = plt.subplots(1,2,figsize=(5,2.5), dpi=160,)
+    axs[0].plot(az, el)
+    axs[0].set_xlabel('az');axs[0].set_ylabel('el')
+    axs[1].set_xlabel('az pattern');axs[1].set_ylabel('el pattern')
+    axs[0].set_ylim(0.69,0.7)
+    axs[0].set_xlim(-0.16, 0.16)
+    axs[1].set_xlim(-0.35, 0.35)
+    axs[1].set_ylim(-0.05, 0.031) 
+    axs[1].plot(scan_path[:,0], scan_path[:,1])
+    plt.show()
+    times = np.arange(0,len(T),30000)
+    for t in times: 
+        fig, axs = plt.subplots(1,2,figsize=(8,5), dpi=160,)
+        axs[0].plot(az[:t], el[:t])
+        axs[0].set_xlabel('az');axs[0].set_ylabel('el')
+        axs[1].set_xlabel('az pattern');axs[1].set_ylabel('el pattern')
+        axs[0].set_title(f'HA={HA[t]:2f}deg')
+        axs[0].set_ylim(0.69,0.7)
+        axs[0].set_xlim(-0.16, 0.16)
+        axs[1].set_xlim(-0.35, 0.35)
+        axs[1].set_ylim(-0.05, 0.031) 
+        axs[1].plot(scan_path[:t,0], scan_path[:t,1])
+        fig.tight_layout();fig.savefig(f'plot/a_frame_t{t:2f}.png')
+        plt.close()
+    '''
 
 def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
     
@@ -412,75 +510,3 @@ def bining(xedges,yedges,pointings):
     H, xedges, yedges = np.histogram2d(pointings[:,0], pointings[:,1], bins=(xedges, yedges))
     return H.T
 
-def az_scan_custom(stripe_size, step_y, num_steps, xoffset=0, yoffset=0, plot=False):
-
-    """
-    Generate the pointing path of a constant elevation scan 
-    Parameters
-    ----------
-    stripe_size: float
-        the size in degrees of one strip
-    step_y: float
-        the elevation step between two stripes in degrees
-    num_step: float
-        the number f step to do
-    xoffet: float
-        the x offset of the beginning of the scan path wrt. the origin, in degree
-    yoffet: float
-        the y offset of the beginning of the scan path wrt. the origin, in degree
-    Returns
-    -------
-    x_series: array
-        azimuth coordinates of the scan path
-    y_series: array
-        elevation coordinates of the scan path
-    """ 
-
-    # Define the field size
-    X = stripe_size / 2  # Half the field size (square bounds)
-
-    # Adjust the starting point and stripe size
-    x0 = -stripe_size / 2
-    
-    # Calculate the y0 offset to center the middle row at y = 0
-    if num_steps % 2 == 1:  # Odd number of rows
-        y0 = -((num_steps // 2) * step_y)
-    else:  # Even number of rows
-        y0 = -((num_steps // 2 - 0.5) * step_y)
-
-    # Calculate the total number of samples required per row
-    dx = stripe_size / 200  # Set a reasonable resolution for the x-direction
-    lx = stripe_size  # Horizontal extent of the stripe
-    samples_per_row = int(lx / dx)
-
-    # Initialize arrays for x and y coordinates
-    x_series = []
-    y_series = []
-
-    # Generate the scan path row by row
-    for step in range(num_steps):
-        # Calculate y position for this step
-        y_current = y0 + step * step_y
-
-        # Generate x values for this row
-        x_row = x0 + (np.arange(samples_per_row) * dx) % lx
-        # Flip every other row for the zig-zag pattern
-        if step % 2 == 1:
-            x_row = -x_row
-
-        # Append the current row's x and y values
-        x_series.append(x_row)
-        y_series.append(np.full_like(x_row, y_current))
-
-    # Flatten the arrays
-    x_series = np.concatenate(x_series)+xoffset-x0
-    y_series = np.concatenate(y_series)+yoffset-y0
-    if(plot):
-        # Plot the scan path
-        plt.plot(x_series, y_series, c='b', alpha=0.8)
-        plt.xlabel('X (rad)')
-        plt.ylabel('Y (rad)')
-        plt.title('Custom Azimuthal Scan Path')
-        plt.show()
-
-    return x_series, y_series

@@ -35,6 +35,7 @@ launch_date = "2026-01-01 00:00:00"
 path = 'fits_and_hdf5/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
+wcs_dict = 'wcs.p'
 #---------------------------
 
 #----- Scan parameters -----
@@ -42,7 +43,7 @@ res = None #[deg] if res is None, the res is the resolution of the sky fits file
 scan='raster' #'loop', 'raster', 'zigzag'
 #Loop scan parameters
 az_size=0.65
-alt_size=0.08
+alt_size=0.06
 alt_step=0.02
 acc=0.05
 scan_v=0.05
@@ -50,12 +51,12 @@ dt_scan=0.001
 #---------------------------
 
 #----- Noise ---------------
-nsim_noise = 3
-fmin = 200 #remove some largest-scale modes
-fmax = 10000
+nsim_noise = 1
+fmin = 1e-3 #remove some largest-scale modes
+fmax = 6e1
 #rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
-tod_noise_level = 1e3 #in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
-fknee = 0.5 ##0.05 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
+tod_noise_level = 1e-6#in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
+fknee = 5e-2 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
 alphaknee = 3.
 rho_one_over_f = 0.9 #some level of 1/f correlation between detectors.
 #---------------------------

@@ -320,6 +320,30 @@ def save_az_el(tod_file, azimuths, elevations, spf):
             grp.create_dataset('spf', data=spf)
     H.close() 
 
+def save_telescope_coord(tod_file, x_tel, y_tel, spf):
+    """
+    Save the scan path in the .hdf5 format. 
+
+    Parameters
+    ----------
+    tod_file: string 
+        name of the output hdf5 file  
+    azimuths: array
+    elevations: array 
+    spf: int
+        the number of samples per frame
+    Returns
+    -------
+    """ 
+    H = h5py.File(tod_file, "a")
+    for i, (name, coord) in enumerate(zip(('xEL', 'EL'), (x_tel,y_tel))):
+        namegrp = name
+        if namegrp not in H:
+            grp = H.create_group(namegrp)
+            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+            grp.create_dataset('spf', data=spf)
+    H.close() 
+
 def save_PA(tod_file, PA, spf):
     """
     Save the parallactic angle in the .hdf5 format. 
@@ -378,9 +402,11 @@ if __name__ == "__main__":
     #Initiate the parameters
 
     #The coordinates of the field
+
     name=P['name_field']
     c=SkyCoord.from_name(name)
-    ra = c.ra.value
+    ra = 0 
+    rafield = c.ra.value
     dec = c.dec.value
     #The contour of the field
     contours = P['contours']
@@ -388,8 +414,6 @@ if __name__ == "__main__":
 
     #load the observer position
     lat = P['latittude']
-    lon = P['longitude']# degrees
-    mcmurdo = EarthLocation(lat=f'{lat}', lon=f'{lon}', height=37000.)
 
     #Plot parameter
     f_range = P['f_range']
@@ -413,8 +437,10 @@ if __name__ == "__main__":
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
     dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    T = np.arange(0,T_duration,dt) * 3600
-    HA = 15*np.arange(-T_duration/2,T_duration/2,dt) #degrees
+    spf = int(1/(dt*3600)) #sample per frame defined here as the acquisition rate in Hz. 
+    T = np.arange(0,T_duration,dt) * 3600 #s
+    #time_obs = Time('2025-04-17T00:00:00') + T * u.s  # Properly time-stamped
+    HA = np.arange(-T_duration/2,T_duration/2,dt) #hours
 
     #----------------------------------------
     #Generate the scan path for the center of the arrays. 
@@ -423,18 +449,24 @@ if __name__ == "__main__":
     if(P['scan']=='zigzag'): az, alt, flag = genLocalPath_cst_el_scan_zigzag(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
 
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
-    scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only constant scan speed part of the pointing. 
+    scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only the constant scan speed part of the pointing. 
     T_trim = T            #[scan_flag==1]
     HA_trim = HA          #[scan_flag==1]
     
+    old=False
     #Generate the pointing on the sky for the center of the arrays
-    scan_path_sky = genPointingPath(T_trim, scan_path, HA_trim, lat, dec, ra) 
+    if(old): scan_path_sky, azel = genPointingPath(T_trim, scan_path, HA_trim, lat, dec, ra, azel=True) 
+    else:    scan_path_sky, azel = genPointingPath_mod(scan_path, HA_trim, lat, dec, ra, azel=True) 
 
     #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
     pixel_paths  = genPixelPath(scan_path, pixel_offset, pixel_shift, theta)
 
     #Generate the pointing on the sky of each pixel. 
-    pointing_paths = [genPointingPath(T_trim, pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
+    start = time.time() 
+    if(old):
+        pointing_paths = [genPointingPath(T_trim, pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
+    else:
+        pointing_paths = [genPointingPath_mod(pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
 
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,ra=ra) 
@@ -442,11 +474,11 @@ if __name__ == "__main__":
     #----------------------------------------
     #Plot a scan route
     BS = 10; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS); mk = 3; lw=1
-    fig, axs = plt.subplots(2,2,figsize=(10,10), dpi=160,)# sharey=True, sharex=True)
+    fig, axs = plt.subplots(3,2,figsize=(10,10), dpi=160,)# sharey=True, sharex=True)
     #---
-    axradec, ax, axr, axp = axs[0,0], axs[0,1], axs[1,0], axs[1,1]
+    axradec, ax, axp, axpix, axr = axs[0,0], axs[1,0], axs[0,1], axs[1,1], axs[2,0]
+    axs[2,1].axis('off') 
     axradec.plot(az-az.max()/2,alt-alt.max()/2,'cyan')
-    if(contours is not None): axradec.plot(contours[:, 1]-ra, contours[:, 0]-dec, c='g' )
     axradec.set_xlabel('Az [deg]')
     axradec.set_ylabel('El [deg]')
     axradec.set_aspect(aspect=1)
@@ -454,31 +486,42 @@ if __name__ == "__main__":
     heatmap, xedges, yedges = np.histogram2d(scan_path_sky[:,0], scan_path_sky[:,1], bins=int(2/res))
     im = ax.imshow(heatmap.T, origin='lower', cmap='binary',extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
     cbar = fig.colorbar(im, ax=ax, label='1 detector counts')
-    if(contours is not None): ax.plot(contours[:, 1], contours[:, 0], c='g' )
+    ax.set_xlabel('RA [deg]')
+    ax.set_ylabel('Dec [deg]')
+    if(contours is not None): ax.plot(contours[:, 1]-rafield, contours[:, 0], c='g' )
+    if(contours is not None): axradec.plot(contours[:, 1]-rafield, contours[:, 0]-dec, c='g' )
     #---
-    img = axr.imshow((hit_map), extent=[x_cen-f_range, x_cen+f_range,y_cen-f_range, y_cen+f_range,], 
+    az_unwrapped = (np.radians(azel[:,0]) + np.pi) % (2 * np.pi) - np.pi
+    axr.plot(np.degrees(az_unwrapped),azel[:,1],'b')
+    axr.set_xlabel('Az [deg]')
+    axr.set_ylabel('El [deg]')
+    ##---
+    img = axp.imshow((hit_map), extent=[x_cen-f_range, x_cen+f_range,y_cen-f_range, y_cen+f_range,], 
                     interpolation='nearest', origin='lower', vmin=0, vmax=np.max(hit_map), cmap='binary' )
-    if(contours is not None): axr.plot(contours[:, 1], contours[:, 0], c= 'r')
-    fig.colorbar(img, ax=axr, label='Counts')
-    CS = axr.contour(np.roll(np.sqrt(hit_map*np.roll(hit_map, 4, axis=1)),-2,axis=1), levels=[0.5*np.max(hit_map)], lw=0.5, origin='lower', linewidths=0.6,
+    if(contours is not None): axp.plot(contours[:, 1], contours[:, 0], c= 'g')
+    fig.colorbar(img, ax=axp, label='Counts')
+    CS = axp.contour(np.roll(np.sqrt(hit_map*np.roll(hit_map, 4, axis=1)),-2,axis=1), levels=[0.5*np.max(hit_map)], lw=0.5, origin='lower', linewidths=0.6,
                 extent=[x_cen-f_range, x_cen+f_range,y_cen-f_range, y_cen+f_range,], colors='magenta')
-    axr.clabel(CS, inline=1, fontsize=8, )
-
+    axp.clabel(CS, inline=1, fontsize=8, )
+    axp.set_xlabel('RA [deg]')
+    axp.set_ylabel('Dec [deg]')
+    #---
     patchs = []
-    axp.set_title('Pointing Path per pixel')
+    axpix.set_title('Pointing Path per pixel')
     idx = np.arange(len(pixel_paths))[::10]
     n = 11
     for i,c in zip(idx, cm.rainbow(np.linspace(0.,1,len(idx)))):
-        axp.scatter(pointing_paths[i][::n,0], pointing_paths[i][::n,1], s=0.1,c=c)
+        axpix.scatter(pointing_paths[i][::n,0], pointing_paths[i][::n,1], s=0.1,c=c)
         patch = mpatches.Patch(color=c, label= 'pixel %d'%i); patchs.append(patch); 
-    axp.set_aspect(aspect=1)
-    axp.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
+    axpix.set_aspect(aspect=1)
+    axpix.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
+    axpix.set_xlabel('RA [deg]')
+    axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}.png")
     plt.show()
     #----------------------------------------
     #Generate the TODs and save Them in hdf5
-    spf = int(1/(dt*3600)) #sample per frame defined here as the acquisition rate in Hz. 
     #The path to the sky simulation from which to generate the TODs from
     simu_sky_path =os.getcwd()+'/'+P['path']+P['file']
     #The output hdf5 file containing the generated TODs. 
@@ -507,26 +550,36 @@ if __name__ == "__main__":
     cube *= pix_size * 1e6 #conversion MJy/sr to Jy/beam
     #Create the world coordinate object. 
     wcs = WCS(hdr, naxis=2) 
+    d = {'wcs':wcs}
+    
+    pickle.dump(d, open(P['wcs_dict'], 'wb'))
+
+
     #----------------------------------------
     #load the observing date to generate the local sideral time (lst) coordinates. 
     #obs_start_time = Time(P['launch_date'], scale="utc")
-    start = time.time()
-    ra_path=scan_path_sky[:,0]
-    dec_path=scan_path_sky[:,1]
-    lst = (ra_path + HA) / 15 #hour angle
+    lst = HA
     lat = np.ones(len(lst)) * lat
-    latr = np.radians(lat)
-    decr = np.radians(dec_path)
-    HAr = np.radians(HA)
-    el = np.arcsin(np.sin(decr)*np.sin(latr)+np.cos(decr)*np.cos(latr)*np.cos(HAr))
-    az = np.arcsin(-np.sin(HAr)*np.cos(decr)/np.cos(el))
+    #---------------------
+    coord1 = np.radians(scan_path_sky[:,0])
+    coord2 = np.radians(scan_path_sky[:,1])
+    cos_lat = np.cos(np.radians(lat))
+    sin_lat = np.sin(np.radians(lat))
+    hour_angle = (lst - ra / 15)*np.pi/12
+    index, = np.where(hour_angle<0)
+    hour_angle[index] += 2*np.pi
+    y_pa = cos_lat*np.sin(hour_angle)
+    x_pa = sin_lat*np.cos(coord2)-np.cos(hour_angle)*cos_lat*np.sin(coord2)
+    pa = np.arctan2(y_pa, x_pa)
+    x_tel = coord1*np.cos(pa)-coord2*np.sin(pa)
+    y_tel = coord2*np.cos(pa)+coord1*np.sin(pa)
+
+    save_PA(tod_file, np.degrees(pa), spf)
+    save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
+
     #Parrallactic angle
-    y_pa = np.cos(latr)*np.sin(HAr)
-    x_pa = np.sin(latr)*np.cos(decr)-np.cos(HAr)*np.cos(latr)*np.sin(decr)
-    PA = np.arctan2(y_pa, x_pa)
     save_lst_lat(tod_file, lst, lat, spf)
-    save_az_el(tod_file, np.degrees(az), np.degrees(el), spf)
-    save_PA(tod_file, np.degrees(PA), spf)
+    save_az_el(tod_file, azel[:,0], azel[:,1], spf)
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
     #----------------------------------------
@@ -535,7 +588,8 @@ if __name__ == "__main__":
     #We first save the TODs of pixels in the HW array, then in the LW array. 
     start = time.time()
 
-    for array, freqs_of_array, pointing_paths_to_save, pixel_offset_array, pixel_shift_array in zip(('HW', 'LW'), 
+    for array, freqs_of_array, pointing_paths_to_save, pixel_offset_array, pixel_shift_array in zip(
+                                                           ('HW', 'LW'), 
                                                            (freqs[:P['nb_channels_per_array']], freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ] ),
                                                            (pointing_paths[:P['nb_pixel_HW']],  pointing_paths[P['nb_pixel_HW']:]),
                                                            (pixel_offset_HW, pixel_offset_LW),
