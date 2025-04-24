@@ -198,6 +198,7 @@ if __name__ == "__main__":
         detector_combs = detector_combs_autos + detector_combs_crosses
 
         H = h5py.File(tod_file, "a")
+        bar = Bar('Processing detectors', max=len(detector_combs))
         for d1d2 in detector_combs:
             d1, d2 = d1d2
             rowval, colval = np.where(detector_arr_to_plot == d1)[0][0], np.where(detector_arr_to_plot == d2)[0][0]
@@ -225,7 +226,11 @@ if __name__ == "__main__":
                 curr_theory = noise_powspec_dic[(d1, d2)]
                 axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
                 axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
-            #------------------
+            
+            bar.next()
+        bar.finish
+        #------------------
+        H.close()
 
         axs[0,2].set_title('noise TOD')
         axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
@@ -241,7 +246,6 @@ if __name__ == "__main__":
         end = time.time()
         timing = end - start
         print(f'Generate the TODs of group{group} in {np.round(timing,2)} sec!')
-        H.close()
 
 
     '''
