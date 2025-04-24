@@ -17,7 +17,7 @@ def zenithAngle(dec,lat,HA):
     lat: float
         lattitude angle in degrees
     HA: array
-        hour angle in degree
+        hour angle in hour
 
     Returns
     -------
@@ -39,7 +39,7 @@ def elevationAngle(dec,lat,HA):
     lat: float
         lattitude angle in degrees
     HA: array
-        hour angle in degree
+        hour angle in hour
 
     Returns
     -------
@@ -60,7 +60,7 @@ def azimuthAngle(dec,lat,HA):
     lat: float
         lattitude angle in degrees
     HA: array
-        hour angle in degree
+        hour angle in hour
 
     Returns
     -------
