@@ -48,11 +48,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     P = load_params(args.params)
-    pixel_offset_HW = np.asarray(pixelOffset(P['nb_pixel_HW'], P['offset_HW'], P['arrays_separation']/2) )
+
+
+    pixel_offset_HW, pixel_shift_HW = pixelOffset(P['nb_pixel_HW'], P['offset_HW'], -P['arrays_separation']/2)
+    pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
+
     pixel_offset_HW_tot = np.tile(pixel_offset_HW, P['nb_channels_per_array'])
-    pixel_offset_LW = np.asarray(pixelOffset(P['nb_pixel_LW'], P['offset_LW'], -P['arrays_separation']/2) )
     pixel_offset_LW_tot = np.tile(pixel_offset_LW, P['nb_channels_per_array'])
-    pixel_offset = np.concatenate((pixel_offset_HW_tot, pixel_offset_LW_tot), axis=1)
+    pixel_offset = np.concatenate((pixel_offset_HW_tot, pixel_offset_LW_tot))
+
+    pixel_shift_HW_tot = np.tile(pixel_shift_HW, P['nb_channels_per_array'])
+    pixel_shift_LW_tot = np.tile(pixel_shift_LW, P['nb_channels_per_array'])
+    pixel_shift = np.concatenate((pixel_shift_HW_tot, pixel_shift_LW_tot))
 
     # Generate detector names
     det_names_HW = generate_strings(P['nb_pixel_HW'] * P['nb_channels_per_array'], ['01', '02', '03', '04'])
@@ -62,8 +69,8 @@ if __name__ == "__main__":
     resp = np.ones(len(det_names))
     noise = np.zeros(len(det_names))
     time_offset = np.zeros(len(det_names)) #Time delay between pointing solution and detector data
-    EL = pixel_offset[1,:]
-    XEL = pixel_offset[0,:]
+    EL = pixel_offset
+    XEL = pixel_shift
     freqs = np.zeros(len(det_names))
 
     # Ensure pixel_offset_HW has the same length as det_names
