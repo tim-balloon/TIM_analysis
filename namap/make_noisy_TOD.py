@@ -174,6 +174,14 @@ if __name__ == "__main__":
         axs[1,1].set_ylim(1e-18,1e-5)
         axs[1,1].set_xlabel('frequency [Hz]')
 
+
+        axs[0,2].set_title('noise TOD')
+        axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
+        axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
+        axs[1,2].set_title('noisy TOD')
+        axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
+        axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
+
         tod_sims_dic = {}
         pspec_dic_sims = {}
 
@@ -216,10 +224,8 @@ if __name__ == "__main__":
                 axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
                 tod_tot = noise_tod + sky_tod[d1]
                 axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
-
                 name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
-                
                 if 'noise_data' not in f: f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
                 if 'noisy_data' not in f: f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
             else:
@@ -228,21 +234,14 @@ if __name__ == "__main__":
                 axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
             
             bar.next()
-        bar.finish
-        #------------------
-        H.close()
-
-        axs[0,2].set_title('noise TOD')
-        axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[1,2].set_title('noisy TOD')
-        axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-
+        
         fig.tight_layout()
         fig.savefig(f'plot/group_{group}_summary_plot.png')
         plt.close()
 
+        bar.finish
+        #------------------
+        H.close()
         end = time.time()
         timing = end - start
         print(f'Generate the TODs of group{group} in {np.round(timing,2)} sec!')
