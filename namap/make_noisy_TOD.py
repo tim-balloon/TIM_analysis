@@ -178,7 +178,7 @@ if __name__ == "__main__":
         pspec_dic_sims = {}
 
         for sim_no in range( nsims ):
-            bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=len(tod_sim_arr))
+            bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
             tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq)
             ###print( tod_sim_arr.shape ); ##sys.exit()
             
