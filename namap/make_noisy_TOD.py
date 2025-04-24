@@ -17,6 +17,7 @@ from astropy.wcs import WCS
 from astropy.io import fits
 import pickle
 from progress.bar import Bar
+import time
 
 
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
@@ -240,6 +241,7 @@ if __name__ == "__main__":
         plt.close()
 
         bar.finish
+        print('!!')
         #------------------
         H.close()
         end = time.time()
