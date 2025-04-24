@@ -57,10 +57,6 @@ cosmo = FlatLambdaCDM(H0=67.8, Om0=0.307, Ob0=0.048, Tcmb0=2.7255, Neff=3.04)
 from astropy.wcs import WCS
 from astropy.coordinates import Angle
 
-from simim.lightcone import LCMaker
-from simim.lightcone import LCHandler
-import simim.instrument as inst
-from simim.map import Gridder
 from astropy. io import fits
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from progress.bar import Bar
