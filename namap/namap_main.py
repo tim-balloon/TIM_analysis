@@ -26,6 +26,7 @@ import astropy.table as tb
 
 
 
+
 if __name__ == "__main__":
 
     '''
@@ -61,16 +62,15 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     params_namap_5det_ind.par: generates the individual maps of 5 detectors 
     params_namap_1det_ind.par: generates the individual map of the central detector
     '''
-
-    #-------------------------------------------------------------------------------------------------------------------------
-    #Iinitialization
-    parser = argparse.ArgumentParser(description='NaMap. A naive mapmaker written in Python for TIM', \
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="strategy parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
     parser.add_argument('params', help=".par file with params", default = None)
     args = parser.parse_args()
-
     P = ld.load_params(args.params)
+    #------------------------------------------------------------------------------------------
 
     num_frames, first_frame = P['num_frames'], P['first_frame']
 
@@ -132,49 +132,37 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
                                       first_frame, num_frames+first_frame,  lst,lat,lat_spf, lat_spf, P['time_offset'], xystage,)
     timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
     '''
-    #--------------------
-    #Do some corrections
-    #if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
-
-    #--------------------
-    #Needs to be implemented. 
-    # So far, I just load the coordinates timestreams for each pixel directly corrected of their offset.
-    #Normally, should just load the coordinates timestream of the central pixel and apply the offsets of the other detectors
-    '''
-    if(P['correction'] and P['pointing_table'] is not None):               
-            #--------------------
-            #Needs to be modify !
-            xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-            xsc_offset = xsc_file.read_file()
-            #--------------------
-    else:
-        xsc_offset = np.zeros(2)
-    corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice)
-    coord1slice, coord2slice = corr.correction()
-    '''
     coord1slice = coord1_data
     coord2slice = coord2_data
     lstslice = lst
     latslice = lat
     detslice = det_data
-
+    #--------------------
+    #Do some corrections
+    #if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
+    #--------------------
+    #Offset with respect to star cameras in xEL and EL
+    xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
+    #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+    #xsc_offset = xsc_file.read_file()
+    #--------------------
+    corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice)
+    coord1slice, coord2slice = corr.correction()
     #--------------------
     #Need to be implemented ! So far, set parallactic angle to 0.
     parallactic=[]
-    if not P['telescope_coordinate'] and lstslice is not None and latslice is not None:
-        #--------------------
-        #Needs to be modify !
-        for j, (c1, c2, ilst, ilat) in enumerate(zip(coord1slice,coord2slice, lstslice, latslice)): 
-            tel = pt.utils(c1/15., c2, ilst, ilat)
+    if not P['telescope_coordinate'] and P['lat'] and P['lst']:
+        for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
+            tel = pt.utils(c1/15., c2, lstslice, latslice)
             parallactic.append( tel.parallactic_angle() )
-        #--------------------
     else:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
             parallactic.append( np.zeros_like(c1) )
+            
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
     #So far, nothing is done as our timestreams are noiseless.     
-    det_tod = tod.data_cleaned(detslice, spf_data,highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
+    det_tod = tod.data_cleaned(detslice, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
 
     #--------------------
@@ -188,7 +176,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     # P['Power_only'] is use to generate only the sqrt(I**2+Q**2) maps. I and Q maps need implementations. 
     #telcoord option needs implementation. 
     maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], P['pixnum'], cleaned_data, coord1slice, coord2slice, convolution, std, 
-                   Ionly=P['Power_only'], coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
+                   coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
     
     maps.wcs_proj()
     #proj = maps.proj
