@@ -25,7 +25,6 @@ import scipy.constants as cst
 # Set plot parameters
 import sys
 
-import pygetdata as gd
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
