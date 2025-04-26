@@ -18,6 +18,8 @@ from astropy.io import fits
 import pickle
 from progress.bar import Bar
 import time
+import matplotlib
+matplotlib.use("Agg")
 
 
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
@@ -114,7 +116,7 @@ if __name__ == "__main__":
 
         sky_tod = []
         fft_sky_tod = []
-        '''
+        
         fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
         axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
         axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
@@ -124,17 +126,18 @@ if __name__ == "__main__":
         axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
         axs[0,1].set_xlim(1e-2, 1e1)
         axs[0,1].set_ylim(1e-18,1e-5)
-        '''
+        
 
         H = h5py.File(tod_file, "a")
         for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
+            #if(id>2): continue
             f = H[f'kid_{d}_roach']
             tod = f['data'][()]
             sky_tod.append(tod)
 
-            #axs[0,0].plot(T/3600,f['data'][()], alpha=0.1)
+            axs[0,0].plot(T/3600,f['data'][()], alpha=0.1)
             curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
-            #axs[0,1].loglog(freq_fft[inds],curr_spec[inds], alpha=0.1)
+            axs[0,1].loglog(freq_fft[inds],curr_spec[inds], alpha=0.1)
             fft_sky_tod.append(curr_spec)
         H.close()
 
@@ -153,7 +156,7 @@ if __name__ == "__main__":
                     noise_powspec_dic[i, j] = noise_powspec
                 else:
                     noise_powspec_dic[i, j] = cross_noise_powspec
-        '''
+        
         axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
         axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
         axs[0,1].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
@@ -181,7 +184,7 @@ if __name__ == "__main__":
         axs[1,2].set_title('noisy TOD')
         axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
         axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        '''
+        
 
         tod_sims_dic = {}
         pspec_dic_sims = {}
@@ -220,28 +223,27 @@ if __name__ == "__main__":
             curr_spec_mean = np.mean( curr_spec_arr, axis = 0 )
 
             if(d1==d2):
-                #axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
+                axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
                 noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-                #axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
+                axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
                 tod_tot = noise_tod + sky_tod[d1]
-                #axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
+                axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
                 name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
                 if 'noise_data' not in f: f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
                 if 'noisy_data' not in f: f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
             else:
                 curr_theory = noise_powspec_dic[(d1, d2)]
-                #axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
-                #axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
+                axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
+                axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
             
             bar.next()
         
-        #fig.tight_layout()
-        #fig.savefig(f'plot/group_{group}_summary_plot.png')
-        #plt.close()
+        fig.tight_layout()
+        fig.savefig(f'plot/group_{group}_summary_plot.png')
+        plt.close()
 
         bar.finish
-        print('!!')
         #------------------
         H.close()
         end = time.time()
