@@ -112,8 +112,6 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
         start = time.time()
         
-        if(group>2):continue
-
         sky_tod = []
         fft_sky_tod = []
         
@@ -126,7 +124,6 @@ if __name__ == "__main__":
         axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
         axs[0,1].set_xlim(1e-2, 1e1)
         axs[0,1].set_ylim(1e-18,1e-5)
-        
 
         H = h5py.File(tod_file, "a")
         for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
