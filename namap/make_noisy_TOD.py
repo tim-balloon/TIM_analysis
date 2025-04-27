@@ -188,21 +188,25 @@ if __name__ == "__main__":
         tod_sims_dic = {}
         pspec_dic_sims = {}
 
-        for sim_no in range( nsims ):
-            bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
-            tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq)
-            ###print( tod_sim_arr.shape ); ##sys.exit()
-            
-            #get the sim spectra now.
-            curr_sim_pspec_dic = {}
-            for (cntr1, tod1) in enumerate( tod_sim_arr ):
-                for (cntr2, tod2) in enumerate( tod_sim_arr ):
-                    if cntr2<cntr1: continue       
-                    curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
-                    curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-                bar.next()
-            bar.finish
-            pspec_dic_sims[sim_no] = curr_sim_pspec_dic
+        name = same_offset_groups.iloc[group]['Name'][-1]
+        f = H[f'kid_{name}_roach']
+        if('noise_data' not in f or 'noisy_data' not in f): 
+
+            for sim_no in range( nsims ):
+                bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
+                tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq)
+                ###print( tod_sim_arr.shape ); ##sys.exit()
+                
+                #get the sim spectra now.
+                curr_sim_pspec_dic = {}
+                for (cntr1, tod1) in enumerate( tod_sim_arr ):
+                    for (cntr2, tod2) in enumerate( tod_sim_arr ):
+                        if cntr2<cntr1: continue       
+                        curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
+                        curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
+                    bar.next()
+                bar.finish
+                pspec_dic_sims[sim_no] = curr_sim_pspec_dic
 
         detector_combs_autos   = [[detector, detector] for detector in detector_array]
         detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
