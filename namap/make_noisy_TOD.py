@@ -223,14 +223,15 @@ if __name__ == "__main__":
 
             if(d1==d2):
                 #axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
-                noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
                 #axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
-                tod_tot = noise_tod + sky_tod[d1]
                 #axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
-                name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
-                if 'noise_data' not in f: f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
-                if 'noisy_data' not in f: f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
+                if('noise_data' not in f or 'noisy_data' not in f): 
+                    noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
+                    tod_tot = noise_tod + sky_tod[d1]
+                    name = same_offset_groups.iloc[group]['Name'][d1]
+                    f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
+                    f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
             else:
                 curr_theory = noise_powspec_dic[(d1, d2)]
                 #axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
