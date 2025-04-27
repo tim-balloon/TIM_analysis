@@ -12,6 +12,8 @@ np.random.seed(42)  # Fixes the seed for NumPy
 def generate_strings(total_count, groups):
     """
     Generate unique detector names in the format A_XX_NNNN.
+    XX for the sub-array, and is set by groups
+    NNNN for the detector, between 0000 and 9999
     
     Parameters
     ----------
