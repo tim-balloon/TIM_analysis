@@ -26,8 +26,6 @@ longitude =  166.69 #deg
 #----- Time parameters -----
 T_duration=1 #hour , duration of the scan
 dt= 2.7777777777777e-6 #hour , defines the aquisition rate. (9.25e-7h acquisition period correspond to 300Hz)
-#Launch data to generate the local sideral time (lst) coordinates
-launch_date = "2026-01-01 00:00:00"
 #---------------------------
 
 #----- Sky simulation -----
@@ -39,6 +37,10 @@ wcs_dict = 'wcs.p'
 #---------------------------
 
 #----- Scan parameters -----
+#Choose which function to use to compute the pointing path. 
+#Dan's version (old=True) and Namap version (old=False) are offsetby up to 30''
+#Use old=False to get a map compatible with Namap. 
+old=False
 #Choose the scan to use: 
 scan='raster' #'loop', 'raster', 'zigzag'
 #Loop scan parameters
