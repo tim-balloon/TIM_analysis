@@ -94,7 +94,6 @@ if __name__ == "__main__":
     freqs = np.zeros(len(det_names))
     #---------------------------
 
-
     # Ensure pixel_offset_HW has the same length as det_names
     if len(resp) < len(det_names) or len(noise) < len(det_names) or  len(time_offset) < len(det_names):
         raise ValueError("Not enough pixel offsets for detector names.")
