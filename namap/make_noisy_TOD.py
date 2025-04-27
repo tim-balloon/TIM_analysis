@@ -77,6 +77,10 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
 if __name__ == "__main__":
     '''
+    Generate noise TOD. 
+    The noise TOD are frequency, detector, and time independant.
+    The noise TODs are gaussian. 
+    The noise TODs for pixels seeing the same beam (at different frequency bands) are correlated. 
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
@@ -135,7 +139,6 @@ if __name__ == "__main__":
     #norm, edges = np.histogramdd(sample=(x_pixel_coords, y_pixel_coords), bins=(xbins,ybins),)
     '''
 
-
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
 
@@ -186,6 +189,8 @@ if __name__ == "__main__":
                 else:
                     noise_powspec_dic[i, j] = cross_noise_powspec
         #------------------------------------------------------------------
+
+        #------------------------------------------------------------------
         if(plot):
             axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
             axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
@@ -213,6 +218,8 @@ if __name__ == "__main__":
             axs[1,2].set_title('noisy TOD')
             axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
             axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
+        #------------------------------------------------------------------
+
         #------------------------------------------------------------------
         #Check if all the detectors in the group already have a noise timestream. 
         H = h5py.File(tod_file, "a")
@@ -283,11 +290,14 @@ if __name__ == "__main__":
                     axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
             
             bar.next()
+        #------------------------------------------------------------------
 
+        #------------------------------------------------------------------
         if(plot):
             fig.tight_layout()
             fig.savefig(f'plot/group_{group}_summary_plot.png')
             plt.close()
+        #------------------------------------------------------------------
 
         bar.finish
 
