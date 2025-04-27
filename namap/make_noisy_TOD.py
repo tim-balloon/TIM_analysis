@@ -90,6 +90,8 @@ if __name__ == "__main__":
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
+
+    plot = False
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
@@ -136,23 +138,21 @@ if __name__ == "__main__":
 
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
+
         start = time.time()
-        
+        if(plot):
+            fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
+            axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
+            axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
+            axs[0,0].set_title('Sky TOD')
+            axs[0,1].set_title('TOD power spectrum')
+            axs[0,1].set_xlabel('frequency [Hz]')
+            axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
+            axs[0,1].set_xlim(1e-2, 1e1)
+            axs[0,1].set_ylim(1e-18,1e-5)
+        #------------------------------------------------------------------
         sky_tod = []
         fft_sky_tod = []
-        
-        '''
-        fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
-        axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[0,0].set_title('Sky TOD')
-        axs[0,1].set_title('TOD power spectrum')
-        axs[0,1].set_xlabel('frequency [Hz]')
-        axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-        axs[0,1].set_xlim(1e-2, 1e1)
-        axs[0,1].set_ylim(1e-18,1e-5)
-        '''
-        #------------------------------------------------------------------
         #Load the sky timestreams (from strategy.py)
         H = h5py.File(tod_file, "a")
         for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
@@ -160,10 +160,9 @@ if __name__ == "__main__":
             f = H[f'kid_{d}_roach']
             tod = f['data'][()]
             sky_tod.append(tod)
-
-            #axs[0,0].plot(T/3600,f['data'][()], alpha=0.1)
+            if(plot): axs[0,0].plot(T/3600,f['data'][()], alpha=0.1)
             curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
-            #axs[0,1].loglog(freq_fft[inds],curr_spec[inds], alpha=0.1)
+            if(plot): axs[0,1].loglog(freq_fft[inds],curr_spec[inds], alpha=0.1)
             fft_sky_tod.append(curr_spec)
         H.close()
         #------------------------------------------------------------------
@@ -188,34 +187,33 @@ if __name__ == "__main__":
                 else:
                     noise_powspec_dic[i, j] = cross_noise_powspec
         #------------------------------------------------------------------
-        '''
-        axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-        axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-        axs[0,1].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-        axs[0,1].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-        axs[0,1].legend(loc = 'lower right',)
+        if(plot):
+            axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
+            axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
+            axs[0,1].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
+            axs[0,1].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
+            axs[0,1].legend(loc = 'lower right',)
 
-        axs[1,0].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-        axs[1,0].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-        axs[1,0].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-        axs[1,0].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-        axs[1,0].legend(loc = 'lower right',)
-        axs[1,0].set_xlabel('frequency [Hz]')
-        axs[1,0].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-        axs[1,0].set_title('$\\rm Noise_{\\nu}$ auto-power')
-        axs[1,0].set_ylim(1e-18,1e-5)
-        axs[1,1].set_ylabel('Cross-power $\\rm [Jy^2.s^{-2}$]')
-        axs[1,1].set_title("$\\rm Noise_{\\nu, \\nu.}$ cross-power")
-        axs[1,1].set_ylim(1e-18,1e-5)
-        axs[1,1].set_xlabel('frequency [Hz]')
+            axs[1,0].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
+            axs[1,0].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
+            axs[1,0].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
+            axs[1,0].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
+            axs[1,0].legend(loc = 'lower right',)
+            axs[1,0].set_xlabel('frequency [Hz]')
+            axs[1,0].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
+            axs[1,0].set_title('$\\rm Noise_{\\nu}$ auto-power')
+            axs[1,0].set_ylim(1e-18,1e-5)
+            axs[1,1].set_ylabel('Cross-power $\\rm [Jy^2.s^{-2}$]')
+            axs[1,1].set_title("$\\rm Noise_{\\nu, \\nu.}$ cross-power")
+            axs[1,1].set_ylim(1e-18,1e-5)
+            axs[1,1].set_xlabel('frequency [Hz]')
 
-        axs[0,2].set_title('noise TOD')
-        axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[1,2].set_title('noisy TOD')
-        axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        '''
+            axs[0,2].set_title('noise TOD')
+            axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
+            axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
+            axs[1,2].set_title('noisy TOD')
+            axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
+            axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
         #------------------------------------------------------------------
         #Check if all the detectors in the group already have a noise timestream. 
         H = h5py.File(tod_file, "a")
@@ -268,9 +266,10 @@ if __name__ == "__main__":
             curr_spec_mean = np.mean( curr_spec_arr, axis = 0 )
 
             if(d1==d2):
-                #axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
-                #axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
-                #axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
+                if(plot): 
+                    axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
+                    axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
+                    axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
                 name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
                 if('noise_data' not in f or 'noisy_data' not in f): 
@@ -280,21 +279,23 @@ if __name__ == "__main__":
                     f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
             else:
                 curr_theory = noise_powspec_dic[(d1, d2)]
-                #axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
-                #axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
+                if(plot): 
+                    axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
+                    axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
             
             bar.next()
-        #------------------------------------------------------------------
 
-        #fig.tight_layout()
-        #fig.savefig(f'plot/group_{group}_summary_plot.png')
-        #plt.close()
+        if(plot):
+            fig.tight_layout()
+            fig.savefig(f'plot/group_{group}_summary_plot.png')
+            plt.close()
 
         bar.finish
-        #------------------
+
         H.close()
         end = time.time()
         timing = end - start
         print('')
         print(f'Generate the TODs of group{group} in {np.round(timing,2)} sec!')
+        #------------------------------------------------------------------
 
