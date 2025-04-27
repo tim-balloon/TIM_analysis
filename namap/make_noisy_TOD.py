@@ -188,15 +188,17 @@ if __name__ == "__main__":
         tod_sims_dic = {}
         pspec_dic_sims = {}
 
+        H = h5py.File(tod_file, "a")
         name = same_offset_groups.iloc[group]['Name'][-1]
         f = H[f'kid_{name}_roach']
-        if('noise_data' not in f or 'noisy_data' not in f): 
+        B = ('noise_data' not in f or 'noisy_data' not in f)
+        H.close()
+        if(B): 
 
             for sim_no in range( nsims ):
                 bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
                 tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq)
                 ###print( tod_sim_arr.shape ); ##sys.exit()
-                
                 #get the sim spectra now.
                 curr_sim_pspec_dic = {}
                 for (cntr1, tod1) in enumerate( tod_sim_arr ):
