@@ -108,7 +108,7 @@ def gen_tod(wcs, Map, ybins, xbins, pixel_offset, pointing_paths):
     pixel_offset: array
         pixel position on the array wrt the central pixel, in degrees
     pointing_paths: list of 2d array
-        coordinates of the sky scan path of each pixel.
+        coordinates of the sky scan path of each pixel, for pixels seeing the same frequency band
     Returns
     -------
     wcs: astropy.wcs.wcs.WCS
@@ -225,8 +225,12 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, po
         horizontal position of each pixel on the array with respect to the center 
     pointing_paths: list of 2d array
         coordinates of the sky scan path of each pixel.
+    dect_file: string
+        the name of the .csv where the info on each pixel is stored. This function add the frequency band info to the .csv file. 
     spf: int
         the number of samples per frame
+    F: astropy quantity
+        the frequency band seen by the detectors
 
     Returns
     -------
@@ -378,12 +382,10 @@ if __name__ == "__main__":
 
     Left to be done:
         Compute mapping efficiency
-        add noise and atmosphere in TOD
         make the simIM version
-        LST LAT timestreams, AZ and EL coord timestreams, and test the namap related steps
-        implement noise peak / cosmic ray maker. 
-        Problem in HA to be fixed. 
-        Make sure that TOD are generated with right periode. 
+        implement slope maker in tod / , (noise peak / cosmic ray)  maker. 
+        implement a function that makes one loop during T_duration instead of several? 
+        Load the pixel offsets from the csv instead of computing them. 
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
@@ -394,10 +396,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
+    
+    #------------------------------------------------------------------------------------------
     #Initiate the parameters
 
     #The coordinates of the field
-
     name=P['name_field']
     c=SkyCoord.from_name(name)
     ra = 0 
@@ -436,8 +439,9 @@ if __name__ == "__main__":
     T = np.arange(0,T_duration,dt) * 3600 #s
     #time_obs = Time('2025-04-17T00:00:00') + T * u.s  # Properly time-stamped
     HA = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    #------------------------------------------------------------------------------------------
 
-    #----------------------------------------
+    #------------------------------------------------------------------------------------------    
     #Generate the scan path for the center of the arrays. 
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
@@ -448,23 +452,23 @@ if __name__ == "__main__":
     T_trim = T            #[scan_flag==1]
     HA_trim = HA          #[scan_flag==1]
     
-    old=False
     #Generate the pointing on the sky for the center of the arrays
-    if(old): scan_path_sky, azel = genPointingPath(T_trim, scan_path, HA_trim, lat, dec, ra, azel=True) 
-    else:    scan_path_sky, azel = genPointingPath_mod(scan_path, HA_trim, lat, dec, ra, azel=True) 
+    if(P['old']): scan_path_sky, azel = genPointingPath(T_trim, scan_path, HA_trim, lat, dec, ra, azel=True) 
+    else: scan_path_sky, azel = genPointingPath_mod(scan_path, HA_trim, lat, dec, ra, azel=True) 
 
     #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
     pixel_paths  = genPixelPath(scan_path, pixel_offset, pixel_shift, theta)
 
     #Generate the pointing on the sky of each pixel. 
     start = time.time() 
-    if(old):
+    if(P['old']):
         pointing_paths = [genPointingPath(T_trim, pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
     else:
         pointing_paths = [genPointingPath_mod(pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
 
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,ra=ra) 
+    #----------------------------------------
 
     #----------------------------------------
     #Plot a scan route
@@ -516,6 +520,9 @@ if __name__ == "__main__":
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}.png")
     plt.show()
     #----------------------------------------
+
+
+    #----------------------------------------
     #Generate the TODs and save Them in hdf5
     #The path to the sky simulation from which to generate the TODs from
     simu_sky_path =os.getcwd()+'/'+P['path']+P['file']
@@ -524,6 +531,9 @@ if __name__ == "__main__":
     #Load the names of the detectors. We assigned to them random names so that we cannot do naive for loop and avoid mistakes.
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
     det_names = det_names_dict['Name']
+    #----------------------------------------
+
+
     #----------------------------------------
     #Load the sky simulation to generate the TOD from
     hdr  = fits.getheader(simu_sky_path)
@@ -543,36 +553,46 @@ if __name__ == "__main__":
     cubemean = np.mean(cube, axis=(1,2)) 
     cube -= cubemean[:, None, None]
     cube *= pix_size * 1e6 #conversion MJy/sr to Jy/beam
-    #Create the world coordinate object. 
+    #Create the world coordinate object and save it. 
     wcs = WCS(hdr, naxis=2) 
     d = {'wcs':wcs}
-    
     pickle.dump(d, open(P['wcs_dict'], 'wb'))
+    #----------------------------------------
 
 
     #----------------------------------------
-    #load the observing date to generate the local sideral time (lst) coordinates. 
-    #obs_start_time = Time(P['launch_date'], scale="utc")
+    #local sideral time
     lst = HA
+    #latitude timestream
     lat = np.ones(len(lst)) * lat
-    #---------------------
+
+    #Generate the telescope coordinates and parallactic angle. 
+
+    #RA and Dec
     coord1 = np.radians(scan_path_sky[:,0])
     coord2 = np.radians(scan_path_sky[:,1])
+
     cos_lat = np.cos(np.radians(lat))
     sin_lat = np.sin(np.radians(lat))
+
     hour_angle = (lst - ra / 15)*np.pi/12
     index, = np.where(hour_angle<0)
     hour_angle[index] += 2*np.pi
+    
+    #Parallactic angle
     y_pa = cos_lat*np.sin(hour_angle)
     x_pa = sin_lat*np.cos(coord2)-np.cos(hour_angle)*cos_lat*np.sin(coord2)
     pa = np.arctan2(y_pa, x_pa)
+
+    #Telescope coordinates
     x_tel = coord1*np.cos(pa)-coord2*np.sin(pa)
     y_tel = coord2*np.cos(pa)+coord1*np.sin(pa)
+    #----------------------------------------
 
+    #----------------------------------------
+    #Save timestreams in a .hdf5 file 
     save_PA(tod_file, np.degrees(pa), spf)
     save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-
-    #Parrallactic angle
     save_lst_lat(tod_file, lst, lat, spf)
     save_az_el(tod_file, azel[:,0], azel[:,1], spf)
     save_time_tod(tod_file, T_trim, spf)
@@ -593,11 +613,18 @@ if __name__ == "__main__":
         bar = Bar(f'Generate the {array} TODs', max=len(freqs_of_array))
         #Then, for each frequency bandpass: 
         for f, F in enumerate(freqs_of_array):
+
+            #----------------------------------------
             #Select the frequency channel out of which the TODs will be sampled. 
             if(array=='LW'): Map = cube[f+P['nb_channels_per_array'],:,:]
             else: Map = cube[f,:,:]
+            #----------------------------------------
+
+            #----------------------------------------
             #Samples the TODs from Map given the pointing paths ofppixels in an array seing the same frequency (but different beams).
             wcs, map, hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, ybins, xbins, pixel_offset_array, pointing_paths_to_save)
+            #----------------------------------------
+
             #----------------------------------------
             fig, axs = plt.subplots(1,3, figsize=(12,4), dpi = 200,subplot_kw={'projection': wcs}, sharex=True, sharey=True )
             imgdec = axs[0].imshow(hist, interpolation='nearest', origin='lower', vmin=map.min(), vmax=map.max(), cmap='cividis' )
@@ -615,17 +642,23 @@ if __name__ == "__main__":
             plt.savefig(os.getcwd()+'/plot/'+f'freq{F.value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
             plt.close()
             #----------------------------------------
+
+            #----------------------------------------
             #Select the right names of the detectors in the name list. 
             if(array=='HW'): names = det_names[f * P['nb_pixel_HW'] : (f + 1) * P['nb_pixel_HW']]
             else:
                 index = P['nb_pixel_HW'] * P['nb_channels_per_array']
                 names = det_names[index +f * P['nb_pixel_LW'] :index + (f + 1) * P['nb_pixel_LW']]
+            #----------------------------------------
+
+            #----------------------------------------
             #Save the TODs.
             save_tod_in_hdf5(tod_file, names, samples, pixel_offset_array, pixel_shift_array, pointing_paths_to_save, P['detectors_name_file'], F, spf)
+            #----------------------------------------
+
             bar.next()
         bar.finish
         print('')
     
     print(f"Generate the TODs in {np.round((time.time() - start),2)}"+'s')
-    #----------------------------------------
 
