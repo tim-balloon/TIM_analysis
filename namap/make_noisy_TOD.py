@@ -304,19 +304,20 @@ if __name__ == "__main__":
         detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
         detector_combs = detector_combs_autos + detector_combs_crosses
 
-        curr_spec_list = []
-        for d1d2 in detector_combs_autos:
-            d1, d2 = d1d2
-            curr_theory = noise_powspec_dic[(d1, d2)]
-            #sims
-            curr_spec_arr = []
-            for sim_no in pspec_dic_sims:
-                curr_freq, curr_spec = pspec_dic_sims[sim_no][(d1, d2)]
-                curr_spec_arr.append( curr_spec )
-            curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
+        if(B):
+            curr_spec_list = []
+            for d1d2 in detector_combs_autos:
+                d1, d2 = d1d2
+                curr_theory = noise_powspec_dic[(d1, d2)]
+                #sims
+                curr_spec_arr = []
+                for sim_no in pspec_dic_sims:
+                    curr_freq, curr_spec = pspec_dic_sims[sim_no][(d1, d2)]
+                    curr_spec_arr.append( curr_spec )
+                curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
-        #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-        if(B): noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)
+            #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
+            noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
 
         for d1d2 in detector_combs:
             d1, d2 = d1d2
