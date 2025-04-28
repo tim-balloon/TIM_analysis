@@ -54,18 +54,24 @@ def worker_model(curr_sim_pspec_dic_for_worker):
     curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
 
 def model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus):
-    embed()
 
     curr_sim_pspec_dic_for_worker = []
+    cntr = []
     for (cntr1, tod1) in enumerate( tod_sim_arr ):
         for (cntr2, tod2) in enumerate( tod_sim_arr ):
             if cntr2<cntr1: continue  
-            else: curr_sim_pspec_dic_for_worker.append((tod1, tod2))
+            else: 
+                curr_sim_pspec_dic_for_worker.append((tod1, tod2))
+                cntr.append((cntr1, cntr2))
     
     with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
         curr_sim_pspec = p.map(worker_model, np.array_split(curr_sim_pspec_dic_for_worker, ncpus) )
+    curr_sim_pspec = np.vstack(curr_sim_pspec) 
 
-    curr_sim_pspec_dic = np.vstack(curr_sim_pspec) 
+    curr_sim_pspec_dic = {}
+    for curr_spec, (cntr1, cntr2) in zip(curr_sim_pspec, cntr):  
+        curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
+
     return curr_sim_pspec_dic
 
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
@@ -142,6 +148,7 @@ if __name__ == "__main__":
     #Initiate the parameters
 
     plot = False
+    ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
@@ -287,7 +294,7 @@ if __name__ == "__main__":
                     bar.next()
                 bar.finish
                 '''
-                curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, 24)
+                curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
                 pspec_dic_sims[sim_no] = curr_sim_pspec_dic
         #------------------------------------------------------------------
 
@@ -311,11 +318,9 @@ if __name__ == "__main__":
         #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
         noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)
 
-
         for d1d2 in detector_combs:
             d1, d2 = d1d2
             curr_theory = noise_powspec_dic[(d1, d2)]
-            #sims
             if(d1==d2):
                 if(plot): 
                     axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
@@ -333,8 +338,6 @@ if __name__ == "__main__":
                 if(plot): 
                     axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
                     axs[1,1].loglog(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
-            
-            bar.next()
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
