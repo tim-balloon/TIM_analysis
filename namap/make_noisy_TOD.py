@@ -47,7 +47,7 @@ def worker_model(curr_sim_pspec_dic_for_worker):
     global _args
     freq_fft, sample_freq, tod_len = _args 
     spec_list = []
-    for tod1, tod2 in zip(curr_sim_pspec_dic_for_worker):
+    for tod1, tod2 in curr_sim_pspec_dic_for_worker:
         spec_list.append(( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real )
     return np.asarray(spec_list)
     curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
