@@ -349,12 +349,9 @@ if __name__ == "__main__":
             fig.savefig(f'plot/group_{group}_summary_plot.png')
             plt.close()
         #------------------------------------------------------------------
-
-
-        H.close()
         end = time.time()
         timing = end - start
         print('')
-        print(f'Generate the TODs of group{group} in {np.round(timing,2)} sec!')
+        print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
         #------------------------------------------------------------------
 
