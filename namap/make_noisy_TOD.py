@@ -20,7 +20,30 @@ from progress.bar import Bar
 import time
 import matplotlib
 matplotlib.use("Agg")
+from multiprocessing import Pool, cpu_count
 
+_args = None
+
+def worker_init(*args):
+    global _args
+    _args = args
+
+def worker_nmc(curr_spec_list):
+    global _args
+    freq_fft, sample_freq, tod_len = _args 
+    TOD_list = []
+    for pk in curr_spec_list:
+        TOD_list.append(gaussian_random_tod(freq_fft, pk, res = (1/sample_freq), nx = tod_len))
+    return np.asarray(TOD_list)
+
+def gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, ncpus):
+    embed()
+    with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
+        # Transform full cube (nchan, npix, npix) as (npix*npix, nchan)
+        tod_list = p.map(worker_nmc, np.array_split(curr_spec_list, ncpus) )
+    
+    tod_list_final = np.vstack(tod_list) 
+    return tod_list_final
 
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
@@ -116,7 +139,6 @@ if __name__ == "__main__":
     nsims = P['nsim_noise']
 
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-    det_dict = det_names_dict.groupby('Frequency')['Name'].first().to_dict()
     #Each pixel with the same offset sees the same beam, but in different frequency band. 
     same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
     
@@ -128,16 +150,6 @@ if __name__ == "__main__":
     alphaknee = P['alphaknee'] 
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
-
-    ''' 
-    # #Load the WCS
-    dwcs = pickle.load( open(P['wcs_dict'], 'rb'))
-    wcs = dwcs['wcs']
-    #y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
-    xbins = np.arange(-0.5, wcs.pixel_shape[0]+0.5, 1)
-    ybins = np.arange(-0.5, wcs.pixel_shape[1]+0.5, 1)
-    #norm, edges = np.histogramdd(sample=(x_pixel_coords, y_pixel_coords), bins=(xbins,ybins),)
-    '''
 
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
@@ -258,36 +270,42 @@ if __name__ == "__main__":
         detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
         detector_combs = detector_combs_autos + detector_combs_crosses
 
-        H = h5py.File(tod_file, "a")
-        bar = Bar('Processing detectors', max=len(detector_combs))
-        for d1d2 in detector_combs:
+        curr_spec_list = []
+        for d1d2 in detector_combs_autos:
             d1, d2 = d1d2
-            rowval, colval = np.where(detector_arr_to_plot == d1)[0][0], np.where(detector_arr_to_plot == d2)[0][0]
             curr_theory = noise_powspec_dic[(d1, d2)]
             #sims
             curr_spec_arr = []
             for sim_no in pspec_dic_sims:
                 curr_freq, curr_spec = pspec_dic_sims[sim_no][(d1, d2)]
                 curr_spec_arr.append( curr_spec )
-            curr_spec_mean = np.mean( curr_spec_arr, axis = 0 )
+            curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
+        #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
+        noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)
+
+
+        for d1d2 in detector_combs:
+            d1, d2 = d1d2
+            curr_theory = noise_powspec_dic[(d1, d2)]
+            #sims
             if(d1==d2):
                 if(plot): 
-                    axs[1,0].plot(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
-                    axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
+                    axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
+                    axs[0,2].plot(T/3600, noise_tod_list[d1], alpha=0.1)
                     axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
                 name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
                 if('noise_data' not in f or 'noisy_data' not in f): 
-                    noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-                    tod_tot = noise_tod + sky_tod[d1]
-                    f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
+                    #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
+                    tod_tot = noise_tod_list[d1] + sky_tod[d1]
+                    f.create_dataset('noise_data', data=noise_tod_list[d1], compression='gzip', compression_opts=9)
                     f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
             else:
                 curr_theory = noise_powspec_dic[(d1, d2)]
                 if(plot): 
                     axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
-                    axs[1,1].loglog(freq_fft[inds], curr_spec_mean[inds], alpha=0.1)
+                    axs[1,1].loglog(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
             
             bar.next()
         #------------------------------------------------------------------
