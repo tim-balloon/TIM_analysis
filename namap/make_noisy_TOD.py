@@ -316,7 +316,7 @@ if __name__ == "__main__":
             curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
         #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-        noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)
+        if(B): noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)
 
         for d1d2 in detector_combs:
             d1, d2 = d1d2
