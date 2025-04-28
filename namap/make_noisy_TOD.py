@@ -319,6 +319,7 @@ if __name__ == "__main__":
             #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
             noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
 
+        H = h5py.File(tod_file, "a")
         for d1d2 in detector_combs:
             d1, d2 = d1d2
             curr_theory = noise_powspec_dic[(d1, d2)]
@@ -339,6 +340,7 @@ if __name__ == "__main__":
                 if(plot): 
                     axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
                     axs[1,1].loglog(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
+        H.close()
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
