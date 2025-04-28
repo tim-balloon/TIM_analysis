@@ -18,8 +18,6 @@ from astropy.io import fits
 import pickle
 from progress.bar import Bar
 import time
-import matplotlib
-matplotlib.use("Agg")
 from multiprocessing import Pool, cpu_count
 
 _args = None
@@ -282,7 +280,7 @@ if __name__ == "__main__":
 
                 #Generate un-correlated simulated timestreams
                 tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
-                '''             
+                             
                 bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
                 #get the correlated power spectra now.
                 curr_sim_pspec_dic = {}
@@ -292,9 +290,8 @@ if __name__ == "__main__":
                         curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
                         curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
                     bar.next()
-                bar.finish
-                '''
-                curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
+                bar.finish              
+                #curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
                 pspec_dic_sims[sim_no] = curr_sim_pspec_dic
         #------------------------------------------------------------------
 
@@ -317,24 +314,43 @@ if __name__ == "__main__":
                 curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
             #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-            noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
+            #noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
 
         H = h5py.File(tod_file, "a")
         for d1d2 in detector_combs:
             d1, d2 = d1d2
             curr_theory = noise_powspec_dic[(d1, d2)]
             if(d1==d2):
-                if(plot): 
-                    axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
-                    axs[0,2].plot(T/3600, noise_tod_list[d1], alpha=0.1)
-                    axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
                 name = same_offset_groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
-                if('noise_data' not in f or 'noisy_data' not in f): 
-                    #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-                    tod_tot = noise_tod_list[d1] + sky_tod[d1]
-                    f.create_dataset('noise_data', data=noise_tod_list[d1], compression='gzip', compression_opts=9)
-                    f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
+                
+                noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
+                tod_tot =  sky_tod[d1] + noise_tod #noise_tod_list[d1] +
+
+                if('uncorr_noise_data' in f): del f['uncorr_noise_data'] 
+                if('uncorr_noisy_data' in f): del f['uncorr_noisy_data'] 
+                f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
+                f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
+
+                #Add a slope
+                delta = 0.3 * (np.max(sky_tod[d1]) - np.min(sky_tod[d1]))  # 30% of the data range
+                slope = delta / (T[-1] - T[0])
+                data_with_slope = noise_tod + slope * (T - T[0])        
+            
+                #add 7-sigma peaks
+                sigma = np.std(data_with_slope)
+                peak_indices = np.random.choice(len(T), size=3, replace=False)
+                data_with_peaks = data_with_slope.copy()
+                peak_amplitude = 7 * sigma
+                for idx in peak_indices: data_with_peaks[idx] += peak_amplitude
+                if('namap_data' in f): del f['namap_data'] 
+                f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
+                
+                
+                if(plot): 
+                    axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
+                    axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
+                    axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
             else:
                 curr_theory = noise_powspec_dic[(d1, d2)]
                 if(plot): 

@@ -17,8 +17,8 @@ from astropy.io import fits
 import pickle
 from progress.bar import Bar
 import time
-import matplotlib
-matplotlib.use("Agg")
+
+
 
 
 if __name__ == "__main__":
@@ -52,7 +52,6 @@ if __name__ == "__main__":
 
     for group in range(len(same_offset_groups)):
 
-    
         #------------------------------------------------------------------
         xpix_list = []
         ypix_list = []
@@ -69,7 +68,6 @@ if __name__ == "__main__":
             y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
             xpix_list.append(x_pixel_coords)
             ypix_list.append(y_pixel_coords)
-
         H.close()
         #------------------------------------------------------------------
 

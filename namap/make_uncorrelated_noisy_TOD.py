@@ -1,6 +1,7 @@
 import sys
 sys.path.append('../simulations')
 import sim_tools_flatsky, sim_tools_tod
+from make_correlated_noisy_TOD import gaussian_random_tod
 import argparse
 from strategy import load_params
 import numpy as np
@@ -18,113 +19,7 @@ from astropy.io import fits
 import pickle
 from progress.bar import Bar
 import time
-import matplotlib
-matplotlib.use("Agg")
 from multiprocessing import Pool, cpu_count
-
-_args = None
-
-def worker_init(*args):
-    global _args
-    _args = args
-
-def worker_tod(curr_spec_list):
-    global _args
-    freq_fft, sample_freq, tod_len = _args 
-    TOD_list = []
-    for pk in curr_spec_list:
-        TOD_list.append(gaussian_random_tod(freq_fft, pk, res = (1/sample_freq), nx = tod_len))
-    return np.asarray(TOD_list)
-
-def gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, ncpus):
-    with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
-        # Transform full cube (nchan, npix, npix) as (npix*npix, nchan)
-        tod_list = p.map(worker_tod, np.array_split(curr_spec_list, ncpus) )
-    tod_list_final = np.vstack(tod_list) 
-    return tod_list_final
-
-def worker_model(curr_sim_pspec_dic_for_worker):
-    global _args
-    freq_fft, sample_freq, tod_len = _args 
-    spec_list = []
-    for tod1, tod2 in curr_sim_pspec_dic_for_worker:
-        spec_list.append(( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real )
-    return np.asarray(spec_list)
-    curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
-    curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-
-def model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus):
-
-    curr_sim_pspec_dic_for_worker = []
-    cntr = []
-    for (cntr1, tod1) in enumerate( tod_sim_arr ):
-        for (cntr2, tod2) in enumerate( tod_sim_arr ):
-            if cntr2<cntr1: continue  
-            else: 
-                curr_sim_pspec_dic_for_worker.append((tod1, tod2))
-                cntr.append((cntr1, cntr2))
-    
-    with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
-        curr_sim_pspec = p.map(worker_model, np.array_split(curr_sim_pspec_dic_for_worker, ncpus) )
-    curr_sim_pspec = np.vstack(curr_sim_pspec) 
-
-    curr_sim_pspec_dic = {}
-    for curr_spec, (cntr1, cntr2) in zip(curr_sim_pspec, cntr):  
-        curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-
-    return curr_sim_pspec_dic
-
-def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
-
-    """
-    Generate a gaussian random noise timestream from a power spectrum.  
-
-    Parameters
-    ----------
-    l:  array
-        wavenumber array
-    clt: array
-        power spectrum amplitude array
-    nx: int
-        the number of elements of the timestream
-    res: float
-        the (time) resolution
-    l_cutoff: float
-        maximum wavenumber used in the generation of the timestream. 
-
-    Returns
-    -------
-    real_space_tod: array
-        the generated timestream. 
-    """ 
-    
-    lmap_rad_x = nx*res
-    #Generate gaussian amplitudes
-    norm = 1/res
-
-    np.random.seed()
-
-    noise = np.random.normal(loc=0, scale=1, size=nx)
-    dmn1  = np.fft.fft( noise )
-
-    if(l_cutoff is not None): lmax = np.minimum(l_cutoff, l.max()) 
-    else: lmax = l.max()
-
-    cl_map = np.zeros(l.shape) 
-        
-    w = np.where((l>0) & (l<=lmax))
-
-    f = interpolate.interp1d( l, clt,  kind='linear')
-    cl_map[w] = f(l[w])
-    w1 = np.where( cl_map <= 0)
-    if(w1[0].shape[0] != 0): cl_map[w1] = 0
-    #Fill amn_t
-    amn_t = dmn1 * norm * np.sqrt( cl_map )
-    
-    #Output map
-    real_space_tod = np.real(np.fft.ifft( amn_t ))
-    
-    return real_space_tod
 
 
 if __name__ == "__main__":
@@ -147,8 +42,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
 
-    plot = False
-    ncpus = 24
+    plot = True
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
@@ -169,8 +63,7 @@ if __name__ == "__main__":
     nsims = P['nsim_noise']
 
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-    #Each pixel with the same offset sees the same beam, but in different frequency band. 
-    same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
+    groups = det_names_dict.groupby(['Frequency'])['Name'].apply(list).reset_index()
     
     tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
 
@@ -181,8 +74,8 @@ if __name__ == "__main__":
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
 
-    #For each group of pixels seeing the same beam: 
-    for group in range(len(same_offset_groups)):
+    #For each group of pixels seeing the frequency band: 
+    for group in range(len(groups)):
 
         start = time.time()
         if(plot):
@@ -200,7 +93,7 @@ if __name__ == "__main__":
         fft_sky_tod = []
         #Load the sky timestreams (from strategy.py)
         H = h5py.File(tod_file, "a")
-        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
+        for id, d in enumerate(groups.iloc[group]['Name']): 
             #if(id>2): continue
             f = H[f'kid_{d}_roach']
             tod = f['data'][()]
@@ -222,14 +115,13 @@ if __name__ == "__main__":
         #------------------------------------------------------------------
         #Generate the noise model for auto- and cross-power between detectors
         freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(tod_noise_level, fknee, alphaknee, tod_len, sample_freq)
-        cross_noise_powspec = sim_tools_tod.get_correlated_powspec(rho_one_over_f, noise_powspec_one_over_f, noise_powspec_one_over_f)
         noise_powspec_dic = {}
         for i in range(total_detectors):
             for j in range(total_detectors):
                 if i == j:
                     noise_powspec_dic[i, j] = noise_powspec
                 else:
-                    noise_powspec_dic[i, j] = cross_noise_powspec
+                    noise_powspec_dic[i, j] = np.zeros_like(noise_powspec)
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
@@ -263,90 +155,71 @@ if __name__ == "__main__":
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
-        #Check if all the detectors in the group already have a noise timestream. 
-        H = h5py.File(tod_file, "a")
-        name = same_offset_groups.iloc[group]['Name'][-1]
-        f = H[f'kid_{name}_roach']
-        B = ('noise_data' not in f or 'noisy_data' not in f)
-        H.close() 
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
         #If the detectors don't all have a noise timestream yet, generate correlated power spectra
-        if(B): 
 
-            tod_sims_dic = {}
-            pspec_dic_sims = {}
+        tod_sims_dic = {}
+        pspec_dic_sims = {}
 
-            for sim_no in range( nsims ):
+        for sim_no in range( nsims ):
 
-                #Generate un-correlated simulated timestreams
-                tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
-                             
-                bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
-                #get the correlated power spectra now.
-                curr_sim_pspec_dic = {}
-                for (cntr1, tod1) in enumerate( tod_sim_arr ):
-                    for (cntr2, tod2) in enumerate( tod_sim_arr ):
-                        if cntr2<cntr1: continue       
-                        curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
-                        curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-                    bar.next()
-                bar.finish              
-                #curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
-                pspec_dic_sims[sim_no] = curr_sim_pspec_dic
+            #Generate un-correlated simulated timestreams
+            tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
         #From the power spectra, generate random gaussian TODs and save them. 
         detector_combs_autos   = [[detector, detector] for detector in detector_array]
-        detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
-        detector_combs = detector_combs_autos + detector_combs_crosses
-
-        if(B):
-            curr_spec_list = []
-            for d1d2 in detector_combs_autos:
-                d1, d2 = d1d2
-                curr_theory = noise_powspec_dic[(d1, d2)]
-                #sims
-                curr_spec_arr = []
-                for sim_no in pspec_dic_sims:
-                    curr_freq, curr_spec = pspec_dic_sims[sim_no][(d1, d2)]
-                    curr_spec_arr.append( curr_spec )
-                curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
-
-            #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-            #noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
 
         H = h5py.File(tod_file, "a")
-        for d1d2 in detector_combs:
+        for d1d2 in detector_combs_autos:
             d1, d2 = d1d2
             curr_theory = noise_powspec_dic[(d1, d2)]
             if(d1==d2):
-                name = same_offset_groups.iloc[group]['Name'][d1]
+                name = groups.iloc[group]['Name'][d1]
                 f = H[f'kid_{name}_roach']
-                if('noise_data' not in f or 'noisy_data' not in f): 
-                    noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
-                    tod_tot =  sky_tod[d1] + noise_tod #noise_tod_list[d1] +
-                    f.create_dataset('noise_data', data=noise_tod, compression='gzip', compression_opts=9)
-                    f.create_dataset('noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
-                
+                noise_tod = tod_sim_arr[d1] #gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
+                tod_tot =  sky_tod[d1] + noise_tod #noise_tod_list[d1] +
+                if('uncorr_noise_data' in f): del f['uncorr_noise_data'] 
+                f.create_dataset('uncorr_noise_data', data=noise_tod, compression='gzip', compression_opts=9)
+                if('uncorr_noisy_data' in f): del f['uncorr_noisy_data'] 
+                f.create_dataset('uncorr_noisy_data', data=tod_tot,   compression='gzip', compression_opts=9)
+
                 if(plot): 
-                    axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
+                    #axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
                     axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
                     axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
-            else:
-                curr_theory = noise_powspec_dic[(d1, d2)]
-                if(plot): 
-                    axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
-                    axs[1,1].loglog(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
+
+                #Add a slope
+                delta = 0.3 * (np.max(sky_tod[d1]) - np.min(sky_tod[d1]))  # 30% of the data range
+                slope = delta / (T[-1] - T[0])
+                data_with_slope = noise_tod + slope * (T - T[0])        
+            
+                #add 7-sigma peaks
+                sigma = np.std(data_with_slope)
+                peak_indices = np.random.choice(len(T), size=3, replace=False)
+                data_with_peaks = data_with_slope.copy()
+                peak_amplitude = 7 * sigma
+                for idx in peak_indices:
+                    data_with_peaks[idx] += peak_amplitude
+                if('namap_data' in f): del f['namap_data'] 
+                f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
+                
+                '''
+                plt.plot(T, data_with_slope, label='With 30% slope')
+                plt.plot(T, data_with_peaks, 'r', label='With 7σ peaks', markersize=8, alpha=0.1)
+                plt.xlabel('Time [s]')
+                plt.ylabel('Data')
+                plt.legend()
+                plt.show()
+                '''
+                
         H.close()
         #------------------------------------------------------------------
 
         #------------------------------------------------------------------
         if(plot):
             fig.tight_layout()
-            fig.savefig(f'plot/group_{group}_summary_plot.png')
+            fig.savefig(f'plot/uncorr_group_{group}_summary_plot.png')
             plt.close()
         #------------------------------------------------------------------
         end = time.time()
@@ -355,3 +228,14 @@ if __name__ == "__main__":
         print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
         #------------------------------------------------------------------
 
+
+
+'''
+from scipy.interpolate import interp1d
+
+# Step 1: create interpolation function from data1
+interp_func = interp1d(t1, data1, kind='linear', fill_value='extrapolate')
+
+# Step 2: evaluate at t2 points
+resampled_data1 = interp_func(t2)
+'''

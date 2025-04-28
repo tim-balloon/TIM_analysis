@@ -54,8 +54,8 @@ std = 0 #STD of the gaussian used for the convolution. The value is in arcsec
 
 #--- Preprocessing data analysis parameters ---
 #Do not work on simulated timestreams so far, as there is no strong baseline, noise nor peaks. 
-highpassfreq = 0 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
-polynomialorder = 0 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
-despike = False #Despike flag. If called, two possible parameters can be explicited. 
+highpassfreq = 9 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
+polynomialorder = 1 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
+despike = True #Despike flag. If called, two possible parameters can be explicited. 
 sigma=5        #The first is the height in sigma unit for the peak, 
 prominence=5   #and the second is the prominence in sigma unit for the peak
