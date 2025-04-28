@@ -160,7 +160,7 @@ def gen_tod(wcs, Map, ybins, xbins, pixel_offset, pointing_paths):
 
     return wcs, Map, hist, norm, samples, positions_x, positions_y
 
-def save_scan_path(tod_file, scan_path, spf):
+def save_scan_path(tod_file, scan_path, spf, lower_spf=False):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -172,11 +172,15 @@ def save_scan_path(tod_file, scan_path, spf):
         (ra, dec) coordinates timestreams of the center pixel
     spf: int
         the number of samples per frame
+    lower_spf: bool
+        if save the rad dec with an spf lower than the spf of the data, change the name of the group. 
     Returns
     -------
     """ 
+    if(lower_spf): names = ('RA_lowerspf', 'DEC_lowerspf')
+    else: names = ('RA', 'DEC')
     H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('RA', 'DEC'), (scan_path_sky[:,0],scan_path_sky[:,1]))):
+    for i, (name, coord) in enumerate(zip(names, (scan_path_sky[:,0],scan_path_sky[:,1]))):
         namegrp = name
         if namegrp not in H:
             grp = H.create_group(namegrp)
@@ -242,11 +246,12 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, po
         namegrp = f'kid_{name}_roach'
         if namegrp not in H:
             grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=samples[detector,:], compression='gzip', compression_opts=9)
+            grp.create_dataset('data', data=samples[detector,:],
+                                compression='gzip', compression_opts=9)
             grp.create_dataset('spf', data=spf)
             grp.create_dataset('pixel_offset_y', data=offset)
             grp.create_dataset('pixel_offset_x', data=shift)
-            grp.create_dataset('frequency', data=shift)
+            grp.create_dataset('frequency', data=F)
 
         namegrp = f'kid_{name}_RA'
         if namegrp not in H:
@@ -423,11 +428,15 @@ if __name__ == "__main__":
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
 
-    #Pixel offsets from the center of the field of view in degree. 
+    #Pixel offsets from the center of the field of view in degree.
+
+    #---------------------------    
+    #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
     pixel_offset_HW, pixel_shift_HW = pixelOffset(P['nb_pixel_HW'], P['offset_HW'], -P['arrays_separation']/2)
     pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
+    
     pixel_offset = np.concatenate((pixel_offset_HW, pixel_offset_LW))
-    pixel_shift  = np.concatenate((pixel_shift_HW, pixel_shift_LW)) 
+    pixel_shift = np.concatenate((pixel_shift_HW, pixel_shift_LW))
 
     #Angle of the rotation to apply to the detector array. 
     theta = np.radians(P['theta'])
@@ -435,10 +444,10 @@ if __name__ == "__main__":
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
     dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = int(1/(dt*3600)) #sample per frame defined here as the acquisition rate in Hz. 
+    spf = int(1/np.round(dt*3600,3)) #sample per frame defined here as the acquisition rate in Hz. 
     T = np.arange(0,T_duration,dt) * 3600 #s
-    #time_obs = Time('2025-04-17T00:00:00') + T * u.s  # Properly time-stamped
-    HA = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    #local sideral time
+    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------    
@@ -450,11 +459,11 @@ if __name__ == "__main__":
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
     scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only the constant scan speed part of the pointing. 
     T_trim = T            #[scan_flag==1]
-    HA_trim = HA          #[scan_flag==1]
+    LST_trim = LST          #[scan_flag==1]
     
     #Generate the pointing on the sky for the center of the arrays
-    if(P['old']): scan_path_sky, azel = genPointingPath(T_trim, scan_path, HA_trim, lat, dec, ra, azel=True) 
-    else: scan_path_sky, azel = genPointingPath_mod(scan_path, HA_trim, lat, dec, ra, azel=True) 
+    if(P['old']): scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
+    else: scan_path_sky, azel = genPointingPath_mod(scan_path, LST_trim, lat, dec, ra, azel=True) 
 
     #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
     pixel_paths  = genPixelPath(scan_path, pixel_offset, pixel_shift, theta)
@@ -462,9 +471,9 @@ if __name__ == "__main__":
     #Generate the pointing on the sky of each pixel. 
     start = time.time() 
     if(P['old']):
-        pointing_paths = [genPointingPath(T_trim, pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
+        pointing_paths = [genPointingPath(T_trim, pixel_path, LST_trim, lat, dec, ra) for pixel_path in pixel_paths]
     else:
-        pointing_paths = [genPointingPath_mod(pixel_path, HA_trim, lat, dec, ra) for pixel_path in pixel_paths]
+        pointing_paths = [genPointingPath_mod(pixel_path, LST_trim, lat, dec, ra) for pixel_path in pixel_paths]
 
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,ra=ra) 
@@ -521,7 +530,6 @@ if __name__ == "__main__":
     plt.show()
     #----------------------------------------
 
-
     #----------------------------------------
     #Generate the TODs and save Them in hdf5
     #The path to the sky simulation from which to generate the TODs from
@@ -561,10 +569,9 @@ if __name__ == "__main__":
 
 
     #----------------------------------------
-    #local sideral time
-    lst = HA
+    
     #latitude timestream
-    lat = np.ones(len(lst)) * lat
+    lat = np.ones(len(LST)) * lat
 
     #Generate the telescope coordinates and parallactic angle. 
 
@@ -575,7 +582,7 @@ if __name__ == "__main__":
     cos_lat = np.cos(np.radians(lat))
     sin_lat = np.sin(np.radians(lat))
 
-    hour_angle = (lst - ra / 15)*np.pi/12
+    hour_angle = (LST - ra / 15)*np.pi/12
     index, = np.where(hour_angle<0)
     hour_angle[index] += 2*np.pi
     
@@ -593,15 +600,20 @@ if __name__ == "__main__":
     #Save timestreams in a .hdf5 file 
     save_PA(tod_file, np.degrees(pa), spf)
     save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_lst_lat(tod_file, lst, lat, spf)
+    save_lst_lat(tod_file, LST, lat, spf)
     save_az_el(tod_file, azel[:,0], azel[:,1], spf)
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
-    #----------------------------------------
+    #-------------------------------------------
+    #-------------------------------------------
+    lower_spf = 50
+    save_scan_path(tod_file, scan_path_sky[::int(spf/lower_spf)], spf=lower_spf, lower_spf=True)
+    #-------------------------------------------
 
     #Finally, we save the TODs of each pixel, depending on their frequency band. 
     #We first save the TODs of pixels in the HW array, then in the LW array. 
     start = time.time()
+
 
     for array, freqs_of_array, pointing_paths_to_save, pixel_offset_array, pixel_shift_array in zip(
                                                            ('HW', 'LW'), 
@@ -645,7 +657,8 @@ if __name__ == "__main__":
 
             #----------------------------------------
             #Select the right names of the detectors in the name list. 
-            if(array=='HW'): names = det_names[f * P['nb_pixel_HW'] : (f + 1) * P['nb_pixel_HW']]
+            if(array=='HW'): 
+                names = det_names[f * P['nb_pixel_HW'] : (f + 1) * P['nb_pixel_HW']]
             else:
                 index = P['nb_pixel_HW'] * P['nb_channels_per_array']
                 names = det_names[index +f * P['nb_pixel_LW'] :index + (f + 1) * P['nb_pixel_LW']]
