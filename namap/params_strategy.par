@@ -2,9 +2,9 @@
 #Array parameters used to geenrate the TODs and the KIDs file.
 detectors_name_file = 'config/TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
-nb_pixel_HW = 64 #Number of pixel per frequency band in the HW array.
+nb_pixel_HW = 63 #Number of pixel per frequency band in the HW array.
 offset_HW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the HW array
-nb_pixel_LW = 52 #Number of pixel per frequency band in the LW array.
+nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
 offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the LW array
 arrays_separation = 0.3 #[deg]
 theta = 0 #[deg] rotation angle of detectors. 
