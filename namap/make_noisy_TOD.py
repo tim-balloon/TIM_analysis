@@ -243,7 +243,7 @@ if __name__ == "__main__":
 
         #------------------------------------------------------------------
         #If the detectors don't all have a noise timestream yet, generate correlated power spectra
-        if(B): 
+        if(B or True): 
 
             tod_sims_dic = {}
             pspec_dic_sims = {}
