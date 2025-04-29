@@ -26,51 +26,19 @@ def worker_init(*args):
     global _args
     _args = args
 
-def worker_tod(curr_spec_list):
+def worker_model(grps):
     global _args
-    freq_fft, sample_freq, tod_len = _args 
-    TOD_list = []
-    for pk in curr_spec_list:
-        TOD_list.append(gaussian_random_tod(freq_fft, pk, res = (1/sample_freq), nx = tod_len))
-    return np.asarray(TOD_list)
+    same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f  = _args 
+    for group in grps:
+        make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
 
-def gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, ncpus):
-    with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
-        # Transform full cube (nchan, npix, npix) as (npix*npix, nchan)
-        tod_list = p.map(worker_tod, np.array_split(curr_spec_list, ncpus) )
-    tod_list_final = np.vstack(tod_list) 
-    return tod_list_final
+def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f):
 
-def worker_model(curr_sim_pspec_dic_for_worker):
-    global _args
-    freq_fft, sample_freq, tod_len = _args 
-    spec_list = []
-    for tod1, tod2 in curr_sim_pspec_dic_for_worker:
-        spec_list.append(( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real )
-    return np.asarray(spec_list)
-    curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
-    curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
+    grps = np.arange(len(same_offset_groups))
 
-def model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus):
-
-    curr_sim_pspec_dic_for_worker = []
-    cntr = []
-    for (cntr1, tod1) in enumerate( tod_sim_arr ):
-        for (cntr2, tod2) in enumerate( tod_sim_arr ):
-            if cntr2<cntr1: continue  
-            else: 
-                curr_sim_pspec_dic_for_worker.append((tod1, tod2))
-                cntr.append((cntr1, cntr2))
+    with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
+        p.map(worker_model, np.array_split(grps, ncpus) )
     
-    with Pool(ncpus, initializer=worker_init, initargs=(freq_fft, sample_freq, tod_len )) as p:
-        curr_sim_pspec = p.map(worker_model, np.array_split(curr_sim_pspec_dic_for_worker, ncpus) )
-    curr_sim_pspec = np.vstack(curr_sim_pspec) 
-
-    curr_sim_pspec_dic = {}
-    for curr_spec, (cntr1, cntr2) in zip(curr_sim_pspec, cntr):  
-        curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-
-    return curr_sim_pspec_dic
 
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
 
@@ -142,7 +110,7 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
     
     return real_space_tod
 
-def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=True):
+def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
 
 
     freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
@@ -389,5 +357,5 @@ if __name__ == "__main__":
         timing = end - start
         
         print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
-        #------------------------------------------------------------------
+    #------------------------------------------------------------------
 
