@@ -35,7 +35,7 @@ def worker_model(grps):
     noise_list = []
     for group in grps:
         print(f'Generate group {group}')
-        total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        total_detectors = 2 #len(same_offset_groups.iloc[group]['Name'])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
     return noise_list
 
@@ -120,6 +120,7 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
 
 def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
+
     '''
     For pixels seeing the same beam, but at different frequency bands, 
     this function generates noise timestreams with the 1/f correlated,
@@ -127,10 +128,8 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
 
     Parameters
     ----------
-    group: int
-        the index of the group of pixels to generate noise for. 
-    same_offset_groups: 
-        the list of pixel groups having seiing the same beam.
+    total_detectors: int
+        the number of detectors to generate noise for. 
     T: array
         the time timestream
     sample_freq: float
@@ -160,6 +159,9 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
 
     Returns
     -------
+    noise_tods_list: list
+        list containing the n=total_detectors noise timestreams.
+
     '''
 
     freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
