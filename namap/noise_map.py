@@ -47,65 +47,63 @@ if __name__ == "__main__":
     wcs = dwcs['wcs']
     xbins = np.arange(-0.5, wcs.pixel_shape[0]+0.5, 1)
     ybins = np.arange(-0.5, wcs.pixel_shape[1]+0.5, 1)
+    embed()
 
     tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
 
-    for group in range(len(same_offset_groups)):
+    for key in ('data', 'noisy_data'):
+        
+        cube_per_pix = []
 
-        #------------------------------------------------------------------
-        xpix_list = []
-        ypix_list = []
-        samples = []
-        #Load the sky timestreams (from strategy.py)
-        H = h5py.File(tod_file, "a")
-        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
-            f = H[f'kid_{d}_roach']
-            samples.append(f['noisy_data'][()]) 
-            f = H[f'kid_{d}_RA']
-            ra = f['data'][()]
-            f = H[f'kid_{d}_DEC']
-            dec = f['data'][()]
-            y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
-            xpix_list.append(x_pixel_coords)
-            ypix_list.append(y_pixel_coords)
-        H.close()
+        for group in range(len(same_offset_groups)):
 
-        xpix_list = np.asarray(xpix_list)
-        ypix_list = np.asarray(ypix_list)
-        samples =np.asarray( samples )
-        #------------------------------------------------------------------
+            #------------------------------------------------------------------
+            xpix_list = []
+            ypix_list = []
+            samples = []
+            #Load the sky timestreams (from strategy.py)
+            H = h5py.File(tod_file, "a")
+            for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
+                f = H[f'kid_{d}_roach']
+                samples.append(f['noisy_data'][()]) 
+                f = H[f'kid_{d}_RA']
+                ra = f['data'][()]
+                f = H[f'kid_{d}_DEC']
+                dec = f['data'][()]
+                y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
+                xpix_list.append(x_pixel_coords)
+                ypix_list.append(y_pixel_coords)
+            H.close()
 
-        norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
-        hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
-        plt.imshow(hist/norm, origin='lower')
-        plt.savefig(f'grp{group}_noise.png')
-        plt.close()
+            xpix_list = np.asarray(xpix_list)
+            ypix_list = np.asarray(ypix_list)
+            samples =np.asarray( samples )
+            #------------------------------------------------------------------
 
-        #------------------------------------------------------------------
-        xpix_list = []
-        ypix_list = []
-        samples = []
-        #Load the sky timestreams (from strategy.py)
-        H = h5py.File(tod_file, "a")
-        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
-            f = H[f'kid_{d}_roach']
-            samples.append(f['data'][()]) 
-            f = H[f'kid_{d}_RA']
-            ra = f['data'][()]
-            f = H[f'kid_{d}_DEC']
-            dec = f['data'][()]
-            y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
-            xpix_list.append(x_pixel_coords)
-            ypix_list.append(y_pixel_coords)
-        H.close()
+            norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
+            hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
+            cube_per_pix.append(hist/norm) #Jy/pix
 
-        xpix_list = np.asarray(xpix_list)
-        ypix_list = np.asarray(ypix_list)
-        samples =np.asarray( samples )
-        #------------------------------------------------------------------
+        pixel_sr = (wcs.wcs.cdelt[0]* np.pi/180/3600 )**2 #solid angle of the pixel in sr 
+        cube_per_sr =  np.asarray(cube_per_pix) / pixel_sr * 1.e-6 #The 1.e-6 is used to go from Jy to My, final result in MJy/sr
+        
 
-        norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
-        hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
-        plt.imshow(hist/norm, origin='lower')
-        plt.savefig(f'grp{group}_signal.png')
-        plt.close()
+        filename = P["output_path"] + '/' +  P["run_name"] + '_' + key + '.fits'
+        print('Write '+filename+'...')
+        
+        if os.path.exists(P['output_path']) == False:
+            print('Create '+P['output_path'])
+            os.makedirs(P['output_path'])
+        
+        f = fits.PrimaryHDU(cube_per_sr, header=wcs.to_header())
+        hdu = fits.HDUList([f])
+        hdr = hdu[0].header
+        hdr.set("cube")
+        hdr.set("Datas")
+        hdr["BITPIX"] = ("64", "array data type")
+        hdr["BUNIT"] = 'Jy/sr'
+        hdr["DATE"] = (str(datetime.datetime.now()), "date of the creation")
+        hdu.writeto(filename, overwrite=True)
+        hdu.close()
+
+    
