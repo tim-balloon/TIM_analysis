@@ -53,11 +53,22 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     final, names = zip(*results)
     final = list(chain.from_iterable(final))
     names = list(chain.from_iterable(names))
-    embed()
 
-    for i, (tod, n) in enumerate(zip(final, names)):
-        print(len(tod), len(n))
-    embed()
+    print('saving')
+    H = h5py.File(tod_file, "a")    
+    for i, (tod_list, list_names) in enumerate(zip(final, names)):
+        for j, (tod, name) in  enumerate(zip(tod_list, list_names)):
+            f = H[f'kid_{d}_roach']
+            sky_tod = f['data']
+            data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
+            data_with_peaks = add_peaks_to_timestream(data_with_slope)
+            if('corr_noise_data' in f): del f['corr_noise_data'] 
+            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
+            f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
+            f.create_dataset('corr_noisy_data', data=tod+sky_tod, compression='gzip', compression_opts=9)
+            if('namap_data' in f): del f['namap_data'] 
+            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
+    H.close()
     
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
 
