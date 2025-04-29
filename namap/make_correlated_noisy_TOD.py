@@ -31,15 +31,20 @@ def worker_init(*args):
 def worker_model(grps):
     global _args
     same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f  = _args 
+
+    noise_list = []
     for group in grps:
-        make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+        noise_list.append(make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
+    return noise_list
 
 def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f):
 
     grps = np.arange(len(same_offset_groups))
     print('start //')
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
-        p.map(worker_model, np.array_split(grps, ncpus) )
+        tods = p.map(worker_model, np.array_split(grps, ncpus) )
+    tods = np.vstack(tods) 
+    embed()
     
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
 
@@ -111,6 +116,47 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
     return real_space_tod
 
 def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
+    '''
+    For pixels seeing the same beam, but at different frequency bands, 
+    this function generates noise timestreams with the 1/f correlated,
+    due to all the pixel seeing the same atmosphere. 
+
+    Parameters
+    ----------
+    group: int
+        the index of the group of pixels to generate noise for. 
+    same_offset_groups: 
+        the list of pixel groups having seiing the same beam.
+    T: array
+        the time timestream
+    sample_freq: float
+        the qcquisition rate of T and of the sky TODs. 
+    tod_len: int
+        lenght of the noise TODs
+    tod_shape: list
+        list of the TODs dimensions
+    fmin: float
+        minimum frequency from which to generate the noise TOD. NOT IMPLEMENTED 
+    fmax: float
+        maximum frequency from which to generate the noise TOD. NOT IMPLEMENTED 
+    nsims: int
+        number of simulation to generate. 
+    tod_file: 
+        name of the hdf5 cntaining the sky TODs and in which to save the noise TODs. 
+    tod_noise_level: float
+
+    fknee: float
+
+    alphaknee: float
+
+    rho_one_over_f: float
+
+    plot: bool
+        If to plot a summary plot for the group of pixels or not.
+
+    Returns
+    -------
+    '''
 
     print(f'Generate group {group}')
 
@@ -119,23 +165,8 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
     inds = np.where(freq_fft>0) 
 
     #------------------------------------------------------------------
-    sky_tod = []
-    fft_sky_tod = []
-    #Load the sky timestreams (from strategy.py)
-    H = h5py.File(tod_file, "a")
-    for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
-        #if(id>2): continue
-        f = H[f'kid_{d}_roach']
-        tod = f['data'][()]
-        sky_tod.append(tod)
-        curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
-        fft_sky_tod.append(curr_spec)
-    H.close()
-    #------------------------------------------------------------------
-
-    #------------------------------------------------------------------
     #define some detectors
-    total_detectors = len(fft_sky_tod)
+    total_detectors = 3 #len(same_offset_groups.iloc[group]['Name'])
     detector_array = np.arange( total_detectors )
     detector_combs_autos   = [[detector, detector] for detector in detector_array]
     detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
@@ -153,17 +184,6 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
                 noise_powspec_dic[i, j] = noise_powspec
             else:
                 noise_powspec_dic[i, j] = cross_noise_powspec
-    #------------------------------------------------------------------
-
-    #------------------------------------------------------------------
-    #Check if all the detectors in the group already have a noise timestream. 
-    '''
-    H = h5py.File(tod_file, "a")
-    name = same_offset_groups.iloc[group]['Name'][-1]
-    f = H[f'kid_{name}_roach']
-    B = ('corr_noise_data' not in f or 'corr_noisy_data' not in f)
-    H.close() 
-    '''
     #------------------------------------------------------------------
 
     #------------------------------------------------------------------
@@ -202,14 +222,9 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
             curr_freq, curr_spec = pspec_dic_sims[sim_no][(d1, d2)]
             curr_spec_arr.append( curr_spec )
         curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
-    #// version which is longer...
-    #noise_tod = gaussian_random_tod(freq_fft, curr_spec_mean, res = (1/sample_freq), nx = tod_len)
-    #noise_tod_list = gaussian_tod_pll(freq_fft, curr_spec_list, sample_freq, tod_len, 24)   
 
-    H = h5py.File(tod_file, "a")
-    if(plot): 
-        noise_tods_list = []
-        namap_tods_list = []
+    noise_tods_list = []
+    if(plot): namap_tods_list = []
     for d1d2 in detector_combs:
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
@@ -217,25 +232,38 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
             name = same_offset_groups.iloc[group]['Name'][d1]
             f = H[f'kid_{name}_roach']
             noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
-            if(plot): noise_tods_list.append(noise_tod)
-            tod_tot =  sky_tod[d1] + noise_tod #noise_tod_list[d1] +
+            noise_tods_list.append(noise_tod)
 
-            if('corr_noise_data' in f): del f['corr_noise_data'] 
-            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
-            f.create_dataset('corr_noise_data', data=noise_tod, compression='gzip', compression_opts=9)
-            f.create_dataset('corr_noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
+            #data_with_slope = add_polynome_to_timestream(sky_tod[d1], T) + noise_tod
+            #data_with_peaks = add_peaks_to_timestream(data_with_slope)
+            #namap_tods_list.append(data_with_peaks)
 
-            data_with_slope = add_polynome_to_timestream(sky_tod[d1], T) + noise_tod
-            data_with_peaks = add_peaks_to_timestream(data_with_slope)
-            if('namap_data' in f): del f['namap_data'] 
-            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
-            if(plot): namap_tods_list.append(data_with_peaks)
-    H.close()
+            #if('corr_noise_data' in f): del f['corr_noise_data'] 
+            #if('corr_noisy_data' in f): del f['corr_noisy_data'] 
+            #f.create_dataset('corr_noise_data', data=noise_tod, compression='gzip', compression_opts=9)
+            #f.create_dataset('corr_noisy_data', data=tod_tot, compression='gzip', compression_opts=9)
+
+            #if('namap_data' in f): del f['namap_data'] 
+            #f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
     #------------------------------------------------------------------
     
     if(plot):
-        fig, axs = plt.subplots(3,3,figsize=(9,9), dpi=150)
-        axs[2,1].axis('off');axs[2,2].axis('off')
+
+        #------------------------------------------------------------------
+        sky_tod = []
+        fft_sky_tod = []
+        #Load the sky timestreams (from strategy.py)
+        H = h5py.File(tod_file, "a")
+        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
+            #if(id>2): continue
+            f = H[f'kid_{d}_roach']
+            tod = f['data'][()]
+            sky_tod.append(tod)
+            curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
+            fft_sky_tod.append(curr_spec)
+        H.close()
+        #------------------------------------------------------------------
+        fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
         
         axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
         axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
@@ -245,14 +273,10 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
         axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
         axs[0,1].set_xlim(1e-2, 1e1)
         axs[0,1].set_ylim(1e-18,1e-5)
-        axs[2,0].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[2,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[2,0].set_title('TOD with drift and peaks')
         #------------------------------------------------------------------
         for i in range(len(sky_tod)):
             axs[0,0].plot(T/3600,sky_tod[i], alpha=0.1)
             axs[0,1].loglog(freq_fft[inds],fft_sky_tod[i][inds], alpha=0.1)
-            axs[2,0].plot(T/3600, namap_tods_list[i], alpha=0.1)
         #------------------------------------------------------------------
         axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
         axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
@@ -297,6 +321,8 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
         fig.tight_layout()
         fig.savefig(f'plot/group_{group}_summary_plot.png')
         plt.close()
+
+    return noise_tods_list
 
 if __name__ == "__main__":
     '''
@@ -347,6 +373,8 @@ if __name__ == "__main__":
     alphaknee = P['alphaknee'] 
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
+
+    #Use the // OR the un// version. 
 
     #------------------------------------------------------------------------------------------
     #// version 
