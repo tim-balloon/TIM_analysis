@@ -37,7 +37,7 @@ def worker_model(grps):
 def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f):
 
     grps = np.arange(len(same_offset_groups))
-
+    print('start //')
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
         p.map(worker_model, np.array_split(grps, ncpus) )
     
