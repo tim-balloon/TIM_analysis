@@ -112,6 +112,8 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
 def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
 
+    print(f'Generate group {group}')
+
 
     freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
     inds = np.where(freq_fft>0) 
