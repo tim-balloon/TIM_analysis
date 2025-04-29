@@ -19,6 +19,8 @@ import pickle
 from progress.bar import Bar
 import time
 from multiprocessing import Pool, cpu_count
+import matplotlib
+matplotlib('Agg')
 
 _args = None
 
@@ -39,7 +41,6 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
         p.map(worker_model, np.array_split(grps, ncpus) )
     
-
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
 
     #Add a slope
@@ -56,7 +57,6 @@ def add_peaks_to_timestream(timestream, nb_peaks=3, sigma_peak=7):
     peak_amplitude = sigma_peak * sigma
     for idx in peak_indices: data_with_peaks[idx] += peak_amplitude
     return data_with_peaks
-
 
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
@@ -175,7 +175,7 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
         #Generate un-correlated simulated timestreams
         tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
                         
-        bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
+        #bar = Bar('Processing Sim = %s of %s' %(sim_no+1, nsims), max=total_detectors)
         #get the correlated power spectra now.
         curr_sim_pspec_dic = {}
         for (cntr1, tod1) in enumerate( tod_sim_arr ):
@@ -183,13 +183,12 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
                 if cntr2<cntr1: continue       
                 curr_spec = ( np.fft.fft(tod1) * (1/sample_freq) * np.conj( np.fft.fft(tod2) * (1/sample_freq) ) / tod_len  ).real
                 curr_sim_pspec_dic[(cntr1, cntr2)] = [freq_fft, curr_spec]
-            bar.next()
-        bar.finish              
+            #bar.next()
+        #bar.finish              
         #curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
         pspec_dic_sims[sim_no] = curr_sim_pspec_dic
     #------------------------------------------------------------------
     #From the power spectra, generate random gaussian TODs and save them. 
-
 
     curr_spec_list = []
     for d1d2 in detector_combs_autos:
@@ -316,7 +315,6 @@ if __name__ == "__main__":
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-
     ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
@@ -348,6 +346,19 @@ if __name__ == "__main__":
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
 
+    #------------------------------------------------------------------------------------------
+    #// version 
+    start = time.time()
+    make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+    end = time.time()
+    timing = end - start
+    print(f'Generate all the TODs in {np.round(timing,2)} sec!')   
+    #------------------------------------------------------------------------------------------
+
+    #------------------------------------------------------------------------------------------
+    '''
+    #un// version
+    
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
 
@@ -357,5 +368,6 @@ if __name__ == "__main__":
         timing = end - start
         
         print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
+    '''
     #------------------------------------------------------------------
 
