@@ -78,6 +78,34 @@ if __name__ == "__main__":
         norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
         hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
         plt.imshow(hist/norm, origin='lower')
-        plt.savefig(f'noise_grp{group}.png')
+        plt.savefig(f'grp{group}_noise.png')
         plt.close()
-    embed()
+
+        #------------------------------------------------------------------
+        xpix_list = []
+        ypix_list = []
+        samples = []
+        #Load the sky timestreams (from strategy.py)
+        H = h5py.File(tod_file, "a")
+        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
+            f = H[f'kid_{d}_roach']
+            samples.append(f['data'][()]) 
+            f = H[f'kid_{d}_RA']
+            ra = f['data'][()]
+            f = H[f'kid_{d}_DEC']
+            dec = f['data'][()]
+            y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(ra,dec)    
+            xpix_list.append(x_pixel_coords)
+            ypix_list.append(y_pixel_coords)
+        H.close()
+
+        xpix_list = np.asarray(xpix_list)
+        ypix_list = np.asarray(ypix_list)
+        samples =np.asarray( samples )
+        #------------------------------------------------------------------
+
+        norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
+        hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
+        plt.imshow(hist/norm, origin='lower')
+        plt.savefig(f'grp{group}_signal.png')
+        plt.close()
