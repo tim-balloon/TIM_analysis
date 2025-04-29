@@ -21,6 +21,7 @@ import time
 from multiprocessing import Pool, cpu_count
 import matplotlib
 matplotlib.use('Agg')
+from itertools import chain
 
 _args = None
 
@@ -49,10 +50,11 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
         results = p.map(worker_model, np.array_split(grps, ncpus) )
     #tods = np.vstack(tods) 
     #names = np.vstack(names) 
+    embed()
     final, names = zip(*results)
     final = list(chain.from_iterable(final))
     names = list(chain.from_iterable(names))
-    
+
     embed()
     
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
