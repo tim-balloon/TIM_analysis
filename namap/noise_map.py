@@ -78,5 +78,6 @@ if __name__ == "__main__":
         norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
         hist, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins), weights=samples.ravel())    
         plt.imshow(hist/norm, origin='lower')
-        plt.show()
+        plt.savefig(f'noise_grp{group}.png')
+        plt.close()
     embed()
