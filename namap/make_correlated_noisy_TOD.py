@@ -46,9 +46,13 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     grps = np.arange(len(same_offset_groups))
     print('start //')
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
-        final, names = p.map(worker_model, np.array_split(grps, ncpus) )
+        results = p.map(worker_model, np.array_split(grps, ncpus) )
     #tods = np.vstack(tods) 
     #names = np.vstack(names) 
+    final, names = zip(*results)
+    final = list(chain.from_iterable(final))
+    names = list(chain.from_iterable(names))
+    
     embed()
     
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
