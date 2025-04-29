@@ -20,7 +20,7 @@ from progress.bar import Bar
 import time
 from multiprocessing import Pool, cpu_count
 import matplotlib
-matplotlib('Agg')
+matplotlib.use('Agg')
 
 _args = None
 
