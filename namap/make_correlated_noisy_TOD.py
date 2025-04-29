@@ -37,8 +37,8 @@ def worker_model(grps):
     name_list = []
     for group in grps:
         print(f'Generate group {group}')
-        total_detectors = 2 #len(same_offset_groups.iloc[group]['Name'])
-        name_list.append(same_offset_groups.iloc[group]['Name'][:total_detectors])
+        total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        name_list.append(same_offset_groups.iloc[group]['Name'])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
     return (noise_list, name_list)
 
@@ -415,7 +415,23 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
 
         start = time.time()
-        make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+        tod_list = make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+
+        print('saving')
+        H = h5py.File(tod_file, "a")    
+        for j, (tod, name) in  enumerate(zip(tod_list, same_offset_groups.iloc[group]['Name'])):
+            f = H[f'kid_{name}_roach']
+            sky_tod = f['data']
+            data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
+            data_with_peaks = add_peaks_to_timestream(data_with_slope)
+            if('corr_noise_data' in f): del f['corr_noise_data'] 
+            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
+            f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
+            f.create_dataset('corr_noisy_data', data=tod+sky_tod, compression='gzip', compression_opts=9)
+            if('namap_data' in f): del f['namap_data'] 
+            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
+        H.close()
+    
         end = time.time()
         timing = end - start
         
