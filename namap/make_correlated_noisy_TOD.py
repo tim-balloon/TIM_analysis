@@ -58,7 +58,7 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     H = h5py.File(tod_file, "a")    
     for i, (tod_list, list_names) in enumerate(zip(final, names)):
         for j, (tod, name) in  enumerate(zip(tod_list, list_names)):
-            f = H[f'kid_{d}_roach']
+            f = H[f'kid_{name}_roach']
             sky_tod = f['data']
             data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
             data_with_peaks = add_peaks_to_timestream(data_with_slope)
