@@ -69,6 +69,10 @@ if __name__ == "__main__":
             xpix_list.append(x_pixel_coords)
             ypix_list.append(y_pixel_coords)
         H.close()
+
+        xpix_list = np.asarray(xpix_list)
+        ypix_list = np.asarray(ypix_list)
+        samples =np.asarray( samples )
         #------------------------------------------------------------------
 
         norm, edges = np.histogramdd(sample=(xpix_list.ravel(), ypix_list.ravel()), bins=(xbins,ybins),  )
