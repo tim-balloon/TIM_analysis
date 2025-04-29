@@ -65,7 +65,7 @@ if __name__ == "__main__":
             H = h5py.File(tod_file, "a")
             for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
                 f = H[f'kid_{d}_roach']
-                samples.append(f['noisy_data'][()]) 
+                samples.append(f[key][()]) 
                 f = H[f'kid_{d}_RA']
                 ra = f['data'][()]
                 f = H[f'kid_{d}_DEC']
