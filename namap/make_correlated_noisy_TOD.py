@@ -38,7 +38,7 @@ def worker_model(grps):
     for group in grps:
         print(f'Generate group {group}')
         total_detectors = 2 #len(same_offset_groups.iloc[group]['Name'])
-        name_list.append(same_offset_groups.iloc[group]['Name'])
+        name_list.append(same_offset_groups.iloc[group]['Name'][:total_detectors])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
     return (noise_list, name_list)
 
@@ -50,11 +50,13 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
         results = p.map(worker_model, np.array_split(grps, ncpus) )
     #tods = np.vstack(tods) 
     #names = np.vstack(names) 
-    embed()
     final, names = zip(*results)
     final = list(chain.from_iterable(final))
     names = list(chain.from_iterable(names))
+    embed()
 
+    for i, (tod, n) in enumerate(zip(final, names)):
+        print(len(tod), len(n))
     embed()
     
 def add_polynome_to_timestream(timestream, time, percent_slope=30):
