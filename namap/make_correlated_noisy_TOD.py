@@ -34,7 +34,9 @@ def worker_model(grps):
 
     noise_list = []
     for group in grps:
-        noise_list.append(make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
+        print(f'Generate group {group}')
+        total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
     return noise_list
 
 def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f):
@@ -115,7 +117,9 @@ def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
     
     return real_space_tod
 
-def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
+
+
+def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
     '''
     For pixels seeing the same beam, but at different frequency bands, 
     this function generates noise timestreams with the 1/f correlated,
@@ -158,15 +162,11 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
     -------
     '''
 
-    print(f'Generate group {group}')
-
-
     freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
     inds = np.where(freq_fft>0) 
 
     #------------------------------------------------------------------
     #define some detectors
-    total_detectors = 3 #len(same_offset_groups.iloc[group]['Name'])
     detector_array = np.arange( total_detectors )
     detector_combs_autos   = [[detector, detector] for detector in detector_array]
     detector_combs_crosses = [[detector1, detector2] for detector1 in detector_array for detector2 in detector_array if (detector1!=detector2 and detector1<detector2)]
@@ -188,7 +188,6 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
 
     #------------------------------------------------------------------
     #If the detectors don't all have a noise timestream yet, generate correlated power spectra
-
     tod_sims_dic = {}
     pspec_dic_sims = {}
 
@@ -210,8 +209,9 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
         #curr_sim_pspec_dic = model_pll(freq_fft, tod_sim_arr, sample_freq, tod_len, ncpus)
         pspec_dic_sims[sim_no] = curr_sim_pspec_dic
     #------------------------------------------------------------------
-    #From the power spectra, generate random gaussian TODs and save them. 
 
+    #------------------------------------------------------------------
+    #From the power spectra, generate random gaussian TODs and save them. 
     curr_spec_list = []
     for d1d2 in detector_combs_autos:
         d1, d2 = d1d2
@@ -229,8 +229,6 @@ def make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_l
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
         if(d1==d2):
-            name = same_offset_groups.iloc[group]['Name'][d1]
-            f = H[f'kid_{name}_roach']
             noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
             noise_tods_list.append(noise_tod)
 
