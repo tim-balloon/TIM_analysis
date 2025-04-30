@@ -102,6 +102,35 @@ def add_polynome_to_timestream(timestream, time, percent_slope=30):
     slope = delta / (time[-1] - time[0])
     return slope * (T - T[0]) 
 
+"""
+def add_polynome_to_timestream(timestream, time, percent_slope=30):
+    # Compute the total amplitude delta (30% of data range)
+    delta = percent_slope / 100 * (np.max(timestream) - np.min(timestream))
+    
+    # Normalize time to [0, 1] for numerical stability
+    t_norm = (time - time[0]) / (time[-1] - time[0])
+    
+    # Construct a 3rd-order polynomial with zero mean and scaled amplitude
+    # Example: p(t) = a*t^3 + b*t^2 + c*t + d, but we'll use a simple shape
+    # Here we use a centered cubic curve like: (t - 0.5)^3, scaled
+    poly_shape = (t_norm - 0.5)**3
+    
+    # Scale the polynomial to match the target amplitude (delta)
+    poly_shape -= np.mean(poly_shape)  # Ensure zero mean
+    poly_shape *= delta / (np.max(poly_shape) - np.min(poly_shape))
+    
+    return poly_shape
+"""
+'''
+from scipy.interpolate import interp1d
+
+# Step 1: create interpolation function from data1
+interp_func = interp1d(t1, data1, kind='linear', fill_value='extrapolate')
+
+# Step 2: evaluate at t2 points
+resampled_data1 = interp_func(t2)
+'''
+
 def add_peaks_to_timestream(timestream, nb_peaks=3, sigma_peak=7):
       
     #add 7-sigma peaks
@@ -294,7 +323,7 @@ if __name__ == "__main__":
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-    pll = True
+    pll = False
     ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
@@ -345,7 +374,8 @@ if __name__ == "__main__":
         for group in range(len(same_offset_groups)):
 
             start = time.time()
-            tod_list = make_correlated_timestreams(group, same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+            total_detectors = len(same_offset_groups.iloc[group]['Name'])
+            tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
 
             print('saving')
             H = h5py.File(tod_file, "a")    
