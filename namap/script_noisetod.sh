@@ -39,3 +39,5 @@ python make_correlated_noisy_TOD.py params_strategy.par
 # Or to run multiple instances of the python script(code)
 #srun python3 my_code.py
 
+
+
