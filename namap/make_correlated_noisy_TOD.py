@@ -19,8 +19,8 @@ import pickle
 from progress.bar import Bar
 import time
 from multiprocessing import Pool, cpu_count
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 from itertools import chain
 
 _args = None
@@ -285,6 +285,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
     for d1d2 in detector_combs_autos:
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
+        
         #sims
         curr_spec_arr = []
         for sim_no in pspec_dic_sims:
@@ -297,6 +298,11 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
         if(d1==d2):
+
+            #plt.loglog( freq, noise_powspec, label = r'Total', color = 'black' )
+            #plt.loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
+            #plt.loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
+
             noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
             noise_tods_list.append(noise_tod)
     #------------------------------------------------------------------
@@ -374,7 +380,7 @@ if __name__ == "__main__":
         for group in range(len(same_offset_groups)):
 
             start = time.time()
-            total_detectors = len(same_offset_groups.iloc[group]['Name'])
+            total_detectors = 2 #len(same_offset_groups.iloc[group]['Name'])
             tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
 
             print('saving')
