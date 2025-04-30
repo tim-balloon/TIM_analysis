@@ -13,7 +13,7 @@
 ##SBATCH --time=00:10:00         # Job run time (hh:mm:ss)
 #SBATCH --nodes=1            # Number of nodes
 #SBATCH --mem=200GB
-#SBATCH --ntasks-per-node=24       # Number of task (cores/ppn) per node
+#SBATCH --ntasks-per-node=3       # Number of task (cores/ppn) per node
 #SBATCH --job-name=python_job      # Name of batch job
 #SBATCH --partition=caps         # Partition (queue)
 #SBATCH --account=caps          # Bactch account to use
@@ -38,3 +38,4 @@
 python make_correlated_noisy_TOD.py params_strategy.par
 # Or to run multiple instances of the python script(code)
 #srun python3 my_code.py
+
