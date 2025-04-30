@@ -251,6 +251,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
 
     #------------------------------------------------------------------
     #Generate the noise model for auto- and cross-power between detectors
+    
     freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(tod_noise_level, fknee, alphaknee, tod_len, sample_freq)
     cross_noise_powspec = sim_tools_tod.get_correlated_powspec(rho_one_over_f, noise_powspec_one_over_f, noise_powspec_one_over_f)
     noise_powspec_dic = {}
@@ -267,6 +268,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
     tod_sims_dic = {}
     pspec_dic_sims = {}
     for sim_no in range( nsims ):
+        print(f'starting sim number {sim_no}')
         #Generate un-correlated simulated timestreams
         tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
         #get the correlated power spectra now.
@@ -281,6 +283,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
 
     #------------------------------------------------------------------
     #From the power spectra, generate random gaussian TODs and save them. 
+    print(f'get power spectra')
     curr_spec_list = []
     for d1d2 in detector_combs_autos:
         d1, d2 = d1d2
@@ -294,6 +297,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
         curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
     noise_tods_list = []
+    print(f'get noise tod')
     for d1d2 in detector_combs:
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
@@ -379,6 +383,7 @@ if __name__ == "__main__":
         #For each group of pixels seeing the same beam: 
         for group in range(len(same_offset_groups)):
 
+            print(f'starting group {group}')
             start = time.time()
             total_detectors = len(same_offset_groups.iloc[group]['Name'])
             tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
