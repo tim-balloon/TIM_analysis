@@ -182,10 +182,12 @@ def save_scan_path(tod_file, scan_path, spf, lower_spf=False):
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(names, (scan_path_sky[:,0],scan_path_sky[:,1]))):
         namegrp = name
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
     H.close() 
 
 def save_time_tod(tod_file, T, spf):
@@ -205,10 +207,13 @@ def save_time_tod(tod_file, T, spf):
     '''
     H = h5py.File(tod_file, "a")
     namegrp = f'time'
-    if namegrp not in H:
-        grp = H.create_group(namegrp)
-        grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
+    if namegrp not in H: grp = H.create_group(namegrp)
+    else:                grp = H[namegrp]
+    if('data' in grp): del grp['data'] 
+    if('spf' in grp): del grp['spf'] 
+    grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
+    grp.create_dataset('spf', data=spf)
+
     H.close()
 
 def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, pointing_paths, dect_file, F, spf):
@@ -243,26 +248,38 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, po
     H = h5py.File(tod_file, "a")
 
     for detector, (offset, shift, name, pointing) in enumerate(zip(pixel_offset, pixel_shift, det_names, pointing_paths)):
+        
         namegrp = f'kid_{name}_roach'
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=samples[detector,:],
-                                compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
-            grp.create_dataset('pixel_offset_y', data=offset)
-            grp.create_dataset('pixel_offset_x', data=shift)
-            grp.create_dataset('frequency', data=F)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        if('pixel_offset_y' in grp): del grp['pixel_offset_y'] 
+        if('pixel_offset_x' in grp): del grp['pixel_offset_x'] 
+        if('frequency' in grp): del grp['frequency'] 
+        grp.create_dataset('data', data=samples[detector,:],
+                            compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
+        grp.create_dataset('pixel_offset_y', data=offset)
+        grp.create_dataset('pixel_offset_x', data=shift)
+        grp.create_dataset('frequency', data=F)
 
         namegrp = f'kid_{name}_RA'
-        if namegrp not in H:
-            grp = H.create_group(namegrp)    
-            grp.create_dataset('data', data=pointing[:,0])
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)   
+        else:                grp = H[namegrp] 
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=pointing[:,0])
+        grp.create_dataset('spf', data=spf)
+        
         namegrp = f'kid_{name}_DEC'
-        if namegrp not in H:
-            grp = H.create_group(namegrp)    
-            grp.create_dataset('data', data=pointing[:,1])
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)   
+        else:                grp = H[namegrp] 
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=pointing[:,1])
+        grp.create_dataset('spf', data=spf)
+
 
     H.close()
 
@@ -289,13 +306,16 @@ def save_lst_lat(tod_file, lst, lat, spf):
     Returns
     -------
     """ 
+
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(('lst', 'lat'), (lst,lat))):
         namegrp = name
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
     H.close() 
 
 def save_az_el(tod_file, azimuths, elevations, spf):
@@ -318,10 +338,12 @@ def save_az_el(tod_file, azimuths, elevations, spf):
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(('AZ', 'EL'), (azimuths,elevations))):
         namegrp = name
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
     H.close() 
 
 def save_telescope_coord(tod_file, x_tel, y_tel, spf):
@@ -342,10 +364,12 @@ def save_telescope_coord(tod_file, x_tel, y_tel, spf):
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(('xEL', 'EL'), (x_tel,y_tel))):
         namegrp = name
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
     H.close() 
 
 def save_PA(tod_file, PA, spf):
@@ -366,10 +390,12 @@ def save_PA(tod_file, PA, spf):
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(('PA',), (PA,))):
         namegrp = name
-        if namegrp not in H:
-            grp = H.create_group(namegrp)
-            grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-            grp.create_dataset('spf', data=spf)
+        if namegrp not in H: grp = H.create_group(namegrp)
+        else:                grp = H[namegrp]
+        if('data' in grp): del grp['data'] 
+        if('spf' in grp): del grp['spf'] 
+        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        grp.create_dataset('spf', data=spf)
     H.close() 
 
 if __name__ == "__main__":
@@ -459,7 +485,7 @@ if __name__ == "__main__":
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
     scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only the constant scan speed part of the pointing. 
     T_trim = T            #[scan_flag==1]
-    LST_trim = LST          #[scan_flag==1]
+    LST_trim = LST        #[scan_flag==1]
     
     #Generate the pointing on the sky for the center of the arrays
     if(P['old']): scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
@@ -533,7 +559,7 @@ if __name__ == "__main__":
     #----------------------------------------
     #Generate the TODs and save Them in hdf5
     #The path to the sky simulation from which to generate the TODs from
-    simu_sky_path =os.getcwd()+'/'+P['path']+P['file']
+    simu_sky_path = P['path']+P['file'] #os.getcwd()
     #The output hdf5 file containing the generated TODs. 
     tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
     #Load the names of the detectors. We assigned to them random names so that we cannot do naive for loop and avoid mistakes.
@@ -562,9 +588,11 @@ if __name__ == "__main__":
     cube -= cubemean[:, None, None]
     cube *= pix_size * 1e6 #conversion MJy/sr to Jy/beam
     #Create the world coordinate object and save it. 
-    wcs = WCS(hdr, naxis=2) 
+    wcs = WCS(hdr) 
     d = {'wcs':wcs}
     pickle.dump(d, open(P['wcs_dict'], 'wb'))
+    embed()
+    wcs = WCS(hdr, naxis=2) 
     #----------------------------------------
 
 
