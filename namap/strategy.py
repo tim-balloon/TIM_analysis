@@ -561,7 +561,7 @@ if __name__ == "__main__":
     #The path to the sky simulation from which to generate the TODs from
     simu_sky_path = P['path']+P['file'] #os.getcwd()
     #The output hdf5 file containing the generated TODs. 
-    tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
+    tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5' #os.getcwd()+'/'+
     #Load the names of the detectors. We assigned to them random names so that we cannot do naive for loop and avoid mistakes.
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
     det_names = det_names_dict['Name']
@@ -591,7 +591,6 @@ if __name__ == "__main__":
     wcs = WCS(hdr) 
     d = {'wcs':wcs}
     pickle.dump(d, open(P['wcs_dict'], 'wb'))
-    embed()
     wcs = WCS(hdr, naxis=2) 
     #----------------------------------------
 
