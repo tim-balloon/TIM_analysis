@@ -30,7 +30,8 @@ dt= 2.7777777777777e-6 #hour , defines the aquisition rate. (9.25e-7h acquisitio
 
 #----- Sky simulation -----
 #Fits file containing the mock sky out of which we generates the TOD
-path = 'fits_and_hdf5/'
+path = '/projects/ncsa/caps/TIM_analysis/timestreams/'
+'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
 wcs_dict = 'wcs.p'
