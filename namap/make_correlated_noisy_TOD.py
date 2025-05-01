@@ -39,7 +39,7 @@ def worker_model(grps):
     noise_list = []
     name_list = []
     for group in grps:
-        print(f'Generate group {group}')
+        opf.writelines(f'Generate group {group}')
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
         name_list.append(same_offset_groups.iloc[group]['Name'])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
