@@ -23,6 +23,8 @@ from multiprocessing import Pool, cpu_count
 #matplotlib.use('Agg')
 from itertools import chain
 
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _args = None
 
@@ -71,7 +73,7 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     '''
 
     grps = np.arange(len(same_offset_groups))
-    print('start //')
+    opf.writelines('start //')
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
         results = p.map(worker_model, np.array_split(grps, ncpus) )
     #tods = np.vstack(tods) 
@@ -80,68 +82,16 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     final = list(chain.from_iterable(final))
     names = list(chain.from_iterable(names))
 
-    print('saving')
+    opf.writelines('saving')
     H = h5py.File(tod_file, "a")    
     for i, (tod_list, list_names) in enumerate(zip(final, names)):
         for j, (tod, name) in  enumerate(zip(tod_list, list_names)):
             f = H[f'kid_{name}_roach']
             sky_tod = f['data']
-            data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
-            data_with_peaks = add_peaks_to_timestream(data_with_slope)
             if('corr_noise_data' in f): del f['corr_noise_data'] 
-            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
             f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
-            f.create_dataset('corr_noisy_data', data=tod+sky_tod, compression='gzip', compression_opts=9)
-            if('namap_data' in f): del f['namap_data'] 
-            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
     H.close()
     
-def add_polynome_to_timestream(timestream, time, percent_slope=30):
-
-    #Add a slope
-    delta = percent_slope/100 * (np.max(timestream) - np.min(timestream))  # 30% of the data range
-    slope = delta / (time[-1] - time[0])
-    return slope * (T - T[0]) 
-
-"""
-def add_polynome_to_timestream(timestream, time, percent_slope=30):
-    # Compute the total amplitude delta (30% of data range)
-    delta = percent_slope / 100 * (np.max(timestream) - np.min(timestream))
-    
-    # Normalize time to [0, 1] for numerical stability
-    t_norm = (time - time[0]) / (time[-1] - time[0])
-    
-    # Construct a 3rd-order polynomial with zero mean and scaled amplitude
-    # Example: p(t) = a*t^3 + b*t^2 + c*t + d, but we'll use a simple shape
-    # Here we use a centered cubic curve like: (t - 0.5)^3, scaled
-    poly_shape = (t_norm - 0.5)**3
-    
-    # Scale the polynomial to match the target amplitude (delta)
-    poly_shape -= np.mean(poly_shape)  # Ensure zero mean
-    poly_shape *= delta / (np.max(poly_shape) - np.min(poly_shape))
-    
-    return poly_shape
-"""
-'''
-from scipy.interpolate import interp1d
-
-# Step 1: create interpolation function from data1
-interp_func = interp1d(t1, data1, kind='linear', fill_value='extrapolate')
-
-# Step 2: evaluate at t2 points
-resampled_data1 = interp_func(t2)
-'''
-
-def add_peaks_to_timestream(timestream, nb_peaks=3, sigma_peak=7):
-      
-    #add 7-sigma peaks
-    sigma = np.std(timestream)
-    peak_indices = np.random.choice(len(timestream), size=nb_peaks, replace=False)
-    data_with_peaks = timestream.copy()
-    peak_amplitude = sigma_peak * sigma
-    for idx in peak_indices: data_with_peaks[idx] += peak_amplitude
-    return data_with_peaks
-
 def gaussian_random_tod(l, clt, nx, res, l_cutoff=None):
 
     """
@@ -269,7 +219,6 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
     tod_sims_dic = {}
     pspec_dic_sims = {}
     for sim_no in range( nsims ):
-        print(f'starting sim number {sim_no}')
         #Generate un-correlated simulated timestreams
         tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
         #get the correlated power spectra now.
@@ -284,7 +233,6 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
 
     #------------------------------------------------------------------
     #From the power spectra, generate random gaussian TODs and save them. 
-    print(f'get power spectra')
     curr_spec_list = []
     for d1d2 in detector_combs_autos:
         d1, d2 = d1d2
@@ -298,7 +246,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
         curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
     noise_tods_list = []
-    print(f'get noise tod')
+    opf.writelines(f'get noise tod')
     for d1d2 in detector_combs:
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
@@ -324,7 +272,6 @@ if __name__ == "__main__":
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
-    print('load the parameters')
     parser = argparse.ArgumentParser(description="strategy parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
@@ -332,7 +279,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
-
+    file_path = "log_correlated_timestreams.txt"
+    # Open the file in append mode ('a')
+    opf = open(file_path, 'a')
     #------------------------------------------------------------------------------------------
     
     #Initiate the parameters
@@ -387,15 +336,14 @@ if __name__ == "__main__":
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
 
-        print(f'starting group {group}')
+        opf.writelines(f'starting group {group}')
     
-
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
         
         tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
-        '''
-        print('saving')
+        
+        opf.writelines('saving')
         H = h5py.File(tod_file, "a")    
         for j, (tod, name) in  enumerate(zip(tod_list, same_offset_groups.iloc[group]['Name'])):
             namegrp = f'kid_{name}_roach'
@@ -405,15 +353,15 @@ if __name__ == "__main__":
             if('spf' in grp): del grp['spf'] 
             f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
         H.close()
-        '''
-    
+        
         end = time.time()
         timing = end - start
         
-        print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
+        opf.writelines(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
     #------------------------------------------------------------------
 
-
+    # Don't forget to close the file
+    opf.close()
 
 
 
