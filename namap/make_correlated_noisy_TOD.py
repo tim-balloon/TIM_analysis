@@ -284,7 +284,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------------------------
     
     #Initiate the parameters
-    pll = True
+    pll = False
     ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
@@ -307,7 +307,7 @@ if __name__ == "__main__":
     #Each pixel with the same offset sees the same beam, but in different frequency band. 
     same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
     
-    tod_file= P['path']+'TOD_noise_'+P['file'][:-5]+'.hdf5'
+    tod_file= P['path']+'TOD_noise_notpll_'+P['file'][:-5]+'.hdf5'
 
     #rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
     tod_noise_level = P['tod_noise_level'] #in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
