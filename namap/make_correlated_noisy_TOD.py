@@ -275,7 +275,7 @@ if __name__ == "__main__":
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
     file_path = "log_correlated_timestreams.txt"
-    # Open the file in append mode ('a')
+    if os.path.exists(file_path): os.remove(file_path)
     opf = open(file_path, 'a')
 
     # Don't forget to close the file
