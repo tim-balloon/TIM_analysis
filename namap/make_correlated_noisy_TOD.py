@@ -23,8 +23,6 @@ from multiprocessing import Pool, cpu_count
 #matplotlib.use('Agg')
 from itertools import chain
 
-import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _args = None
 
