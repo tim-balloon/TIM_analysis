@@ -333,7 +333,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------
-    """
+    
     #Initiate the parameters
     pll = False
     ncpus = 24
@@ -366,7 +366,7 @@ if __name__ == "__main__":
     alphaknee = P['alphaknee'] 
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
-
+    
     #Use the // OR the un// version. 
 
     #------------------------------------------------------------------------------------------
@@ -380,7 +380,6 @@ if __name__ == "__main__":
         print(f'Generate all the TODs in {np.round(timing,2)} sec!')   
     '''
     #------------------------------------------------------------------------------------------
-
     #------------------------------------------------------------------------------------------
     #un// version
             
@@ -388,6 +387,7 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
 
         print(f'starting group {group}')
+    """
 
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
