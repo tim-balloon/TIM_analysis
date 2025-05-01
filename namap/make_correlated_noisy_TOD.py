@@ -386,6 +386,13 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
 
         print(f'starting group {group}')
+        print(f'starting group {group}')
+        print(f'starting group {group}')
+        print(f'starting group {group}')
+        print(f'starting group {group}')
+        print(f'starting group {group}')
+        print(f'starting group {group}')
+
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
         tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
