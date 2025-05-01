@@ -23,8 +23,8 @@ from multiprocessing import Pool, cpu_count
 #matplotlib.use('Agg')
 from itertools import chain
 
-import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+#import warnings
+#warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _args = None
 
@@ -39,7 +39,7 @@ def worker_model(grps):
     noise_list = []
     name_list = []
     for group in grps:
-        opf.writelines(f'Generate group {group}')
+        opf.write(f'Generate group {group}'); opf.flush()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
         name_list.append(same_offset_groups.iloc[group]['Name'])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
@@ -73,7 +73,7 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     '''
 
     grps = np.arange(len(same_offset_groups))
-    opf.writelines('start //')
+    opf.write('start //'); opf.flush()
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
         results = p.map(worker_model, np.array_split(grps, ncpus) )
     #tods = np.vstack(tods) 
@@ -82,7 +82,7 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     final = list(chain.from_iterable(final))
     names = list(chain.from_iterable(names))
 
-    opf.writelines('saving')
+    opf.write('saving'); opf.flush()
     H = h5py.File(tod_file, "a")    
     for i, (tod_list, list_names) in enumerate(zip(final, names)):
         for j, (tod, name) in  enumerate(zip(tod_list, list_names)):
@@ -178,7 +178,7 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
     alphaknee: float
 
     rho_one_over_f: float
-
+2023857
     plot: bool
         If to plot a summary plot for the group of pixels or not.
 
@@ -246,16 +246,11 @@ def make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_sh
         curr_spec_list.append( np.mean( curr_spec_arr, axis = 0 ) )
 
     noise_tods_list = []
-    opf.writelines(f'get noise tod')
+    opf.write(f'get noise tod'); opf.flush()
     for d1d2 in detector_combs:
         d1, d2 = d1d2
         curr_theory = noise_powspec_dic[(d1, d2)]
         if(d1==d2):
-
-            #plt.loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-            #plt.loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-            #plt.loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-
             noise_tod = gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
             noise_tods_list.append(noise_tod)
     #------------------------------------------------------------------
@@ -284,9 +279,8 @@ if __name__ == "__main__":
     opf = open(file_path, 'a')
 
     # Don't forget to close the file
-    opf.writelines(f'starting')
-    opf.close()
-    opf = open(file_path, 'a')
+    opf.write(f'starting'); opf.flush()
+
     #------------------------------------------------------------------------------------------
     
     #Initiate the parameters
@@ -341,28 +335,28 @@ if __name__ == "__main__":
     #For each group of pixels seeing the same beam: 
     for group in range(len(same_offset_groups)):
 
-        opf.writelines(f'starting group {group}')
+        opf.write(f'starting group {group}'); opf.flush()
     
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
         
         tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
         
-        opf.writelines('saving')
+        opf.write('saving'); opf.flush()
         H = h5py.File(tod_file, "a")    
         for j, (tod, name) in  enumerate(zip(tod_list, same_offset_groups.iloc[group]['Name'])):
             namegrp = f'kid_{name}_roach'
             if namegrp not in H: grp = H.create_group(namegrp)
             else:                grp = H[namegrp]
-            if('corr_noise_data' in f): del f['corr_noise_data'] 
-            if('spf' in grp): del grp['spf'] 
+            #if('corr_noise_data' in f): del f['corr_noise_data'] 
+            
             f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
         H.close()
         
         end = time.time()
         timing = end - start
         
-        opf.writelines(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
+        opf.write(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!'); opf.flush()
     #------------------------------------------------------------------
 
 
