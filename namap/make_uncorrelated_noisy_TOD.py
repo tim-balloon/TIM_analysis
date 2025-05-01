@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../simulations')
 import sim_tools_flatsky, sim_tools_tod
-from make_correlated_noisy_TOD import gaussian_random_tod
+from make_correlated_noisy_TOD import gaussian_random_tod, add_peaks_to_timestream, add_polynome_to_timestream
 import argparse
 from strategy import load_params
 import numpy as np
@@ -21,13 +21,59 @@ from progress.bar import Bar
 import time
 from multiprocessing import Pool, cpu_count
 
+def make_uncorrelated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f, plot=False):
+
+
+    freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
+    inds = np.where(freq_fft>0) 
+
+    #------------------------------------------------------------------
+    #define some detectors
+    total_detectors = len(total_detectors)
+    detector_array = np.arange( total_detectors )
+    detector_arr_to_plot = np.asarray( detector_array )
+    #------------------------------------------------------------------
+
+    #------------------------------------------------------------------
+    #Generate the noise model for auto- and cross-power between detectors
+    freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(tod_noise_level, fknee, alphaknee, tod_len, sample_freq)
+    noise_powspec_dic = {}
+    for i in range(total_detectors):
+        for j in range(total_detectors):
+            if i == j:
+                noise_powspec_dic[i, j] = noise_powspec
+            else:
+                noise_powspec_dic[i, j] = np.zeros_like(noise_powspec)
+    #------------------------------------------------------------------
+
+    #------------------------------------------------------------------
+    #If the detectors don't all have a noise timestream yet, generate correlated power spectra
+    tod_sims_dic = {}
+    pspec_dic_sims = {}
+    for sim_no in range( nsims ):
+        #Generate un-correlated simulated timestreams
+        tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
+        tod_sims_dic[sim_no] = tod_sim_arr
+    
+    #------------------------------------------------------------------
+
+    #------------------------------------------------------------------
+    #From the power spectra, generate random gaussian TODs and save them. 
+    detector_combs_autos   = [[detector, detector] for detector in detector_array]
+
+    noise_tod_list = []
+    for d1d2 in detector_combs_autos:
+        d1, d2 = d1d2
+        tods = []
+        for sim_no in range( nsims ):
+            tods.append(tod_sims_dic[sim_no][d1])
+        tods = np.asarray(tods)
+        noise_tod_list.append( np.mean(tods, axis = 1) )
+
+    return noise_tod_list
 
 if __name__ == "__main__":
     '''
-    Generate noise TOD. 
-    The noise TOD are frequency, detector, and time independant.
-    The noise TODs are gaussian. 
-    The noise TODs for pixels seeing the same beam (at different frequency bands) are correlated. 
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
@@ -41,8 +87,6 @@ if __name__ == "__main__":
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-
-    plot = True
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
@@ -53,8 +97,6 @@ if __name__ == "__main__":
     sample_freq = 1 / np.round(dt*3600,3)
     tod_len = len(T)
     tod_shape = [tod_len]
-    freq_fft = np.fft.fftfreq(tod_len, 1/sample_freq) #TOD frequencies.
-    inds = np.where(freq_fft>0) 
     #get params for sim generation
     fmin = P['fmin']
     fmax = P['fmax']
@@ -74,168 +116,34 @@ if __name__ == "__main__":
     rho_one_over_f = P['rho_one_over_f']  #some level of 1/f correlation between detectors.
     #------------------------------------------------------------------------------------------
 
-    #For each group of pixels seeing the frequency band: 
-    for group in range(len(groups)):
+    det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+    #Each pixel with the same offset sees the same beam, but in different frequency band. 
+    same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
+
+
+    for group in range(len(same_offset_groups)):
 
         start = time.time()
-        if(plot):
-            fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
-            axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
-            axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-            axs[0,0].set_title('Sky TOD')
-            axs[0,1].set_title('TOD power spectrum')
-            axs[0,1].set_xlabel('frequency [Hz]')
-            axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-            axs[0,1].set_xlim(1e-2, 1e1)
-            axs[0,1].set_ylim(1e-18,1e-5)
-        #------------------------------------------------------------------
-        sky_tod = []
-        fft_sky_tod = []
-        #Load the sky timestreams (from strategy.py)
-        H = h5py.File(tod_file, "a")
-        for id, d in enumerate(groups.iloc[group]['Name']): 
-            #if(id>2): continue
-            f = H[f'kid_{d}_roach']
-            tod = f['data'][()]
-            sky_tod.append(tod)
-            if(plot): axs[0,0].plot(T/3600,f['data'][()], alpha=0.1)
-            curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
-            if(plot): axs[0,1].loglog(freq_fft[inds],curr_spec[inds], alpha=0.1)
-            fft_sky_tod.append(curr_spec)
+        total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        tod_list = make_uncorrelated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
+
+        print('saving')
+        H = h5py.File(tod_file, "a")    
+        for j, (tod, name) in  enumerate(zip(tod_list, same_offset_groups.iloc[group]['Name'])):
+            f = H[f'kid_{name}_roach']
+            sky_tod = f['data']
+            data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
+            data_with_peaks = add_peaks_to_timestream(data_with_slope)
+            if('corr_noise_data' in f): del f['corr_noise_data'] 
+            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
+            f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
+            f.create_dataset('corr_noisy_data', data=tod+sky_tod, compression='gzip', compression_opts=9)
+            if('namap_data' in f): del f['namap_data'] 
+            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
         H.close()
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        #define some detectors
-        total_detectors = len(fft_sky_tod)
-        detector_array = np.arange( total_detectors )
-        detector_arr_to_plot = np.asarray( detector_array )
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        #Generate the noise model for auto- and cross-power between detectors
-        freq, noise_powspec, noise_powspec_one_over_f, noise_powspec_white = sim_tools_tod.detector_noise_model(tod_noise_level, fknee, alphaknee, tod_len, sample_freq)
-        noise_powspec_dic = {}
-        for i in range(total_detectors):
-            for j in range(total_detectors):
-                if i == j:
-                    noise_powspec_dic[i, j] = noise_powspec
-                else:
-                    noise_powspec_dic[i, j] = np.zeros_like(noise_powspec)
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        if(plot):
-            axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-            axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-            axs[0,1].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-            axs[0,1].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-            axs[0,1].legend(loc = 'lower right',)
-
-            axs[1,0].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-            axs[1,0].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-            axs[1,0].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-            axs[1,0].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-            axs[1,0].legend(loc = 'lower right',)
-            axs[1,0].set_xlabel('frequency [Hz]')
-            axs[1,0].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-            axs[1,0].set_title('$\\rm Noise_{\\nu}$ auto-power')
-            axs[1,0].set_ylim(1e-18,1e-5)
-            axs[1,1].set_ylabel('Cross-power $\\rm [Jy^2.s^{-2}$]')
-            axs[1,1].set_title("$\\rm Noise_{\\nu, \\nu.}$ cross-power")
-            axs[1,1].set_ylim(1e-18,1e-5)
-            axs[1,1].set_xlabel('frequency [Hz]')
-
-            axs[0,2].set_title('noise TOD')
-            axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
-            axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-            axs[1,2].set_title('noisy TOD')
-            axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
-            axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        #If the detectors don't all have a noise timestream yet, generate correlated power spectra
-
-        tod_sims_dic = {}
-        pspec_dic_sims = {}
-
-        for sim_no in range( nsims ):
-
-            #Generate un-correlated simulated timestreams
-            tod_sim_arr = sim_tools_flatsky.make_gaussian_realisations(freq_fft, noise_powspec_dic, tod_shape, 1./sample_freq) 
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        #From the power spectra, generate random gaussian TODs and save them. 
-        detector_combs_autos   = [[detector, detector] for detector in detector_array]
-
-        H = h5py.File(tod_file, "a")
-        for d1d2 in detector_combs_autos:
-            d1, d2 = d1d2
-            curr_theory = noise_powspec_dic[(d1, d2)]
-            if(d1==d2):
-                name = groups.iloc[group]['Name'][d1]
-                f = H[f'kid_{name}_roach']
-                noise_tod = tod_sim_arr[d1] #gaussian_random_tod(freq_fft, curr_spec_list[d1], res = (1/sample_freq), nx = tod_len)
-                tod_tot =  sky_tod[d1] + noise_tod #noise_tod_list[d1] +
-                if('uncorr_noise_data' in f): del f['uncorr_noise_data'] 
-                f.create_dataset('uncorr_noise_data', data=noise_tod, compression='gzip', compression_opts=9)
-                if('uncorr_noisy_data' in f): del f['uncorr_noisy_data'] 
-                f.create_dataset('uncorr_noisy_data', data=tod_tot,   compression='gzip', compression_opts=9)
-
-                if(plot): 
-                    #axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
-                    axs[0,2].plot(T/3600, noise_tod, alpha=0.1)
-                    axs[1,2].plot(T/3600, tod_tot, alpha=0.1)
-
-                #Add a slope
-                delta = 0.3 * (np.max(sky_tod[d1]) - np.min(sky_tod[d1]))  # 30% of the data range
-                slope = delta / (T[-1] - T[0])
-                data_with_slope = noise_tod + slope * (T - T[0])        
-            
-                #add 7-sigma peaks
-                sigma = np.std(data_with_slope)
-                peak_indices = np.random.choice(len(T), size=3, replace=False)
-                data_with_peaks = data_with_slope.copy()
-                peak_amplitude = 7 * sigma
-                for idx in peak_indices:
-                    data_with_peaks[idx] += peak_amplitude
-                if('namap_data' in f): del f['namap_data'] 
-                f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
-                
-                '''
-                plt.plot(T, data_with_slope, label='With 30% slope')
-                plt.plot(T, data_with_peaks, 'r', label='With 7σ peaks', markersize=8, alpha=0.1)
-                plt.xlabel('Time [s]')
-                plt.ylabel('Data')
-                plt.legend()
-                plt.show()
-                '''
-                
-        H.close()
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        if(plot):
-            fig.tight_layout()
-            fig.savefig(f'plot/uncorr_group_{group}_summary_plot.png')
-            plt.close()
-        #------------------------------------------------------------------
+    
         end = time.time()
         timing = end - start
-        print('')
+        
         print(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
-        #------------------------------------------------------------------
-
-
-
-'''
-from scipy.interpolate import interp1d
-
-# Step 1: create interpolation function from data1
-interp_func = interp1d(t1, data1, kind='linear', fill_value='extrapolate')
-
-# Step 2: evaluate at t2 points
-resampled_data1 = interp_func(t2)
-'''
+    #------------------------------------------------------------------
