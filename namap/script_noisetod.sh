@@ -26,7 +26,7 @@
 # Change to the directory from which the batch job was submitted
 # Note: SLURM defaults to running jobs in the directory where
 # they are submitted, no need for cd'ing to $SLURM_SUBMIT_DIR
-#cd /home/mvancuyck/Desktop/TIM_analysis/namap
+cd /home/mvancuyck/Desktop/TIM_analysis/namap
 # Load Python/Anaconda module (Enable Python in batch job environment)
 # by loading a Python or Anaconda modulefile (Only one modulfile should be
 # loaded. To use the python modulefile below, uncomment that "module load ..."
