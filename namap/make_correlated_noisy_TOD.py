@@ -274,7 +274,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
-    file_path = "log_correlated_timestreams.txt"
+    file_path = "log_correlated_notpll_timestreams.txt"
     if os.path.exists(file_path): os.remove(file_path)
     opf = open(file_path, 'a')
 
