@@ -7,8 +7,6 @@ generating correlated Gaussian realisations across different bands.
 
 import numpy as np, sys, os, warnings
 
-import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 def get_lxly(map_shape, pixel_res_radians):
