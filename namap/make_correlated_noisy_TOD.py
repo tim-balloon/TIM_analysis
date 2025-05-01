@@ -387,10 +387,11 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
 
         print(f'starting group {group}')
-    """
+    
 
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        '''
         tod_list = make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f)
 
         print('saving')
@@ -403,6 +404,7 @@ if __name__ == "__main__":
             if('spf' in grp): del grp['spf'] 
             f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
         H.close()
+        '''
     
         end = time.time()
         timing = end - start
@@ -411,7 +413,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------
 
 
-"""
+
 
 
 '''  
