@@ -282,6 +282,11 @@ if __name__ == "__main__":
     file_path = "log_correlated_timestreams.txt"
     # Open the file in append mode ('a')
     opf = open(file_path, 'a')
+
+    # Don't forget to close the file
+    opf.writelines(f'starting')
+    opf.close()
+    opf = open(file_path, 'a')
     #------------------------------------------------------------------------------------------
     
     #Initiate the parameters
@@ -360,8 +365,7 @@ if __name__ == "__main__":
         opf.writelines(f'Generate the TODs of group {group} in {np.round(timing,2)} sec!')
     #------------------------------------------------------------------
 
-    # Don't forget to close the file
-    opf.close()
+
 
 
 
