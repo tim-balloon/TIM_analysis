@@ -5,7 +5,13 @@ Contains necessary function for performing TOD simulations.
 
 import numpy as np, sys, os, warnings
 
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+
 def detector_noise_model(noise_level, fknee, alphaknee, total_samples, sample_freq):
+
+
 
     """
     TOD noise model (1/f, white noise, and total).
