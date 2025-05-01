@@ -323,6 +323,7 @@ if __name__ == "__main__":
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
+    print('load the parameters')
     parser = argparse.ArgumentParser(description="strategy parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
@@ -332,6 +333,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------
+    """
     #Initiate the parameters
     pll = False
     ncpus = 24
@@ -356,7 +358,7 @@ if __name__ == "__main__":
     #Each pixel with the same offset sees the same beam, but in different frequency band. 
     same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
     
-    tod_file= P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
+    tod_file= P['path']+'TOD_noise_'+P['file'][:-5]+'.hdf5'
 
     #rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
     tod_noise_level = P['tod_noise_level'] #in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
@@ -386,12 +388,6 @@ if __name__ == "__main__":
     for group in range(len(same_offset_groups)):
 
         print(f'starting group {group}')
-        print(f'starting group {group}')
-        print(f'starting group {group}')
-        print(f'starting group {group}')
-        print(f'starting group {group}')
-        print(f'starting group {group}')
-        print(f'starting group {group}')
 
         start = time.time()
         total_detectors = len(same_offset_groups.iloc[group]['Name'])
@@ -400,16 +396,12 @@ if __name__ == "__main__":
         print('saving')
         H = h5py.File(tod_file, "a")    
         for j, (tod, name) in  enumerate(zip(tod_list, same_offset_groups.iloc[group]['Name'])):
-            f = H[f'kid_{name}_roach']
-            sky_tod = f['data']
-            data_with_slope = add_polynome_to_timestream(sky_tod, T) + tod
-            data_with_peaks = add_peaks_to_timestream(data_with_slope)
+            namegrp = f'kid_{name}_roach'
+            if namegrp not in H: grp = H.create_group(namegrp)
+            else:                grp = H[namegrp]
             if('corr_noise_data' in f): del f['corr_noise_data'] 
-            if('corr_noisy_data' in f): del f['corr_noisy_data'] 
+            if('spf' in grp): del grp['spf'] 
             f.create_dataset('corr_noise_data', data=tod, compression='gzip', compression_opts=9)
-            f.create_dataset('corr_noisy_data', data=tod+sky_tod, compression='gzip', compression_opts=9)
-            if('namap_data' in f): del f['namap_data'] 
-            f.create_dataset('namap_data', data=data_with_peaks,   compression='gzip', compression_opts=9)
         H.close()
     
         end = time.time()
@@ -419,7 +411,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------
 
 
-
+"""
 
 
 '''  
