@@ -291,7 +291,7 @@ if __name__ == "__main__":
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-    pll = True
+    pll = False
     ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
