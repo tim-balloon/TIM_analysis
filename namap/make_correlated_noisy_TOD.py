@@ -40,7 +40,7 @@ def worker_model(grps):
     name_list = []
     for group in grps:
         opf.write(f'Generate group {group} \n'); opf.flush()
-        total_detectors = len(same_offset_groups.iloc[group]['Name'])
+        total_detectors = 2 #len(same_offset_groups.iloc[group]['Name'])
         name_list.append(same_offset_groups.iloc[group]['Name'])
         noise_list.append(make_correlated_timestreams(total_detectors, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f))
     return (noise_list, name_list)
@@ -83,7 +83,7 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     final = list(chain.from_iterable(final))
     opf.write('get names \n'); opf.flush()
     names = list(chain.from_iterable(names))
-
+    embed()
     opf.write('saving \n'); opf.flush()
     H = h5py.File(tod_file, "a")    
     for i, (tod_list, list_names) in enumerate(zip(final, names)):
