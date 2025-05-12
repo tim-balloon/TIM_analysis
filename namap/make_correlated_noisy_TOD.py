@@ -76,10 +76,12 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     opf.write('start // \n'); opf.flush()
     with Pool(ncpus, initializer=worker_init, initargs=(same_offset_groups, T, sample_freq, tod_len, tod_shape, fmin, fmax, nsims, tod_file, tod_noise_level, fknee, alphaknee, rho_one_over_f )) as p:
         results = p.map(worker_model, np.array_split(grps, ncpus) )
-    #tods = np.vstack(tods) 
-    #names = np.vstack(names) 
+    opf.write('done \n'); opf.flush()
+    
     final, names = zip(*results)
+    opf.write('get tods \n'); opf.flush()
     final = list(chain.from_iterable(final))
+    opf.write('get names \n'); opf.flush()
     names = list(chain.from_iterable(names))
 
     opf.write('saving \n'); opf.flush()
@@ -278,8 +280,6 @@ if __name__ == "__main__":
     if os.path.exists(file_path): os.remove(file_path)
     opf = open(file_path, 'a')
 
-    # Don't forget to close the file
-    opf.write(f'starting \n'); opf.flush()
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
     pll = False
@@ -354,84 +354,4 @@ if __name__ == "__main__":
             
             opf.write(f'Generate the TODs of group {group} in {np.round(timing,2)} sec! \n'); opf.flush()
     #------------------------------------------------------------------
-
-
-
-
-
-'''  
-    if(plot):
-
-        #------------------------------------------------------------------
-        sky_tod = []
-        fft_sky_tod = []
-        #Load the sky timestreams (from strategy.py)
-        H = h5py.File(tod_file, "a")
-        for id, d in enumerate(same_offset_groups.iloc[group]['Name']): 
-            #if(id>2): continue
-            f = H[f'kid_{d}_roach']
-            tod = f['data'][()]
-            sky_tod.append(tod)
-            curr_spec = ( np.fft.fft(tod) * (1/sample_freq) * np.conj( np.fft.fft(tod) * (1/sample_freq) ) / tod_len  ).real
-            fft_sky_tod.append(curr_spec)
-        H.close()
-        #------------------------------------------------------------------
-        fig, axs = plt.subplots(2,3,figsize=(9,6), dpi=150)
-        
-        axs[0,0].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[0,0].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[0,0].set_title('Sky TOD')
-        axs[0,1].set_title('TOD power spectrum')
-        axs[0,1].set_xlabel('frequency [Hz]')
-        axs[0,1].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-        axs[0,1].set_xlim(1e-2, 1e1)
-        axs[0,1].set_ylim(1e-18,1e-5)
-        #------------------------------------------------------------------
-        for i in range(len(sky_tod)):
-            axs[0,0].plot(T/3600,sky_tod[i], alpha=0.1)
-            axs[0,1].loglog(freq_fft[inds],fft_sky_tod[i][inds], alpha=0.1)
-        #------------------------------------------------------------------
-        axs[0,1].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-        axs[0,1].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-        axs[0,1].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-        axs[0,1].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-        axs[0,1].legend(loc = 'lower right',)
-
-        axs[1,0].loglog( freq, noise_powspec, label = r'Total', color = 'black' )
-        axs[1,0].loglog( freq, noise_powspec_one_over_f, label = r'$1/f$', color = 'orangered' )
-        axs[1,0].loglog( freq, noise_powspec_white, label = r'White', color = 'darkgreen' )
-        axs[1,0].grid(True, lw = 0.2, alpha = 0.2, which = 'both')
-        axs[1,0].legend(loc = 'lower right',)
-        axs[1,0].set_xlabel('frequency [Hz]')
-        axs[1,0].set_ylabel('Power amplitude $\\rm [Jy^2.s^{-2}$]')
-        axs[1,0].set_title('$\\rm Noise_{\\nu}$ auto-power')
-        axs[1,0].set_ylim(1e-18,1e-5)
-        axs[1,1].set_ylabel('Cross-power $\\rm [Jy^2.s^{-2}$]')
-        axs[1,1].set_title("$\\rm Noise_{\\nu, \\nu.}$ cross-power")
-        axs[1,1].set_ylim(1e-18,1e-5)
-        axs[1,1].set_xlabel('frequency [Hz]')
-
-        axs[0,2].set_title('noise TOD')
-        axs[0,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[0,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        axs[1,2].set_title('noisy TOD')
-        axs[1,2].set_xlabel('$\\rm t_{int}$ [h]')
-        axs[1,2].set_ylabel('$\\rm S_{\\nu}$ [Jy]')
-        #------------------------------------------------------------------
-        for d1d2 in detector_combs:
-            d1, d2 = d1d2
-            curr_theory = noise_powspec_dic[(d1, d2)]
-            if(d1==d2):
-                axs[1,0].plot(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
-                axs[0,2].plot(T/3600, noise_tods_list[d1], alpha=0.1)
-                axs[1,2].plot(T/3600, noise_tods_list[d1]+sky_tod[d1], alpha=0.1)
-            else:
-                curr_theory = noise_powspec_dic[(d1, d2)]
-                axs[1,1].loglog( freq_fft[inds], curr_theory[inds], color = 'black', zorder = 100)
-                axs[1,1].loglog(freq_fft[inds], curr_spec_list[d1][inds], alpha=0.1)
-        #------------------------------------------------------------------
-
-        fig.tight_layout()
-        fig.savefig(f'plot/group_{group}_summary_plot.png')
-        plt.close()
-'''
+    opf.close()
