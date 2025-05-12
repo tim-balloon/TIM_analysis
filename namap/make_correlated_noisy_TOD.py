@@ -83,7 +83,6 @@ def make_all_tods_pll(same_offset_groups, T, sample_freq, tod_len, tod_shape, fm
     final = list(chain.from_iterable(final))
     opf.write('get names \n'); opf.flush()
     names = list(chain.from_iterable(names))
-    embed()
     opf.write('saving \n'); opf.flush()
     H = h5py.File(tod_file, "a")    
     for i, (tod_list, list_names) in enumerate(zip(final, names)):
@@ -315,7 +314,7 @@ if __name__ == "__main__":
     #Each pixel with the same offset sees the same beam, but in different frequency band. 
     same_offset_groups = det_names_dict.groupby(['XEL', 'EL'])['Name'].apply(list).reset_index()
     
-    tod_file= P['path']+'TOD_noise_notpll_'+P['file'][:-5]+'.hdf5'
+    tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5' #os.getcwd()+'/'+
 
     #rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
     tod_noise_level = P['tod_noise_level'] #in, for example, uK/\sqrt(seconds), units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
