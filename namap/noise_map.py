@@ -73,7 +73,7 @@ def make_cube_from_TODs(key, P ):
     #Save the cube
     pixel_sr = (wcs.wcs.cdelt[0]* np.pi/180/3600 )**2 #solid angle of the pixel in sr 
     cube_per_sr =  np.asarray(cube_per_pix) / pixel_sr 
-    filename = 'fits_and_hdf5/' + 'Scanned_' + P['file'][:-5]+ '_' + key + '_sr.fits'
+    filename = 'fits_and_hdf5/' + 'Scanned_' + P['file'][:-5]+ '_' + key + '.fits'
     print('Write '+filename+'...')
 
     
@@ -103,4 +103,4 @@ if __name__ == "__main__":
     P = load_params(args.params)
     #------------------------------------------------------------------------------------------
 
-    for key in ('data', 'corr_noise_data'): make_cube_from_TODs(key, P)
+    for key in ('corr_noise_data', ): make_cube_from_TODs(key, P) #'data'
