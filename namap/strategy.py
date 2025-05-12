@@ -709,7 +709,7 @@ if __name__ == "__main__":
     print(f"Generate the TODs in {np.round((time.time() - start),2)}"+'s')
 
 
-    if(True):
+    if(False):
         det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
         #Each pixel with the same offset sees the same beam, but in different frequency band. 
         same_offset_groups = det_names_dict.groupby(['Frequency'])['Name'].apply(list).reset_index()
