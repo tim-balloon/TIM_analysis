@@ -40,6 +40,7 @@ from progress.bar import Bar
 import pandas as pd
 
 import argparse
+from make_namap_timestreams import *
 
 '''
 matplotlib.rcParams.update({'font.size': 10})
@@ -534,9 +535,9 @@ if __name__ == "__main__":
                     interpolation='nearest', origin='lower', vmin=0, vmax=np.max(hit_map), cmap='binary' )
     if(contours is not None): axp.plot(contours[:, 1], contours[:, 0], c= 'g')
     fig.colorbar(img, ax=axp, label='Counts')
-    CS = axp.contour(np.roll(np.sqrt(hit_map*np.roll(hit_map, 4, axis=1)),-2,axis=1), levels=[0.5*np.max(hit_map)], lw=0.5, origin='lower', linewidths=0.6,
-                extent=[x_cen-f_range, x_cen+f_range,y_cen-f_range, y_cen+f_range,], colors='magenta')
-    axp.clabel(CS, inline=1, fontsize=8, )
+    #CS = axp.contour(np.roll(np.sqrt(hit_map*np.roll(hit_map, 4, axis=1)),-2,axis=1), levels=[0.5*np.max(hit_map)], lw=0.5, origin='lower', linewidths=0.6,
+    #extent=[x_cen-f_range, x_cen+f_range,y_cen-f_range, y_cen+f_range,], colors='magenta')
+    #axp.clabel(CS, inline=1, fontsize=8, )
     axp.set_xlabel('RA [deg]')
     axp.set_ylabel('Dec [deg]')
     #---
@@ -567,7 +568,6 @@ if __name__ == "__main__":
     det_names = det_names_dict['Name']
     #----------------------------------------
 
-
     #----------------------------------------
     #Load the sky simulation to generate the TOD from
     hdr  = fits.getheader(simu_sky_path)
@@ -593,7 +593,6 @@ if __name__ == "__main__":
     pickle.dump(d, open(P['wcs_dict'], 'wb'))
     wcs = WCS(hdr, naxis=2) 
     #----------------------------------------
-
 
     #----------------------------------------
     
@@ -632,6 +631,7 @@ if __name__ == "__main__":
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
     #-------------------------------------------
+    
     #-------------------------------------------
     lower_spf = 50
     save_scan_path(tod_file, scan_path_sky[::int(spf/lower_spf)], spf=lower_spf, lower_spf=True)
@@ -640,7 +640,6 @@ if __name__ == "__main__":
     #Finally, we save the TODs of each pixel, depending on their frequency band. 
     #We first save the TODs of pixels in the HW array, then in the LW array. 
     start = time.time()
-
 
     for array, freqs_of_array, pointing_paths_to_save, pixel_offset_array, pixel_shift_array in zip(
                                                            ('HW', 'LW'), 
@@ -702,3 +701,26 @@ if __name__ == "__main__":
     
     print(f"Generate the TODs in {np.round((time.time() - start),2)}"+'s')
 
+
+    if(True):
+        det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+        #Each pixel with the same offset sees the same beam, but in different frequency band. 
+        same_offset_groups = det_names_dict.groupby(['Frequency'])['Name'].apply(list).reset_index()
+        start = time.time()
+        #For each group of pixels seeing the same beam: 
+        for group in range(len(same_offset_groups)):
+            print(f'starting group {group}')
+            H = h5py.File(tod_file, "a")    
+            for j, name in  enumerate(same_offset_groups.iloc[group]['Name']):
+                namegrp = f'kid_{name}_roach'
+                f = H[namegrp]
+                data = f['data'][()]
+                data_with_slope = data + add_polynome_to_timestream(data, T)
+                data_with_peak = add_peaks_to_timestream(data_with_slope)
+                if('namap_data' in f): del f['namap_data'] 
+                f.create_dataset('namap_data', data=data_with_peak,
+                                    compression='gzip', compression_opts=9)
+            H.close()
+            end = time.time()
+            timing = end - start
+        print(f'Generate the namap in {np.round(timing,2)} sec!')
