@@ -20,7 +20,7 @@ import time
 
 def make_cube_from_TODs(key, P ):
         
-    tod_file=os.getcwd()+'/'+P['path']+'TOD_'+P['file'][:-5]+'.hdf5'
+    tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5' #os.getcwd()+'/'+
 
     #------------------------------------------------------------------------------------------ 
     #Load the detector file and sort them by frequency bandpass
