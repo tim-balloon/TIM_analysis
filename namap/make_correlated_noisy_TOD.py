@@ -269,20 +269,30 @@ if __name__ == "__main__":
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
+
     parser = argparse.ArgumentParser(description="strategy parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
     parser.add_argument('params', help=".par file with params", default = None)
+    parser.add_argument('--non_iteractive', help = "load directly Mbb", action="store_true")
+
     args = parser.parse_args()
+
     P = load_params(args.params)
+
+    if(args.non_iteractive): 
+        import matplotlib
+        matplotlib.use("Agg")
+
     #------------------------------------------------------------------------------------------
-    file_path = "log_correlated_notpll_timestreams.txt"
+
+    file_path = "log_correlated_plll_timestreams.txt"
     if os.path.exists(file_path): os.remove(file_path)
     opf = open(file_path, 'a')
 
     #------------------------------------------------------------------------------------------
     #Initiate the parameters
-    pll = False
+    pll = True
     ncpus = 24
     
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
