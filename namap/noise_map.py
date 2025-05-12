@@ -75,10 +75,7 @@ def make_cube_from_TODs(key, P ):
     cube_per_sr =  np.asarray(cube_per_pix) / pixel_sr 
     filename = 'fits_and_hdf5/' + 'Scanned_' + P['file'][:-5]+ '_' + key + '_sr.fits'
     print('Write '+filename+'...')
-    
-    if os.path.exists(P['output_path']) == False:
-        print('Create '+P['output_path'])
-        os.makedirs(P['output_path'])
+
     
     f = fits.PrimaryHDU(cube_per_sr, header=wcs.to_header())
     hdu = fits.HDUList([f])
