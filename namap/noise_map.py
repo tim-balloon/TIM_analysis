@@ -47,6 +47,7 @@ def make_cube_from_TODs(key, P ):
         ypix_list = []
         samples = []
         H = h5py.File(tod_file, "a")
+        embed()
         for id, d in enumerate(groups.iloc[group]['Name']): 
             f = H[f'kid_{d}_roach']
             samples.append(f[key][()]) 
