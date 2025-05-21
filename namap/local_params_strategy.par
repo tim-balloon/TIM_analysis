@@ -11,6 +11,8 @@ theta = 0 #[deg] rotation angle of detectors.
 f_range = 0.6 #spatial extent for the plots. 
 #---------------------------
 
+
+
 #----- Targetted field coordinates -----
 #Name of the field to load its coordinates
 name_field = 'Goods-S Field'
