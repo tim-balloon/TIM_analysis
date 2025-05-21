@@ -1,4 +1,4 @@
-import pygetdata as gd
+#import pygetdata as gd
 import numpy as np
 from scipy.interpolate import interp1d
 import os

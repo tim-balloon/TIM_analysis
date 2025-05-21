@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.signal as sgn
-import pygetdata as gd
+#import pygetdata as gd
 import src.loaddata as ld
 import h5py
 from IPython import embed 
