@@ -188,7 +188,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #---------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    plt.show()
+    plt.close()
     #---------------------------------
 
     #--------------------------------------------------
