@@ -17,7 +17,7 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, Ionly=True, coadd=False, noise=1., telcoord=False, parang=None):
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, coadd=False, noise=1., telcoord=False, parang=None):
         '''
         Create an instance of maps
         Parameters
@@ -38,7 +38,6 @@ class maps():
         self.proj = 0.                 #inizialization of the wcs of the map. see wcs_world for more explanation about projections
         self.convolution = convolution #parameters to check if the convolution is required
         self.std = float(std)          #std of the gaussian is the convolution is required
-        self.Ionly = Ionly             #paramters to check if only I is required to be computed
         self.noise = noise             #white level noise of detector(s)
         self.telcoord = telcoord       #If True the map is drawn in telescope coordinates. That means that the projected plane is rotated
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
@@ -71,7 +70,7 @@ class maps():
         -------
         '''
         mapmaker = mapmaking(self.data, self.noise, len(self.data), self.proj, self.coadd)
-        if(self.Ionly): Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
+        Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
 
         if not self.convolution: return Pow_map
         else:
@@ -138,7 +137,7 @@ class maps():
             plt.tight_layout()
             path = os.getcwd()+'/plot/'+f'coadd.png'
             plt.savefig(path, transparent=True)
-            plt.show()
+            #plt.show()
             
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
             hdu = fits.HDUList([f])
@@ -168,8 +167,9 @@ class maps():
                 plt.tight_layout()
                 path = os.getcwd()+'/plot/'+f'{name}.png'
                 plt.savefig(path, transparent=True)
-                if(len(kid_num)<6): plt.show()
-                else: plt.close()
+                #if(len(kid_num)<6): plt.show()
+                #else: plt.close()
+                plt.close()
 
                 f = fits.PrimaryHDU(m, header=self.w.to_header())
                 hdu = fits.HDUList([f])
@@ -274,6 +274,7 @@ class mapmaking(object):
         Returns
         -------
         '''
+
         if value is None: value = self.data.copy()
         else: value = value
 
@@ -302,6 +303,7 @@ class mapmaking(object):
             Xmax = max(Xmax, xmax)
             Ymin = min(Ymin, ymin)
             Ymax = max(Ymax, ymax)
+            
         edges = np.round((Xmin, Xmax, Ymin, Ymax))
         X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1)        
         Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1)        

@@ -62,19 +62,19 @@ class data_cleaned():
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
         for i, data in enumerate(self.data):
             det_data = detector_trend(data)
-            if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
+            if self.polynomialorder != 0 and False: residual_data = det_data.fit_residual(order=self.polynomialorder)
             else: residual_data = data.copy()
 
-            if self.despike :
+            if self.despike and False:
                 desp = despike(residual_data)
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
             else: data_despiked = residual_data.copy()
 
-            if self.cutoff != 0:
+            if self.cutoff != 0 and False:
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
             else: cleaned_data.append( data_despiked )
-
+        
         return cleaned_data
         
 class despike():
@@ -163,7 +163,7 @@ class despike():
             redge = np.append(redge, right_edge[-1])
             #print('INDEX', i, peaks[i], left_edge, right_edge)
             #print('PEAKS', left_edge, right_edge, peaks[i])
-        print(len(peaks), len(ledge), len(redge))
+        #print(len(peaks), len(ledge), len(redge))
         return param[0].copy(), ledge, redge
 
     def replace_peak(self, hthres=5, pthres = 5, peaks = np.array([]), widths = np.array([])):
@@ -172,9 +172,6 @@ class despike():
         This function replaces the spikes data with noise realization. Noise can be gaussian
         or poissonian based on the statistic of the data
         '''
-
-        print('in replace peak')
-        #embed()
 
         x_inter = np.array([], dtype = 'int')
 
@@ -328,7 +325,6 @@ class detector_trend():
         '''
         Function to fit a trend line to a TOD
         '''
-        embed()
 
         x = np.arange(len(self.data))
 
@@ -477,7 +473,7 @@ class kidsutils():
         pps_list, spf_pps = ld.data_value.load(path, pps_roach_string, first_frame=frames[0], num_frames=num_frames)#d.getdata(pps_roach_string, first_frame=frames[0], num_frames=num_frames)
         
         ctime_roach_renormed = []
-        bins_list = []
+        bins_list = [] 
         for i in range(len(roach_number)):
             if pps_list.ndim == 1:  # If it's a 1D array
                 pps = pps_list  # Assign the entire array
