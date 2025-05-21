@@ -2,6 +2,8 @@ import numpy as np
 import scipy as sp
 import matplotlib.colors as colors
 from matplotlib.pyplot import cm
+import matplotlib
+matplotlib.use('Agg')  # non-GUI backend
 
 from astropy.coordinates import EarthLocation, AltAz, SkyCoord
 from astropy.time import Time
