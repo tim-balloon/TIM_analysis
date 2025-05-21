@@ -13,7 +13,7 @@ from scan_fcts import *
 from TIM_scan_strategy import *
 import importlib
 from astropy.coordinates import SkyCoord
-from IPython import embed
+#from IPython import embed
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.patches as mpatches
@@ -41,7 +41,7 @@ import pandas as pd
 
 import argparse
 from make_namap_timestreams import *
-
+from scipy import interpolate
 '''
 matplotlib.rcParams.update({'font.size': 10})
 matplotlib.rcParams.update({'xtick.direction':'in'})
@@ -52,9 +52,9 @@ matplotlib.rcParams.update({'legend.frameon':False})
 matplotlib.rcParams.update({'lines.dashed_pattern':[5,3]})
 '''
 import pickle
-from astropy.cosmology import FlatLambdaCDM
+#from astropy.cosmology import FlatLambdaCDM
 # Set cosmology to match Bolshoi-Planck simulation
-cosmo = FlatLambdaCDM(H0=67.8, Om0=0.307, Ob0=0.048, Tcmb0=2.7255, Neff=3.04)
+#cosmo = FlatLambdaCDM(H0=67.8, Om0=0.307, Ob0=0.048, Tcmb0=2.7255, Neff=3.04)
 from astropy.wcs import WCS
 from astropy.coordinates import Angle
 
@@ -399,6 +399,120 @@ def save_PA(tod_file, PA, spf):
         grp.create_dataset('spf', data=spf)
     H.close() 
 
+def make_a_whitenoise_cube(cube,hdr):
+
+
+    normpk = hdr['CDELT1'] * hdr['CDELT2'] / (hdr['NAXIS1'] * hdr['NAXIS2'])
+    w_freq = np.fft.fftfreq(hdr['NAXIS2'], d=((hdr['CDELT1']*u.deg).to(u.arcmin)).value)
+    v_freq = np.fft.fftfreq(hdr['NAXIS1'], d=((hdr['CDELT1']*u.deg).to(u.arcmin)).value)
+    k = np.sqrt(w_freq[:,np.newaxis]**2 + v_freq[np.newaxis,:]**2)
+    kmin = np.min(k[np.where(k!=0)])
+    kmax = np.max(k[np.where(k!=0)])
+    k_bin = np.logspace(np.log10(kmin), np.log10(kmax),20)
+    histo, e = np.histogram(k, bins = k_bin)
+    K, e = np.histogram(k, bins = k_bin, weights=k)
+    kmean = K/histo
+    cube_wn = []
+
+    for i in range(cube.shape[0]):
+        M = cube[i,:,:]
+        pow_sqr = np.absolute(np.fft.fftn(M)**2 * normpk )
+        pk, e = np.histogram(k, bins = k_bin, weights=pow_sqr)
+        pk /= histo
+        m,_ = gaussian_random_field(kmean, pk, int(hdr['NAXIS2']*1.1), int(hdr['NAXIS1']*1.1), ((hdr['CDELT1']*u.deg).to(u.arcmin)).value, ny_exit = hdr['NAXIS2'], nx_exit = hdr['NAXIS1'], l_cutoff=kmax)
+        cube_wn.append(m)
+    
+    return np.asarray(cube_wn)
+
+def gaussian_random_field(l, clt, ny, nx, res, ny_exit = None, nx_exit = None, l_cutoff=None,  cl_map = None,sigma = 0, force = True):
+    """
+    Create a map of a Gaussian random field, given its angular power spectrum or from a power law with a given index 
+    
+    l (astropy.Quantity): the multipol
+
+    clt (astropy.Quantity): the given power spectrum 
+
+    ny, nx: the size of the map to generate
+
+    res (astropy.Quantity): the resolution of the map
+
+    ny_exit, nx_exit (optional): <ny, nx, size of the map to return, to avoid periodic boundaries
+
+    l_cutoff (optional, astropy.Quantity): the maximum multipol to taken into account in the map generation
+
+    sigma (optional, astropy.Quantity): the size of the instrumental Gaussian beam profile in sigma unit to apply, if any. 
+
+    ampl (optional): the amplitude of the power law to compute the angular power spectrum
+
+    index (optional): the index of the power law to compute the angular power spectrum
+
+    cl_map (optional, astropy.Quantity): map containing the power spectrum values for each l values of the map. 
+                                         If provided, not recomputed. 
+
+    force (bool): set the negative values in the power spectrum map to zero. 
+
+    return: 
+    
+    real_space_map (astropy.Quantity): the generated map in real space.
+
+    cl_map (astropy.Quantity): the angular power spectrum map
+    """
+    
+    lmap_rad_y = ny*res
+    lmap_rad_x = nx*res
+    #Generate gaussian amplitudes
+    norm = np.sqrt( (nx/lmap_rad_x)*(ny/lmap_rad_y)) 
+
+    noise = np.random.normal(loc=0, scale=1, size=(ny,nx))
+    dmn1  = np.fft.fft2( noise )
+
+    #Interpolate input power spectrum
+    if(cl_map is None):
+            
+            
+        w_freq = np.fft.fftfreq(ny, d=res)
+        v_freq = np.fft.fftfreq(nx, d=res)
+        lmap = np.sqrt(w_freq[:,np.newaxis]**2 + v_freq[np.newaxis,:]**2)
+
+
+        if(l_cutoff is not None): lmax = np.minimum(l_cutoff, l.max())
+        else: lmax = np.minimum(l.max(), lmap.max()) 
+    
+        cl_map = np.zeros(lmap.shape)
+        w = np.where((lmap>l.min()) & (lmap<=lmax))
+        if(not w[0].any()): print("wrong k range")
+        else:
+            #Power law spectrum
+            print("interpolate")
+            f = interpolate.interp1d( l, clt,  kind='linear')
+            cl_map[w] = f(lmap[w])
+            w1 = np.where( cl_map <= 0)
+            if(w1[0].shape[0] != 0 and force): cl_map[w1] = 0
+
+    #Fill amn_t
+    amn_t = dmn1 * norm * np.sqrt( cl_map )
+    
+    #Output map
+    real_space_map = np.real(np.fft.ifft2( amn_t ))
+    
+    if(ny_exit is not None and nx_exit is not None):
+        scale_y = ny / ny_exit
+        iy0 = int(( (scale_y - 1)*ny_exit/2))
+        scale_x = nx / nx_exit
+        ix0 = int(( (scale_x - 1)*nx_exit/2))
+        return real_space_map[iy0:int(iy0+ny_exit), ix0:int(ix0+nx_exit)], cl_map
+
+    else: return real_space_map, cl_map
+
+def format_duration(hours):
+    total_seconds = int(hours * 3600)
+    h = total_seconds // 3600
+    m = (total_seconds % 3600) // 60
+    s = total_seconds % 60
+    return f"{h}h{m}min{s}sec"
+
+
+
 if __name__ == "__main__":
     '''
     Instructions: 
@@ -440,7 +554,7 @@ if __name__ == "__main__":
     #Initiate the parameters
 
     #The coordinates of the field
-    name=P['name_field']
+    name='Goods-S Field' #P['name_field']
     c=SkyCoord.from_name(name)
     ra = 0 
     rafield = c.ra.value
@@ -491,24 +605,19 @@ if __name__ == "__main__":
     if(P['scan']=='zigzag'): az, alt, flag = genLocalPath_cst_el_scan_zigzag(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
 
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
-    scan_path = scan_path #[scan_flag==1] Use the scan flag to keep only the constant scan speed part of the pointing. 
-    T_trim = T            #[scan_flag==1]
-    LST_trim = LST        #[scan_flag==1]
-    
+    scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
+    T_trim = T[scan_flag==1]
+    LST_trim = LST[scan_flag==1]
+
     #Generate the pointing on the sky for the center of the arrays
-    if(P['old']): scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
-    else: scan_path_sky, azel = genPointingPath_mod(scan_path, LST_trim, lat, dec, ra, azel=True) 
+    scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
 
     #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
     pixel_paths  = genPixelPath(scan_path, pixel_offset, pixel_shift, theta)
 
     #Generate the pointing on the sky of each pixel. 
     start = time.time() 
-    if(P['old']):
-        pointing_paths = [genPointingPath(T_trim, pixel_path, LST_trim, lat, dec, ra) for pixel_path in pixel_paths]
-    else:
-        pointing_paths = [genPointingPath_mod(pixel_path, LST_trim, lat, dec, ra) for pixel_path in pixel_paths]
-
+    pointing_paths = [genPointingPath(T_trim, pixel_path, LST_trim, lat, dec, ra) for pixel_path in pixel_paths]
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=f_range,dec=dec,ra=ra) 
     #----------------------------------------
@@ -569,7 +678,9 @@ if __name__ == "__main__":
     #The path to the sky simulation from which to generate the TODs from
     simu_sky_path = P['path']+P['file'] #os.getcwd()
     #The output hdf5 file containing the generated TODs. 
-    tod_file=P['path']+'TOD_'+P['file'][:-5]+'.hdf5' #os.getcwd()+'/'+
+    tod_file=P['path']+f'TOD_{format_duration(T_duration)}'+P['file'][:-5]+'.hdf5' #os.getcwd()+'/'+
+    hitmap_file=P['path']+f'TOD_{format_duration(T_duration)}'+'.fits' #os.getcwd()+'/'+
+
     #Load the names of the detectors. We assigned to them random names so that we cannot do naive for loop and avoid mistakes.
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
     det_names = det_names_dict['Name']
@@ -589,11 +700,14 @@ if __name__ == "__main__":
     xbins = np.arange(-0.5, hdr['NAXIS1']+0.5, 1)
     ybins = np.arange(-0.5, hdr['NAXIS2']+0.5, 1)
     #load the angular spectral cube. 
+    
     cube = fits.getdata(simu_sky_path)
     #Remove the mean in each map, to wich we are not sensitive. 
     cubemean = np.mean(cube, axis=(1,2)) 
     cube -= cubemean[:, None, None]
-    cube *= pix_size * 1e6 #conversion MJy/sr to Jy/beam
+    cube *= 1e6
+    if(P['whitenoise']): cube = make_a_whitenoise_cube(cube, hdr)
+    cube *= pix_size #conversion MJy/sr to Jy/beam
     #Create the world coordinate object and save it. 
     wcs = WCS(hdr) 
     d = {'wcs':wcs}
@@ -604,7 +718,7 @@ if __name__ == "__main__":
     #----------------------------------------
     
     #latitude timestream
-    lat = np.ones(len(LST)) * lat
+    lat = np.ones(len(LST_trim)) * lat
 
     #Generate the telescope coordinates and parallactic angle. 
 
@@ -615,7 +729,7 @@ if __name__ == "__main__":
     cos_lat = np.cos(np.radians(lat))
     sin_lat = np.sin(np.radians(lat))
 
-    hour_angle = (LST - ra / 15)*np.pi/12
+    hour_angle = (LST_trim - ra / 15)*np.pi/12
     index, = np.where(hour_angle<0)
     hour_angle[index] += 2*np.pi
     
@@ -633,7 +747,7 @@ if __name__ == "__main__":
     #Save timestreams in a .hdf5 file 
     save_PA(tod_file, np.degrees(pa), spf)
     save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_lst_lat(tod_file, LST, lat, spf)
+    save_lst_lat(tod_file, LST_trim, lat, spf)
     save_az_el(tod_file, azel[:,0], azel[:,1], spf)
     save_time_tod(tod_file, T_trim, spf)
     save_scan_path(tod_file, scan_path_sky, spf)
@@ -706,10 +820,11 @@ if __name__ == "__main__":
         bar.finish
         print('')
     
+    print('save '+tod_file)
     print(f"Generate the TODs in {np.round((time.time() - start),2)}"+'s')
+    
 
-
-    if(False):
+    if(True):
         det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
         #Each pixel with the same offset sees the same beam, but in different frequency band. 
         same_offset_groups = det_names_dict.groupby(['Frequency'])['Name'].apply(list).reset_index()
