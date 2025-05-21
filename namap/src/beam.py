@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.linalg import svd
 from scipy.optimize import least_squares
-from photutils import find_peaks
+#from photutils import find_peaks
 from astropy.stats import sigma_clipped_stats
 
 class beam(object):
