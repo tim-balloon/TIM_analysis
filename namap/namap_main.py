@@ -23,8 +23,7 @@ import scipy.signal as sgn
 import matplotlib.pyplot as plt 
 import tracemalloc
 import astropy.table as tb
-
-
+import time
 
 
 if __name__ == "__main__":
@@ -64,6 +63,10 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
+
+    tracemalloc.start()
+    start = time.time()
+
     parser = argparse.ArgumentParser(description="strategy parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
@@ -98,12 +101,11 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
         xystage = True
 
     filepath = P['hdf5_file']
-    kid_num = P['kid_num']
 
-    if(kid_num=='all'): 
-        btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-        filtered = btable[btable['Frequency'] == P['frequency']]
-        kid_num = filtered['Name']
+    btable = tb.Table.read(P['detector_table'], format='ascii.tab')
+    filtered = btable[btable['Frequency'] == P['frequency']]
+    kid_num = filtered['Name'] #(filtered['Name'][0],)
+    print(len(kid_num))
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
@@ -123,7 +125,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
     dataload = ld.data_value(filepath, kid_num, filepath, coord1, coord2, lst, lat, first_frame, num_frames, xystage, telemetry)
-    det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lat_spf = dataload.values()
+    det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lat_spf, all_coord1, all_coord2 = dataload.values()
     #--------------------
     #Synchronize the data
     #Needs to be modify , nothing to synchronize so far. 
@@ -148,6 +150,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #--------------------
     corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice)
     coord1slice, coord2slice = corr.correction()
+
     #--------------------
     #Need to be implemented ! So far, set parallactic angle to 0.
     parallactic=[]
@@ -185,5 +188,29 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #---------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
+    plt.show()
     #---------------------------------
+
+    #--------------------------------------------------
+    '''
+    coord1slice = all_coord1
+    coord2slice = all_coord2
+    parallactic =  np.zeros_like(coord1slice) 
+    maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], P['pixnum'], cleaned_data, coord1slice, coord2slice, convolution, std, 
+                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
+    maps.wcs_proj()
+    map_values = maps.map2d()
+    maps.map_plot(data_maps = map_values, kid_num=kid_num)
+    plt.show()
+    '''
+    #--------------------------------------------------
+
+    current, peak = tracemalloc.get_traced_memory()
+    print(f"Current memory usage: {current / 10**6:.2f} MB")
+    print(f"Peak memory usage: {peak / 10**6:.2f} MB")
+    tracemalloc.stop()
+
+    end = time.time()
+    timing = end - start
+    print(f'Run Namap in {np.round(timing,2)} sec! ')
     
