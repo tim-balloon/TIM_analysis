@@ -1,4 +1,4 @@
-import pygetdata as gd
+#import pygetdata as gd
 import numpy as np
 from IPython import embed
 import src.detector as det
