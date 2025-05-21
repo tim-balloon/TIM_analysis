@@ -7,9 +7,8 @@ from IPython import embed
 import src.detector as det 
 import h5py
 import matplotlib.pyplot as plt
- 
-def load_params(path, force_pysides_path = ''):
 
+def load_params(path):
     """
     Return as a dictionary the parameters stores in a .par file
     
@@ -145,8 +144,10 @@ class data_value():
         f = H[field]
         if(('spf' in f.keys()) and (num_frames is not None) and (first_frame is not None)):
             spf = f['spf'][()]
+            #if(not 'roach' in field): data = f['data'][first_frame*spf:(first_frame+num_frames)*spf]
             data = f['data'][first_frame*spf:(first_frame+num_frames)*spf]
         else: 
+            #if(not 'roach' in field): data = f['data'][()]
             data = f['data'][()]
         H.close()
         return data
@@ -178,37 +179,36 @@ class data_value():
         """    
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
-        print(num,first_frame)
         kid_num  = self.det_name
 
         det_data = []
-        coord1_data = []
-        coord2_data = []
+        coord1_data_all= []
+        coord2_data_all= []
 
         for kid in kid_num: 
-            #I_data = data_value.loaddata(self.det_path, f'I_kid{kid}_roach', num, first_frame)
-            #Q_data = data_value.loaddata(self.det_path, f'Q_kid{kid}_roach', num, first_frame)
             kidutils = det.kidsutils()
-            det_data.append( data_value.loaddata(self.det_path, f'kid{kid}_roach', num, first_frame) )#kidutils.KIDmag(I_data, Q_data))
+            det_data.append( data_value.loaddata(self.det_path, f'kid_{kid}_roach', num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
             # Assume all the data have the same spf            
-            spf_data = data_value.loadspf(self.det_path, f'I_kid{kid}_roach')
+            spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
+            coord1_data_all.append(data_value.loaddata(self.det_path, f'kid_{kid}_RA', num, first_frame))
+            coord2_data_all.append(data_value.loaddata(self.det_path, f'kid_{kid}_DEC', num, first_frame))
+            #---------------------------------------------------------------------------------
 
-            #---------------------------------------------------------------------------------
-            coord1_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_RA', num, first_frame) )
-            coord2_data.append( data_value.loaddata(self.coord_path, f'kid{kid}_DEC', num, first_frame) )
-            spf_coord = data_value.loadspf(self.coord_path, self.coord2_name, )
-            #---------------------------------------------------------------------------------
+        coord1_data = data_value.loaddata(self.coord_path, f'{self.coord1_name}', num, first_frame) 
+        coord2_data = data_value.loaddata(self.coord_path, f'{self.coord2_name}', num, first_frame) 
+        spf_coord = data_value.loadspf(self.coord_path, self.coord2_name, )
+        #---------------------------------------------------------------------------------
         
         if (self.lat_file_type and self.lst_file_type):
             
             lat = data_value.loaddata(self.coord_path, 'lat',num, first_frame)
             lst = data_value.loaddata(self.coord_path, 'lst',num, first_frame)
-            lat_spf = loadspf(self.coord_path, 'lst')
+            lat_spf = data_value.loadspf(self.coord_path, 'lst')
 
-            return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord,lat_spf
+            return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord,lat_spf, coord1_data_all, coord2_data_all
         else:
-        
-            return det_data, coord1_data, coord2_data, None, None, spf_data, spf_coord,  0
+
+            return det_data, coord1_data, coord2_data, None, None, spf_data, spf_coord,  0, coord1_data_all, coord2_data_all
 
 class convert_dirfile():
 
@@ -465,8 +465,8 @@ class det_table():
         for i, kid in enumerate(self.name):
 
             index, = np.where(btable['Name'] == kid)
-            det_off[i, 0] = btable['EL'][index] 
-            det_off[i, 1] = btable['XEL'][index] 
+            det_off[i, 0] = btable['XEL'][index] 
+            det_off[i, 1] = btable['EL'][index] 
 
             noise[i] = btable['WhiteNoise'][index]
             resp[i] = btable['Resp.'][index]#*-1.

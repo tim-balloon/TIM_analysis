@@ -3,6 +3,7 @@ import gc
 from astropy import wcs
 from IPython import embed
 import src.quaternion as quat
+import matplotlib.pyplot as plt
 
 class utils(object):
 
@@ -12,7 +13,7 @@ class utils(object):
 
     def __init__(self, coord1, coord2, lst = None, lat = None):
 
-        self.coord1 = coord1              #Array of coord 1 (if RA needs to be in hours)
+        self.coord1 = coord1              #Array of coord 1 (if RA, it needs to be in hours)
         self.coord2 = np.radians(coord2)  #Array of coord 2 converted in radians   
         self.lst = lst                    #Local Sideral Time in hours
         self.lat = np.radians(lat)        #Latitude converted in radians
@@ -23,7 +24,6 @@ class utils(object):
         Return the hour angle in hours given the lst and the ra
         i.e. both lst and ra needs to be in hours
         ''' 
-
         return self.lst-self.coord1
 
     def ha2ra(self, hour_angle):
@@ -40,27 +40,40 @@ class utils(object):
         '''
         Function to convert RA and DEC to AZ and EL
         '''
+        hour_angle = (self.ra2ha()) * np.pi/12 
         
-        hour_angle = np.radians(self.ra2ha()*15.)
-
+        
         if isinstance(hour_angle, np.ndarray):
             index, = np.where(hour_angle<0)
             hour_angle[index] += 2*np.pi
         else:
             if hour_angle<0:
                 hour_angle +=2*np.pi
-
-        el = np.arcsin(np.sin(self.coord2)*np.sin(self.lat)+\
-                       np.cos(self.lat)*np.cos(self.coord2)*np.cos(hour_angle))
-
+        
+        
+        el = np.arcsin(np.sin(self.coord2)*np.sin(self.lat)+np.cos(self.lat)*np.cos(self.coord2)*np.cos(hour_angle))
         az = np.arccos((np.sin(self.coord2)-np.sin(self.lat)*np.sin(el))/(np.cos(self.lat)*np.cos(el)))
-
+        
         if isinstance(az, np.ndarray):
             index, = np.where(np.sin(hour_angle)>0)
             az[index] = 2*np.pi - az[index]
         else:
             if np.sin(hour_angle)>0 :
                 az = 2*np.pi - az
+        
+        '''
+        az_unwrapped = (az + np.pi) % (2 * np.pi) - np.pi
+
+        fig, axs = plt.subplots(1,2,figsize=(12,6),dpi=130)
+        axs[0].plot(np.degrees(az_unwrapped),np.degrees(el))
+        axs[0].set_xlabel('Az [deg]');axs[0].set_ylabel('El [deg]')
+        axs[0].set_title('Az El in radec2azel()')
+        axs[1].plot(np.degrees(hour_angle),np.degrees(el))
+        axs[1].set_xlabel('Hour angle'); axs[1].set_ylabel('El [deg]')
+        fig.tight_layout()
+        plt.close()
+        '''
+
         return np.degrees(az), np.degrees(el)
 
     def azel2radec(self):
@@ -71,18 +84,15 @@ class utils(object):
 
         dec = np.arcsin(np.sin(self.coord2)*np.sin(self.lat)+\
                         np.cos(self.lat)*np.cos(self.coord2)*np.cos(np.radians(self.coord1)))
-
-
         hour_angle = np.arccos((np.sin(self.coord2)-np.sin(self.lat)*np.sin(dec))/(np.cos(self.lat)*np.cos(dec)))
 
         index, = np.where(np.sin(np.radians(self.coord1)) > 0)
         hour_angle[index] = 2*np.pi - hour_angle[index]
-
-        ra = self.ha2ra(np.degrees(hour_angle)/15.)*15.
-
+        #ra = self.ha2ra(hour_angle*12/np.pi)*15.
+        ra= self.ha2ra(np.degrees(hour_angle)/15.)*15.
         index, = np.where(ra<0)
-        ra[index] += 360.
-
+        #ra_namap[index]+=360
+        
         return ra, np.degrees(dec)
 
     def parallactic_angle(self):
@@ -92,7 +102,8 @@ class utils(object):
         '''
 
         hour_angle = np.radians((self.ra2ha())*15)
-
+        
+        
         if isinstance(hour_angle, np.ndarray):
             try:
                 index, = np.where(hour_angle<0)
@@ -103,6 +114,7 @@ class utils(object):
         else:
             if hour_angle<=0:
                 hour_angle += 2*np.pi
+        
 
         y_pa = np.cos(self.lat)*np.sin(hour_angle)
         x_pa = np.sin(self.lat)*np.cos(self.coord2)-np.cos(hour_angle)*np.cos(self.lat)*np.sin(self.coord2)
@@ -182,7 +194,6 @@ class apply_offset(object):
         self.lst = lst                          #Local Sideral Time array
         self.lat = lat                          #Latitude array
         
-
     def correction(self):
         """
         Apply offset
@@ -209,21 +220,13 @@ class apply_offset(object):
         dec_corrected: array
             corrected array of Dec coordinates
         -------
-        """    
-
-        ra_corrected = []
-        dec_corrected = []
+        """  
         if self.ctype.lower() == 'ra and dec':
-            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
-                ra_corrected.append( self.coord1[i]+ offset_ra )
-                dec_corrected.append( self.coord2[i]+ offset_dec )
 
-        if self.ctype.lower() == 'ra and dec' and self.lst is not None and self.lat is not None:
-            conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat)
+            conv2azel = utils(self.coord1/15, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
             az, el = conv2azel.radec2azel()
+
             xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
-            #xEL_corrected = xEL-self.xsc_offset[0]
-            #EL_corrected = el+self.xsc_offset[1]
             ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
             dec_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
 
@@ -233,50 +236,57 @@ class apply_offset(object):
                 xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
                 det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
                 off_quat = quaternion.product(det_quat, xsc_quat)
-                xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
-                print('OFFSET', xEL_offset, EL_offset)
-                xEL_corrected_temp = xEL-xEL_offset
-                EL_corrected_temp = el+EL_offset
-                AZ_corrected_temp = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
-                conv2radec = utils(AZ_corrected_temp, EL_corrected_temp, \
-                                   self.lst, self.lat)
-                ra_corrected[i,:], dec_corrected[i,:] = conv2radec.azel2radec()
-                # hour_angle = np.radians((self.lst-self.coord1)*15)
-                # print('hour', hour_angle)
-                # index, = np.where(hour_angle<0)
-                # hour_angle[index] += 2*np.pi
 
-                # y_pa = np.cos(np.radians(self.lat))*np.sin(hour_angle)
-                # x_pa = np.sin(np.radians(self.lat))*np.cos(np.radians(self.coord2))-np.cos(hour_angle)*np.cos(np.radians(self.lat))*np.sin(np.radians(self.coord2))
-                # pa = np.arctan2(y_pa, x_pa)
-                
-                # dec_corrected[i,:]= self.coord2+np.degrees(-np.radians(self.det_offset[i,0])*np.sin(pa)+np.radians(self.det_offset[i,1])*np.cos(pa))
-                # ra_corrected[i,:] = self.coord1*15+np.degrees((np.radians(self.det_offset[i,0])*np.cos(pa)+\
-                #           np.radians(self.det_offset[i,1])*np.sin(pa))/np.cos(np.radians(dec_corrected[i,:])))
+                xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
+                xEL_corrected_temp = xEL+xEL_offset
+                EL_corrected_temp = el+EL_offset
+                AZ_corrected_temp = az + xEL_offset #np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
+
+                conv2radec = utils(AZ_corrected_temp, EL_corrected_temp, self.lst, self.lat) #deg, deg, hour, deg
+                ra_corrected[i,:], dec_corrected[i,:] = conv2radec.azel2radec()
 
             del xEL_corrected_temp
             del EL_corrected_temp
             del AZ_corrected_temp
             gc.collect()
-            return ra_corrected, dec_corrected
 
+            return ra_corrected, dec_corrected
+        
         elif self.ctype.lower() == 'az and el':
-            el_corrected = []
-            az_corrected = []
-            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
-                el_corrected.append( self.coord2+self.xsc_offset[1]+offset_dec)
-                az_corrected.append( (self.coord1*np.cos(self.coord2)-self.xsc_offset[i]-\
-                                      offset_ra)/np.cos(el_corrected))
+
+            xEL = np.degrees(np.radians(self.coord1)*np.cos(np.radians(self.coord2)))
+            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
+            az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
+
+            for i in range(int(np.size(self.det_offset)/2)):
+                
+                quaternion = quat.quaternions()
+                xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
+                det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
+                off_quat = quaternion.product(det_quat, xsc_quat)
+                xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
+                xEL_corrected_temp = xEL+xEL_offset
+                az_corrected[i, :]  = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(self.coord2)))
+                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+
+                '''
+                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+
+                az_corrected[i, :] = (self.coord1*np.cos(np.radians(self.coord2))-self.xsc_offset[0]- ##!! self.xsc_offset[i]
+                                      self.det_offset[i, 0])/np.cos(np.radians(el_corrected[i, :]))
+                '''
+               
             return az_corrected, el_corrected
 
         else:
-            el_corrected = []
-            xel_corrected = []
-            for i, (offset_ra, offset_dec) in enumerate(self.det_offset):
-                xel_corrected.append( self.coord1-self.xsc_offset[0]+offset_ra )
-                el_corrected.append( self.coord2+self.xsc_offset[1]+offset_dec )
-            return xel_corrected,el_corrected
 
+            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
+            xel_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
+            for i in range(int(np.size(self.det_offset)/2)):
+                xel_corrected[i, :] = self.coord1-self.xsc_offset[0]-self.det_offset[i, 0]
+                el_corrected[i, :]  = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+            return xel_corrected,el_corrected
+        
 class compute_offset(object):
 
     def __init__(self, coord1_ref, coord2_ref, map_data, \
