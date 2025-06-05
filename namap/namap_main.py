@@ -152,6 +152,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #--------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
+    
     #--------------------------------------------------
     current, peak = tracemalloc.get_traced_memory()
     print(f"Current memory usage: {current / 10**6:.2f} MB")
