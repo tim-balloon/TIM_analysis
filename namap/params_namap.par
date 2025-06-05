@@ -2,20 +2,19 @@
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = 'fits_and_hdf5/TOD_0h4min58secpySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.hdf5' 
+hdf5_file = 'fits_and_hdf5/TOD_1h0min0secpySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
 
 #Choose the frequency band to make a map from
-frequency = 715.0 #GHz
+frequencies = (715.0, 719.0) #GHz
  
 Chose the data in the time dimension 
 num_frames=3500 #integration time in seconds to be loaded. 
 first_frame=0 #Starting time in second to loaded
 time_offset = 0 #Time offset between detector data and coordinates
 #----------------------------
-
 
 #--- Astrometry Parameters ---
 Correct for the poiting offset, note that there is no pointing offset parameter so far. 
@@ -48,12 +47,12 @@ prominence=5   #and the second is the prominence in sigma unit for the peak
 #-----------------------------------------------
 
 
-#--- Parameters for the post-processing of the TODs ---
-#convolution by the beam
-gaussian_convolution = False #
-std = 0 #STD of the gaussian used for the convolution. The value is in arcsec
-
+#--- Parameters for the post-processing of the TODs and the map ---
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
 coadd = True
-#------------------------------------------------
+
+#convolution by the beam
+gaussian_convolution = False #
+std = 0 #STD of the gaussian used for the convolution. The value is in arcsec
+#--------------------------------------------------------------------

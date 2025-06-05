@@ -1,28 +1,19 @@
-#import pygetdata as gd
 import numpy as np
-from IPython import embed
-import src.detector as det
 import src.loaddata as ld
 import src.detector as tod
 import src.mapmaker as mp
 import src.pointing as pt  
 import copy
 from astropy import wcs 
-import os
-from src.gui import MapPlotsGroup
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from astropy.nddata import Cutout2D
-import matplotlib.pyplot as plt
-from astropy.coordinates import SkyCoord
+import astropy.table as tb
 import h5py
 import argparse
-from scipy.interpolate import interp1d
-import scipy.signal as sgn
-import matplotlib.pyplot as plt 
+
+#for debugging purpose only
+from IPython import embed
+
+#for profilling only
 import tracemalloc
-import astropy.table as tb
 import time
 
 
@@ -33,16 +24,16 @@ if __name__ == "__main__":
 
     Instructions: 
 
-    1st: git clone from TIM_analysis/namap, mathilde branch or main branch if it exists. 
+    1/4: git clone from TIM_analysis/namap
 
-    (Optional, needed for 4th A) 2nd: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
+    (Optional, needed for 4/4A) 2/4: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
     and put it in namap/fits_and_hdf5/
     
-    3rd: generate the KIDs file: python gen_det_names.py params_strategy.par
+    3/4: generate the KIDs file: python gen_det_names.py params_strategy.par
 
-    4th A: generate the TOD file: python strategy.py params_strategy.par 
+    4/4A: generate the TOD file: python strategy.py params_strategy.par 
     OR
-    4th B: Download the TOD file: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full
+    4/4B: Download the TOD file: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full
 _de_Looze_smoothed_MJy_sr.hdf5 . , 
     and put it in namap/fits_and_hdf5/
 
@@ -51,23 +42,17 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     Left to be done:
         Implement the telemetry option 
         Implement respons correction
-        Implement parallactic angle 
+        Test parallactic angle 
         Implement noise detectors
         Implement spectral axis 
-
-    The different par: 
-    params_namap.par: generates the coadd map of all the (64 so far) detectors 
-    params_namap_5det.par: generates the coadd map of 5 detectors 
-    params_namap_5det_ind.par: generates the individual maps of 5 detectors 
-    params_namap_1det_ind.par: generates the individual map of the central detector
     '''
-    #------------------------------------------------------------------------------------------
-    #load the .par file parameters
 
     tracemalloc.start()
     start = time.time()
 
-    parser = argparse.ArgumentParser(description="strategy parameters",
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="NAMAP parameters",
                                      formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     #options
     parser.add_argument('params', help=".par file with params", default = None)
@@ -103,9 +88,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     filepath = P['hdf5_file']
 
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-    filtered = btable[btable['Frequency'] == P['frequency']]
-    kid_num = filtered['Name'] #(filtered['Name'][0],)
-    print(len(kid_num))
+    filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
+    kid_num = filtered['Name'] 
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
@@ -116,32 +100,18 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     polynomialorder = P['polynomialorder']
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
-    #So far, the cleaning parameters are set such as no cleaning is applied. 
-    #Because the simulated TODS dont have noise or noise peaks. 
 
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
-    dataload = ld.data_value(filepath, kid_num, filepath, coord1, coord2, lst, lat, first_frame, num_frames, xystage, telemetry)
-    det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lat_spf, all_coord1, all_coord2 = dataload.values()
-    #--------------------
-    #Synchronize the data
-    #Needs to be modify , nothing to synchronize so far. 
-    '''
-    zoomsyncdata = ld.frame_zoom_sync(filepath, det_data, spf_data, spf_data, coord1_data, coord2_data, spf_coord, spf_coord, 
-                                      first_frame, num_frames+first_frame,  lst,lat,lat_spf, lat_spf, P['time_offset'], xystage,)
-    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
-    '''
-    coord1slice = coord1_data
-    coord2slice = coord2_data
-    lstslice = lst
-    latslice = lat
-    detslice = det_data
+    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
+    detslice, coord1slice, coord2slice, lstslice, latslice, spf_data, spf_coord, lat_spf = dataload.values()
+
     #--------------------
     #Do some corrections
-    #if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
+    if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
     #--------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
@@ -164,52 +134,29 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
             
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
-    #So far, nothing is done as our timestreams are noiseless.     
     det_tod = tod.data_cleaned(detslice, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
 
     #--------------------
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
+
     #--------------------
-    
     #Create the maps
-    #!!!! Change the crval in the .par if you change the field coordinates used to gen the timestreams. 
-    #Pixnum option to limit the size of the map needs implementation. 
-    # P['Power_only'] is use to generate only the sqrt(I**2+Q**2) maps. I and Q maps need implementations. 
-    #telcoord option needs implementation. 
     maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], P['pixnum'], cleaned_data, coord1slice, coord2slice, convolution, std, 
                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
     
     maps.wcs_proj()
-    #proj = maps.proj
-    #w = maps.w
     map_values = maps.map2d()
-    #---------------------------------
+
+    #--------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    plt.close()
-    #---------------------------------
-
     #--------------------------------------------------
-    '''
-    coord1slice = all_coord1
-    coord2slice = all_coord2
-    parallactic =  np.zeros_like(coord1slice) 
-    maps = mp.maps(P['ctype'], P['crpix'], P['cdelt'], P['crval'], P['pixnum'], cleaned_data, coord1slice, coord2slice, convolution, std, 
-                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
-    maps.wcs_proj()
-    map_values = maps.map2d()
-    maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    plt.show()
-    '''
-    #--------------------------------------------------
-
     current, peak = tracemalloc.get_traced_memory()
     print(f"Current memory usage: {current / 10**6:.2f} MB")
     print(f"Peak memory usage: {peak / 10**6:.2f} MB")
     tracemalloc.stop()
-
     end = time.time()
     timing = end - start
     print(f'Run Namap in {np.round(timing,2)} sec! ')
