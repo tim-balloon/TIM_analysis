@@ -1,0 +1,66 @@
+#----- TIM arrays information -----
+#Array parameters used to geenrate the TODs and the KIDs file.
+detectors_name_file = 'TIM_kid_table.tsv'
+nb_channels_per_array = 64 #Number of frequency band per array. 
+nb_pixel_HW = 63 #Number of pixel per frequency band in the HW array.
+offset_HW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the HW array
+nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
+offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the LW array
+arrays_separation = 0.3 #[deg]
+theta = 0 #[deg] rotation angle of detectors. 
+f_range = 0.6 #spatial extent for the plots. 
+#---------------------------
+
+
+#----- Targetted field coordinates -----
+#Name of the field to load its coordinates
+name_field = 'Goods-S Field'
+#Edges of the field in Ra, Dec coordinates [deg]
+contours = np.array([[-27.7, 53], [-27.96, 53.09], [-27.9, 53.26], [-27.65, 53.16], [-27.7, 53]])
+#--------------------------- 
+
+#----- McMurdo/Observeur coordinates -----
+latittude =  -77.83 #deg
+longitude =  166.69 #deg
+#---------------------------
+
+#----- Time parameters -----
+T_duration= 1 #hour , duration of the scan
+dt= 2.7777777777777e-6 #hour , defines the aquisition rate. (9.25e-7h acquisition period correspond to 300Hz)
+#---------------------------
+
+#----- Sky simulation -----
+#Fits file containing the mock sky out of which we generates the TOD
+path = 'fits_and_hdf5/'
+file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
+whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
+res = None #[deg] if res is None, the res is the resolution of the sky fits file
+wcs_dict = 'wcs.p'
+#---------------------------
+
+#----- Scan parameters -----
+#Choose which function to use to compute the pointing path. 
+#Dan's version (old=True) and Namap version (old=False) are offset by up to 30''
+#Use old=False to get a map compatible with Namap. 
+old=False
+#Choose the scan to use: 
+scan='raster' #'loop', 'raster', 'zigzag'
+#Loop scan parameters
+az_size=0.65
+alt_size= 0.017
+alt_step=0.00833
+acc=0.05
+scan_v=0.05
+dt_scan=0.001
+#---------------------------
+
+#----- Noise ---------------
+nsim_noise = 1
+fmin = 1e-3 #remove some largest-scale modes
+fmax = 6e1
+#rough noise specs - similar to SPT (https://arxiv.org/pdf/2106.11202).
+tod_noise_level = 5 #in Jy/sqrt(seconds),s units. (Fig. 11 of https://arxiv.org/pdf/2106.11202).
+fknee = 5e-2 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
+alphaknee = 3.
+rho_one_over_f = 0.9 #some level of 1/f correlation between detectors.
+#---------------------------
