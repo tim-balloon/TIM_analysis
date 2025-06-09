@@ -167,6 +167,8 @@ if __name__ == "__main__":
     cube -= cubemean[:, None, None]
     cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
     #-----------------------------
+
+    #-----------------------------
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
 
     LW = det_names_dict[det_names_dict['XEL'] > 0]
