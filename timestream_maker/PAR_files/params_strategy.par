@@ -25,7 +25,7 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration= 1 #hour , duration of the scan
+T_duration= 0.083 #hour , duration of the scan
 dt= 2.7777777777777e-6 #hour , defines the aquisition rate. (9.25e-7h acquisition period correspond to 300Hz)
 #---------------------------
 
