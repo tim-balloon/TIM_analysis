@@ -16,7 +16,7 @@ def zenithAngle(dec,lat,HA):
     dec: float 
         declination angle in degrees     
     lat: float
-        lattitude angle in degrees
+        latitude   angle in degrees
     HA: array
         hour angle in hour
 
@@ -25,8 +25,7 @@ def zenithAngle(dec,lat,HA):
     za: array
         zenith angle in degree
     """ 
-    HArad = HA * np.pi/12; dec = np.radians(dec) ; lat = np.radians(lat)
-    za = np.arccos(np.sin(lat) * np.sin(dec) + np.cos(lat) * np.cos(dec) * np.cos(HArad))
+    za = np.arccos(np.sin(np.radians(lat)) * np.sin(np.radians(dec)) + np.cos(np.radians(lat)) * np.cos(np.radians(dec)) * np.cos(HA* np.pi/12))
     return za
 
 def elevationAngle(dec,lat,HA): 
@@ -38,7 +37,7 @@ def elevationAngle(dec,lat,HA):
     dec: float 
         declination angle in degrees     
     lat: float
-        lattitude angle in degrees
+        latitude angle in degrees
     HA: array
         hour angle in hour
 
@@ -59,7 +58,7 @@ def azimuthAngle(dec,lat,HA):
     dec: float 
         declination angle in degrees     
     lat: float
-        lattitude angle in degrees
+        latitude angle in degrees
     HA: array
         hour angle in hour
 
@@ -84,7 +83,7 @@ def parallacticAngle(dec,lat,HA,unwrapPA=True):
     dec: float 
         declination angle in degrees     
     lat: float
-        lattitude angle in degrees
+        latitude angle in degrees
     HA: array
         hour angle in degree
 
@@ -93,8 +92,7 @@ def parallacticAngle(dec,lat,HA,unwrapPA=True):
     pa: array
         source parrallactic angle (rad)
     """ 
-    HArad = HA * np.pi/12; dec = np.radians(dec) ; lat = np.radians(lat)
-    pa = np.arctan2(np.sin(HArad), np.cos(dec) * np.tan(lat) - np.sin(dec) * np.cos(HArad))
+    pa = np.arctan2(np.sin(HA * np.pi/12), np.cos(np.radians(dec)) * np.tan(np.radians(lat)) - np.sin(np.radians(dec)) * np.cos(HA * np.pi/12))
     if unwrapPA == True:
         pa = np.unwrap(pa)
         if np.mean(pa)<0:
@@ -110,18 +108,17 @@ def declinationAngle(azi, alt, lat):
     azi: float 
         azimuth in degrees     
     alt: float
-        lattitude angle in degrees
+        latitude  angle in degrees
     lat: float
-        lattitude angle in degree
+        latitude angle in degree
 
     Returns
     -------
     Dec: float
         source declination angle (rad)
     """ 
-
-    azi = np.radians(azi); alt = np.radians(alt); lat = np.radians(lat)
-    sinDec = np.sin(alt)*np.sin(lat) + np.cos(alt)*np.cos(lat)*np.cos(azi)
+  
+    sinDec = np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
     return np.arcsin(sinDec)
 
 def hourAngle(azi, alt, lat):
@@ -133,9 +130,9 @@ def hourAngle(azi, alt, lat):
     azi: float 
         azimuth in degrees     
     alt: float
-        lattitude angle in degrees
+        latitude angle in degrees
     lat: float
-        lattitude angle in degree
+        latitude angle in degree
 
     Returns
     -------
@@ -143,13 +140,9 @@ def hourAngle(azi, alt, lat):
         source hour angle (rad)
     """ 
     dec = declinationAngle(azi, alt, lat)
-    azi = np.radians(azi); alt = np.radians(alt); lat = np.radians(lat)
-    cosHA = ( np.sin(alt)- np.sin(dec)*np.sin(lat) )/ (np.cos(dec)*np.cos(lat))
-    HA = np.arccos(cosHA)
-    index, = np.where(np.sin(azi) > 0)
-    HA[index] = 2*np.pi - HA[index]
+    tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(lat)) - np.cos(np.radians(azi))*np.sin(np.radians(lat)))
+    HA = np.arctan(tanHA)
     return HA
-    #return np.arccos(cosHA)*np.where((azi > 0)&(azi<=np.pi), 1, -1)
 
 if __name__ == "__main__":
 
