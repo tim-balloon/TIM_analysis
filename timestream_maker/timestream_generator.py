@@ -19,7 +19,7 @@ from IPython import embed
 def gen_tod(wcs, Map, ybins, xbins, pointing_paths):
 
     """
-    Generate the tod for one array of TIM detectors. 
+    Generate the tod for one array of TIM detectors from a simulated map.
 
     Parameters
     ----------
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     dec = c.dec.value
 
     #load the observer position
-    lat = P['latittude']
+    lat = P['latitude']
 
     #Load the resolution. 
     #if not in params, load it from the map used to generate the TOD. 
@@ -172,9 +172,9 @@ if __name__ == "__main__":
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
 
     LW = det_names_dict[det_names_dict['XEL'] > 0]
-    HW = det_names_dict[det_names_dict['XEL'] < 0]
+    SW = det_names_dict[det_names_dict['XEL'] < 0]
 
-    for array_name, array, freqs_array in zip( ('HW', 'LW'), (HW, LW),
+    for array_name, array, freqs_array in zip( ('SW', 'LW'), (SW, LW),
                                    (freqs[:P['nb_channels_per_array']], freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ])):
 
         #------------------------------------------------------------------

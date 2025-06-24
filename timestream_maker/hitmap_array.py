@@ -49,7 +49,7 @@ if __name__ == "__main__":
     x_cen, y_cen = np.mean(contours[:, 1]), np.mean(contours[:, 0])
 
     #load the observer position
-    lat = P['latittude']
+    lat = P['latitude']
 
     #Load the resolution. 
     #if not in params, load it from the map used to generate the TOD. 
@@ -73,10 +73,10 @@ if __name__ == "__main__":
 
     #-----------------------------
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
-    pixel_offset_HW, pixel_shift_HW = pixelOffset(P['nb_pixel_HW'], P['offset_HW'], -P['arrays_separation']/2)
+    pixel_offset_SW, pixel_shift_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
     pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
-    pixel_offset = np.concatenate((pixel_offset_HW, pixel_offset_LW))
-    pixel_shift = np.concatenate((pixel_shift_HW, pixel_shift_LW))
+    pixel_offset = np.concatenate((pixel_offset_SW, pixel_offset_LW))
+    pixel_shift = np.concatenate((pixel_shift_SW, pixel_shift_LW))
     #-------------------------------
 
     #-------------------------------
@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     #----------------------------------------
     #Plot a scan route
-    BS = 8; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS); mk = 3; lw=1
+    BS = 8; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
     fig, axs = plt.subplots(1,3,figsize=(9,3), dpi=160,)# sharey=True, sharex=True)
     #---
     axradec, axp, axpix = axs[0], axs[1], axs[2]
