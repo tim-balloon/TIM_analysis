@@ -120,7 +120,7 @@ def save_lst_lat(tod_file, lst, lat, spf):
     lst: array
         the local sideral time timestream, for the center of the array. 
     lat: array 
-        the lattitude timestream, for the center of the array. 
+        the latitudetimestream, for the center of the array. 
     spf: int
         the number of samples per frame
     Returns
@@ -149,7 +149,7 @@ def save_az_el(tod_file, azimuths, elevations, spf):
     azimuths: array
         the azimuth timestream of the centre of the array
     elevations: array 
-        the lattitude timestream of the centre of the array
+        the latitude timestream of the centre of the array
     spf: int
         the number of samples per frame
     Returns
