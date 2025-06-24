@@ -159,7 +159,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
     #The sequence is repeated for each altitude step (ver_N times).
     a = np.tile(a,ver_N)
     #Generate Altitude Acceleration Pattern
-    acc_alt = alt_step/(turn_time/2)**2   
+    acc_alt =  alt_step/(turn_time/2)**2   
 
     #The altitude changes slightly during turns, using a small acceleration.
     #A similar acceleration pattern is applied to a2 to control altitude transitions.
@@ -186,7 +186,8 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     flag = np.where(a==0,1,0) #constant scan speed part
     t = np.arange(0,len(a))*dt
-    return az,alt,flag  
+
+    return az,alt,flag
 
 def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
     """
@@ -348,12 +349,16 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, azel=False):
     pixel_path: nd array
         the coordinates timestream of the pointing of each pixel, in degrees
     """     
+
     alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1])
     azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0]) 
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
-    path = np.vstack((np.degrees(-ha_point+HA*np.pi/12),np.degrees(dec_point))).T
-    path[:,0] += ra
+
+    ra = (HA*np.pi/12-ha_point)
+    ra_unwrapped = ( ra + np.pi) % (2 * np.pi) - np.pi
+
+    path = np.vstack((np.degrees(ra_unwrapped),np.degrees(dec_point))).T
     azel_path = np.vstack((np.degrees(azi),np.degrees(alt))).T
 
     if(azel): return path, azel_path
