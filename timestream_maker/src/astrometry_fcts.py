@@ -138,7 +138,6 @@ def hourAngle(azi, alt, lat):
     ha: float
         source hour angle (rad)
     """ 
-    dec = declinationAngle(azi, alt, lat)
     tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(lat)) - np.cos(np.radians(azi))*np.sin(np.radians(lat)))
     HA = np.arctan(tanHA)
     return HA
