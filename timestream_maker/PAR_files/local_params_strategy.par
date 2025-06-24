@@ -2,8 +2,8 @@
 #Array parameters used to geenrate the TODs and the KIDs file.
 detectors_name_file = 'TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
-nb_pixel_HW = 63 #Number of pixel per frequency band in the HW array.
-offset_HW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the HW array
+nb_pixel_SW = 63 #Number of pixel per frequency band in the SW array.
+offset_SW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the SW array
 nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
 offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the LW array
 arrays_separation = 0.3 #[deg]
@@ -20,7 +20,7 @@ contours = np.array([[-27.7, 53], [-27.96, 53.09], [-27.9, 53.26], [-27.65, 53.1
 #--------------------------- 
 
 #----- McMurdo/Observeur coordinates -----
-latittude =  -77.83 #deg
+latitude =  -77.83 #deg
 longitude =  166.69 #deg
 #---------------------------
 
