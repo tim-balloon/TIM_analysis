@@ -11,7 +11,6 @@ theta = 0 #[deg] rotation angle of detectors.
 f_range = 0.6 #spatial extent for the plots. 
 #---------------------------
 
-
 #----- Targetted field coordinates -----
 #Name of the field to load its coordinates
 name_field = 'Goods-S Field'
@@ -25,7 +24,7 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration= 0.083 #hour , duration of the scan
+T_duration= 1 #hour , duration of the scan
 dt= 2.7777777777777e-6 #hour , defines the aquisition rate. (9.25e-7h acquisition period correspond to 300Hz)
 #---------------------------
 
