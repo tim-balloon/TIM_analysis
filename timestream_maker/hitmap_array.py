@@ -116,7 +116,7 @@ if __name__ == "__main__":
     for i,c in zip(idx, cm.rainbow(np.linspace(0.,1,len(idx)))):
         axpix.scatter(pointing_paths[i][::n,0], pointing_paths[i][::n,1], s=0.1,c=c)
         patch = mpatches.Patch(color=c, label= 'pixel %d'%i); patchs.append(patch); 
-    axpix.set_aspect(aspect=1)
+    #axpix.set_aspect(aspect=1)
     axpix.legend(handles=patchs,frameon=False, bbox_to_anchor=(1,1))
     axpix.set_xlabel('RA [deg]')
     axpix.set_ylabel('Dec [deg]')
