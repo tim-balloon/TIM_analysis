@@ -69,9 +69,8 @@ def azimuthAngle(dec,lat,HA):
     """ 
 
     za = zenithAngle(dec,lat,HA)
-    HArad = HA * np.pi/12; dec = np.radians(dec) ; lat = np.radians(lat)
-    cosAz = (np.sin(dec) - np.sin(lat) * np.cos(za))/(np.cos(lat) * np.sin(za))
-    sinAz = - np.sin(HArad) * np.cos(dec) / np.sin(za)
+    cosAz = (np.sin(np.radians(dec)) - np.sin(np.radians(lat)) * np.cos(za))/(np.cos(np.radians(lat)) * np.sin(za))
+    sinAz = - np.sin(HA * np.pi/12) * np.cos(np.radians(dec)) / np.sin(za)
     return np.arctan2(sinAz,cosAz)
 
 def parallacticAngle(dec,lat,HA,unwrapPA=True):
