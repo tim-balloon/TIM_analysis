@@ -72,7 +72,7 @@ def azimuthAngle(dec,lat,HA):
     za = zenithAngle(dec,lat,HA)
     HArad = HA * np.pi/12; dec = np.radians(dec) ; lat = np.radians(lat)
     cosAz = (np.sin(dec) - np.sin(lat) * np.cos(za))/(np.cos(lat) * np.sin(za))
-    sinAz = np.sin(HArad) * np.cos(dec) / np.sin(za)
+    sinAz = - np.sin(HArad) * np.cos(dec) / np.sin(za)
     return np.arctan2(sinAz,cosAz)
 
 def parallacticAngle(dec,lat,HA,unwrapPA=True):
@@ -145,7 +145,11 @@ def hourAngle(azi, alt, lat):
     dec = declinationAngle(azi, alt, lat)
     azi = np.radians(azi); alt = np.radians(alt); lat = np.radians(lat)
     cosHA = ( np.sin(alt)- np.sin(dec)*np.sin(lat) )/ (np.cos(dec)*np.cos(lat))
-    return np.arccos(cosHA)*np.where((azi > 0)&(azi<=180), 1, -1)
+    HA = np.arccos(cosHA)
+    index, = np.where(np.sin(azi) > 0)
+    HA[index] = 2*np.pi - HA[index]
+    return HA
+    #return np.arccos(cosHA)*np.where((azi > 0)&(azi<=np.pi), 1, -1)
 
 if __name__ == "__main__":
 
