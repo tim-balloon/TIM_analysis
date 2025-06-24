@@ -62,23 +62,23 @@ if __name__ == "__main__":
 
     #---------------------------    
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
-    pixel_offset_HW, pixel_shift_HW = pixelOffset(P['nb_pixel_HW'], P['offset_HW'], -P['arrays_separation']/2)
+    pixel_offset_SW, pixel_shift_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
     pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
 
-    pixel_offset_HW_tot = np.tile(pixel_offset_HW, P['nb_channels_per_array'])
+    pixel_offset_SW_tot = np.tile(pixel_offset_SW, P['nb_channels_per_array'])
     pixel_offset_LW_tot = np.tile(pixel_offset_LW, P['nb_channels_per_array'])
-    pixel_offset = np.concatenate((pixel_offset_HW_tot, pixel_offset_LW_tot))
+    pixel_offset = np.concatenate((pixel_offset_SW_tot, pixel_offset_LW_tot))
 
-    pixel_shift_HW_tot = np.tile(pixel_shift_HW, P['nb_channels_per_array'])
+    pixel_shift_SW_tot = np.tile(pixel_shift_SW, P['nb_channels_per_array'])
     pixel_shift_LW_tot = np.tile(pixel_shift_LW, P['nb_channels_per_array'])
-    pixel_shift = np.concatenate((pixel_shift_HW_tot, pixel_shift_LW_tot))
+    pixel_shift = np.concatenate((pixel_shift_SW_tot, pixel_shift_LW_tot))
     #---------------------------    
 
     #---------------------------
     # Generate detector names
-    det_names_HW = generate_strings(P['nb_pixel_HW'] * P['nb_channels_per_array'], ['01', '02', '03', '04'])
+    det_names_SW = generate_strings(P['nb_pixel_SW'] * P['nb_channels_per_array'], ['01', '02', '03', '04'])
     det_names_LW = generate_strings(P['nb_pixel_LW'] * P['nb_channels_per_array'], ['05', '06', '07', '08'])
-    det_names = np.concatenate((det_names_HW,det_names_LW))
+    det_names = np.concatenate((det_names_SW,det_names_LW))
     #---------------------------
 
     #---------------------------    
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     freqs = np.zeros(len(det_names))
     #---------------------------
 
-    # Ensure pixel_offset_HW has the same length as det_names
+    # Ensure pixel_offset_SW has the same length as det_names
     if len(resp) < len(det_names) or len(noise) < len(det_names) or  len(time_offset) < len(det_names):
         raise ValueError("Not enough pixel offsets for detector names.")
 
