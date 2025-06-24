@@ -90,11 +90,12 @@ if __name__ == "__main__":
     axradec.set_xlabel('RA [deg]')
     axradec.set_ylabel('Dec [deg]')
     #---
-    heatmap, xedges, yedges = np.histogram2d(scan_path_sky[:,0], scan_path_sky[:,1], bins=int(2/res))
-    im = ax.imshow(heatmap.T, origin='lower', cmap='binary',extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
+    hitmap, xedges, yedges = np.histogram2d(scan_path_sky[:,0], scan_path_sky[:,1], bins=int(2/res))
+    im = ax.imshow(hitmap.T, origin='lower', cmap='binary',extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
     cbar = fig.colorbar(im, ax=ax, label='1 detector counts')
     ax.set_xlabel('RA [deg]')
     ax.set_ylabel('Dec [deg]')
+    #ax.set_aspect('auto')
     if(contours is not None): ax.plot(contours[:, 1]-rafield, contours[:, 0], c='g' )
     if(contours is not None): axradec.plot(contours[:, 1]-rafield, contours[:, 0]-dec, c='g' )
     #---
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     axr.plot(np.degrees(az_unwrapped),azel[:,1],'b')
     axr.set_xlabel('Az [deg]')
     axr.set_ylabel('El [deg]')
-    ##---
+    #-----
     patchs = []
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
