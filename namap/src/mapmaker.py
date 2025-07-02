@@ -2,7 +2,6 @@ import numpy as np
 from astropy import wcs
 from astropy.convolution import Gaussian2DKernel, convolve
 from IPython import embed
-import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
 import datetime
@@ -74,7 +73,6 @@ class maps():
 
         if not self.convolution: return Pow_map
         else:
-            #Needs to be modify ! 
             std_pixel = self.std/3600./self.cdelt[0]
             return mapmaker.convolution(std_pixel, Pow_map)
         
@@ -121,6 +119,8 @@ class maps():
 
 
         if(self.coadd):
+
+            '''
             fig, ax = plt.subplots(dpi=150, subplot_kw={'projection': self.w})
             im = ax.imshow(data_maps, origin='lower', interpolation='None', cmap='cividis' )
                         
@@ -138,6 +138,7 @@ class maps():
             path = os.getcwd()+'/plot/'+f'coadd.png'
             plt.savefig(path, transparent=True)
             #plt.show()
+            '''
             
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
             hdu = fits.HDUList([f])
@@ -153,6 +154,7 @@ class maps():
         else: 
             for m, name in zip(data_maps, kid_num): 
 
+                '''
                 fig, ax = plt.subplots(dpi=150, subplot_kw={'projection': self.w})
                 im = ax.imshow(m, origin='lower', interpolation='None', cmap='cividis' )
                 cbar = fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.046, pad=0.04)
@@ -170,6 +172,7 @@ class maps():
                 #if(len(kid_num)<6): plt.show()
                 #else: plt.close()
                 plt.show()
+                '''
 
                 f = fits.PrimaryHDU(m, header=self.w.to_header())
                 hdu = fits.HDUList([f])
