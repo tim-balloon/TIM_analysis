@@ -42,15 +42,15 @@ class data_cleaned():
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
         for i, data in enumerate(self.data):
             det_data = detector_trend(data)
-            if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
+            if self.polynomialorder != 0 and False: residual_data = det_data.fit_residual(order=self.polynomialorder)
             else: residual_data = data.copy()
 
-            if self.despike:
+            if self.despike and False:
                 desp = despike(residual_data)
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
             else: data_despiked = residual_data.copy()
 
-            if self.cutoff != 0:
+            if self.cutoff != 0 and False:
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
             else: cleaned_data.append( data_despiked )

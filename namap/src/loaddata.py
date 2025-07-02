@@ -168,19 +168,20 @@ class data_value():
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
         kid_num  = self.det_name
-
         det_data = []
 
         for kid in kid_num: 
             kidutils = det.kidsutils()
-            det_data.append( data_value.loaddata(self.det_path, f'kid_{kid}_roach', num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
-            # Assume all the data have the same spf            
-            spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
-            #---------------------------------------------------------------------------------
+            det_data.append(data_value.loaddata(self.det_path, f'kid_{kid}_roach', num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
+            # Assume all the data have the same spf       
 
+        spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
+        #---------------------------------------------------------------------------------
+        
         coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', num, first_frame) 
         coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', num, first_frame) 
         spf_coord = data_value.loadspf(self.det_path, self.coord2_name, )
+
         #---------------------------------------------------------------------------------
         lat = data_value.loaddata(self.det_path, 'lat',num, first_frame)
         lst = data_value.loaddata(self.det_path, 'lst',num, first_frame)
@@ -241,7 +242,7 @@ class det_table():
 
     def loadtable(self):
         '''
-        Function to load the detectors info from the decteror file. 
+        Function to load the detectors info from the dectector file. 
         Parameters
         ----------
         Returns

@@ -60,6 +60,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     P = ld.load_params(args.params)
     #------------------------------------------------------------------------------------------
 
+    #---------------------------------
     num_frames, first_frame = P['num_frames'], P['first_frame']
 
     #Lat and lst need to be implemented in strategy.py
@@ -89,7 +90,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
     filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
-    kid_num = filtered['Name'] 
+    kid_num = filtered['Name']
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
@@ -103,43 +104,53 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
+    #---------------------------------
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
     detslice, coord1slice, coord2slice, lstslice, latslice, spf_data, spf_coord, lat_spf = dataload.values()
+    #---------------------------------
 
     #--------------------
     #Do some corrections
     if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
     #--------------------
+
+    #---------------------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
-    #--------------------
-    corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice)
+    #---------------------------------
+
+    #---------------------------------
+    corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
+    #---------------------------------
 
     #--------------------
     #Need to be implemented ! So far, set parallactic angle to 0.
     parallactic=[]
-    if not P['telescope_coordinate'] and P['lat'] and P['lst']:
+    if P['telescope_coordinate']:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            tel = pt.utils(c1/15., c2, lstslice, latslice)
+            tel = pt.utils(c1, c2, lstslice, latslice)
             parallactic.append( tel.parallactic_angle() )
     else:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
             parallactic.append( np.zeros_like(c1) )
+    #---------------------------------
             
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
     det_tod = tod.data_cleaned(detslice, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
+    #---------------------------------
 
-    #--------------------
+    #---------------------------------
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
+    #---------------------------------
 
     #--------------------
     #Create the maps
@@ -148,12 +159,14 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     
     maps.wcs_proj()
     map_values = maps.map2d()
+    #--------------------
 
-    #--------------------------------
+    #--------------------------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    
     #--------------------------------------------------
+
+    #------------------------------------------------------
     current, peak = tracemalloc.get_traced_memory()
     print(f"Current memory usage: {current / 10**6:.2f} MB")
     print(f"Peak memory usage: {peak / 10**6:.2f} MB")
@@ -161,4 +174,4 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     end = time.time()
     timing = end - start
     print(f'Run Namap in {np.round(timing,2)} sec! ')
-    
+    #------------------------------------------------------
