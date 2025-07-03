@@ -145,7 +145,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     #----
     #Compute Number of Vertical Steps 
-    vertical_steps = int(alt_size//alt_step)
+    vertical_steps = 1 #int(alt_size//alt_step) 
 
     #Compute Time for Scan and Turns
     scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
