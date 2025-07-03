@@ -184,7 +184,10 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     flag = np.where(az_acc==0,1,0) #constant scan speed part
 
-    return az,alt,flag
+    t = np.arange(len(alt)*dt,dt)
+    v = np.vstack((az_v,alt_v)).T
+
+    return az,alt,flag,v
 
 def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
     """
@@ -252,7 +255,7 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.
 
     return az,alt,flag  
 
-def genScanPath(T, alt, az, flag, plot=False):
+def genScanPath(T, alt, az, v, flag, plot=False):
     """    
     Function that generates the pointing coordinates vs time.
 
@@ -275,14 +278,21 @@ def genScanPath(T, alt, az, flag, plot=False):
     """ 
 
     coor = np.zeros((len(T),2))
+    v_list = np.zeros((len(T),2))
+
 
     idx = np.int_(np.fmod(T,len(alt)/100)*100)
     
     coor[:,0] = az[idx]-np.mean(az)
     coor[:,1] = alt[idx]-np.mean(alt)
+
+
+    v_list[:,0] = v[idx,0]
+    v_list[:,1] = v[idx,1]
+
     flag      = flag[idx]
     
-    return coor,flag
+    return coor,v_list,flag
 
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """

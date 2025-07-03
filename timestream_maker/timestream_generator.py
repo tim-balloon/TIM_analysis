@@ -16,7 +16,7 @@ from astropy.wcs import WCS
 
 from IPython import embed
 
-def gen_tod(wcs, Map, ybins, xbins, pointing_paths):
+def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths):
 
     """
     Generate the tod for one array of TIM detectors from a simulated map.
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             #----------------------------------------
 
             #----------------------------------------
-            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, ybins, xbins, pointing_paths_to_save)
+            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save)
             #----------------------------------------
 
             #----------------------------------------
