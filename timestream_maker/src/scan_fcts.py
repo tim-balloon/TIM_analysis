@@ -36,7 +36,7 @@ def timeFractionAbove(hmap, threshold):
         fraction of the hitmaps above a level of hits
     """ 
     hits = hmap.flatten()
-    return np.sum(hits[hits>treshold])/np.sum(hits)
+    return np.sum(hits[hits>threshold])/np.sum(hits)
 
 def genLocalPath_cst_el_scan_crisscross(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
 
