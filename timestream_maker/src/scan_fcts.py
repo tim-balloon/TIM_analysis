@@ -21,7 +21,7 @@ def hitsPerSqdeg(total_hits, area):
     """ 
     return np.sum(total_hits)/area
 
-def timeFractionAbove(hmap, treshold):
+def timeFractionAbove(hmap, threshold):
     """
     fraction of time above a level of hits
     Parameters
