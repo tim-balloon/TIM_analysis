@@ -8,7 +8,7 @@
 
 import os, sys
 
-sys.path.insert( 0, os.path.abspath('../../simulations') ) #this is important to point out that the codes are outisde of the docs folder.
+sys.path.insert( 0, os.path.abspath('../../simulations/') ) #this is important to point out that the codes are outisde of the docs folder.
 
 project = 'TIM analysis software'
 copyright = '2025, TIM science team'
