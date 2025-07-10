@@ -305,7 +305,8 @@ class apply_offset(object):
 
             conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
             az, el = conv2azel.radec2azel()
-            #xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
+
+            xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
             ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
             dec_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
 
@@ -318,7 +319,9 @@ class apply_offset(object):
 
                 xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
                 EL_corrected_temp = el + EL_offset
-                AZ_corrected_temp = az + xEL_offset #np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
+                xEL_corrected_temp = xEL + xEL_offset
+                AZ_corrected_temp = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
+
                 conv2radec = utils(AZ_corrected_temp, EL_corrected_temp, self.lst, self.lat) #deg, deg, hour, deg
                 ra_corrected[i,:], dec_corrected[i,:] = conv2radec.azel2radec()
 
