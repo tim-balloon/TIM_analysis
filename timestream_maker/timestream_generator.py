@@ -199,12 +199,12 @@ if __name__ == "__main__":
         # Extract XEL and EL from the MultiIndex of the row
         xel = group.index.get_level_values('XEL')
         el = group.index.get_level_values('EL')
-
         #-------------------------------
-        #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
-        pixel_paths  = genPixelPath(scan_path, el, xel, P['theta'])
+        
+        #-------------------------------
+        pixel_offsets = pixels_rotations(el, xel, P['theta'])
         #Generate the pointing on the sky of each pixel. 
-        pointing_paths_to_save = [genPointingPath(T, pixel_path, LST, lat, dec, ra) for pixel_path in pixel_paths]
+        pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
         #-------------------------------
 
         #------------------------------------------------------------------

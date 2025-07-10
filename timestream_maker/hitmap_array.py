@@ -73,17 +73,18 @@ if __name__ == "__main__":
 
     #-----------------------------
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
-    pixel_offset_SW, pixel_shift_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
-    pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
-    pixel_offset = np.concatenate((pixel_offset_SW, pixel_offset_LW))
-    pixel_shift = np.concatenate((pixel_shift_SW, pixel_shift_LW))
+    pixel_offset_EL_SW, pixel_offset_xEL_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
+    pixel_offset_EL_LW, pixel_offset_xEL_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
+    pixel_offset_EL = np.concatenate((pixel_offset_EL_SW, pixel_offset_EL_LW))
+    pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW, pixel_offset_xEL_LW))
     #-------------------------------
 
     #-------------------------------
-    #Generate the scan path of each pixel, as a function of their offset to the center of the arrays. 
-    pixel_paths  = genPixelPath(scan_path, pixel_offset, pixel_shift, P['theta'])
+    pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
+
     #Generate the pointing on the sky of each pixel. 
-    pointing_paths = [genPointingPath(T, pixel_path, LST, lat, dec, ra) for pixel_path in pixel_paths]
+    pointing_paths = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
+
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=P['f_range'],dec=dec,ra=ra) 
     #-------------------------------
@@ -94,9 +95,9 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(1,3,figsize=(9,3), dpi=160,)# sharey=True, sharex=True)
     #---
     axradec, axp, axpix = axs[0], axs[1], axs[2]
-    axradec.plot(RA_path-RA_path.max()/2,DEC_path-DEC_path.max()/2,'b')
-    axradec.set_xlabel('Az [deg]')
-    axradec.set_ylabel('El [deg]')
+    axradec.plot(RA_path,DEC_path,'b')
+    axradec.set_xlabel('RA [deg]')
+    axradec.set_ylabel('Dec [deg]')
     #axradec.set_aspect(aspect=1)
     #---
     img = axp.imshow((hit_map), extent=[x_cen-P['f_range'], x_cen+P['f_range'],y_cen-P['f_range'], y_cen+P['f_range'],], 
@@ -111,7 +112,7 @@ if __name__ == "__main__":
     #---
     patchs = []
     axpix.set_title('Pointing Path per pixel')
-    idx = np.arange(len(pixel_paths))[::15]
+    idx = np.arange(len(pointing_paths))[::15]
     n = 11
     for i,c in zip(idx, cm.rainbow(np.linspace(0.,1,len(idx)))):
         axpix.scatter(pointing_paths[i][::n,0], pointing_paths[i][::n,1], s=0.1,c=c)
@@ -122,7 +123,7 @@ if __name__ == "__main__":
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.close()
+    plt.show()
     #----------------------------------------
 
     #-------------------------------

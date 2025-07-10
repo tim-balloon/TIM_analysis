@@ -184,10 +184,10 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     flag = np.where(az_acc==0,1,0) #constant scan speed part
 
-    t = np.arange(len(alt)*dt,dt)
-    v = np.vstack((az_v,alt_v)).T
+    #t = np.arange(len(alt)*dt,dt)
+    #v = np.vstack((az_v,alt_v)).T
 
-    return az,alt,flag,v
+    return az,alt,flag #,v
 
 def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.05, dt= 0.01):
     """
@@ -255,7 +255,7 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.
 
     return az,alt,flag  
 
-def genScanPath(T, alt, az, v, flag, plot=False):
+def genScanPath(T, alt, az, flag, plot=False):
     """    
     Function that generates the pointing coordinates vs time.
 
@@ -278,7 +278,7 @@ def genScanPath(T, alt, az, v, flag, plot=False):
     """ 
 
     coor = np.zeros((len(T),2))
-    v_list = np.zeros((len(T),2))
+    #v_list = np.zeros((len(T),2))
 
 
     idx = np.int_(np.fmod(T,len(alt)/100)*100)
@@ -286,13 +286,12 @@ def genScanPath(T, alt, az, v, flag, plot=False):
     coor[:,0] = az[idx]-np.mean(az)
     coor[:,1] = alt[idx]-np.mean(alt)
 
+    #v_list[:,0] = v[idx,0]
+    #v_list[:,1] = v[idx,1]
 
-    v_list[:,0] = v[idx,0]
-    v_list[:,1] = v[idx,1]
-
-    flag      = flag[idx]
+    flag = flag[idx]
     
-    return coor,v_list,flag
+    return coor , flag #,v_list,flag
 
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
@@ -314,7 +313,7 @@ def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     
     return yoffsets, xoffsets
 
-def genPixelPath(pointing_path, pixel_offset, pixel_shift, theta):
+def pixels_rotations(pixel_offset, pixel_shift, theta):
     """
     Function that gernerates the pointing time stream for each pixel
     Parameters
@@ -330,15 +329,15 @@ def genPixelPath(pointing_path, pixel_offset, pixel_shift, theta):
     pixel_path: nd array
         the coordinates timestream of the pointing of each pixel, in degrees
     """ 
-    pixel_path = []
+    rotated_pixel = []
     for pixel, xpixel in zip(pixel_offset, pixel_shift):  
         pixel_w_time = np.array([xpixel * np.cos(theta) - pixel * np.sin(theta), 
                                  xpixel * np.sin(theta) + pixel * np.cos(theta)])  # Apply rotation
         #pixel_w_time = np.append( pixel*np.sin(theta), pixel*np.cos(theta))
-        pixel_path.append(pointing_path+pixel_w_time) 
-    return pixel_path
+        rotated_pixel.append(pixel_w_time) 
+    return np.asarray(rotated_pixel)
 
-def genPointingPath(T, scan_path, HA, lat, dec,ra, azel=False):
+def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=False):
 
     """
     Function that takes local paths and generates the pointing on sky vs time.
@@ -354,8 +353,13 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, azel=False):
         the coordinates timestream of the pointing of each pixel, in degrees
     """     
 
-    alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1])
-    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0]) 
+    alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1]) 
+    azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])   
+
+    x_el = azi * np.cos(alt) - np.radians(offsets[0])
+    azi = x_el / np.cos(alt)
+    alt += +np.radians(offsets[1])
+
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
 
