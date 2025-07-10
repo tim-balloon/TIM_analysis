@@ -62,16 +62,16 @@ if __name__ == "__main__":
 
     #---------------------------    
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
-    pixel_offset_SW, pixel_shift_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
-    pixel_offset_LW, pixel_shift_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
+    pixel_offset_EL_SW, pixel_offset_xEL_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
+    pixel_offset_EL_LW, pixel_offset_xEL_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
 
-    pixel_offset_SW_tot = np.tile(pixel_offset_SW, P['nb_channels_per_array'])
-    pixel_offset_LW_tot = np.tile(pixel_offset_LW, P['nb_channels_per_array'])
-    pixel_offset = np.concatenate((pixel_offset_SW_tot, pixel_offset_LW_tot))
+    pixel_offset_EL_SW_tot = np.tile(pixel_offset_EL_SW, P['nb_channels_per_array'])
+    pixel_offset_EL_LW_tot = np.tile(pixel_offset_EL_LW, P['nb_channels_per_array'])
+    pixel_offset_EL = np.concatenate((pixel_offset_EL_SW_tot, pixel_offset_EL_LW_tot))
 
-    pixel_shift_SW_tot = np.tile(pixel_shift_SW, P['nb_channels_per_array'])
-    pixel_shift_LW_tot = np.tile(pixel_shift_LW, P['nb_channels_per_array'])
-    pixel_shift = np.concatenate((pixel_shift_SW_tot, pixel_shift_LW_tot))
+    pixel_offset_xEL_SW_tot = np.tile(pixel_offset_xEL_SW, P['nb_channels_per_array'])
+    pixel_offset_xEL_LW_tot = np.tile(pixel_offset_xEL_LW, P['nb_channels_per_array'])
+    pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW_tot, pixel_offset_xEL_LW_tot))
     #---------------------------    
 
     #---------------------------
@@ -89,8 +89,8 @@ if __name__ == "__main__":
     #Time delay between pointing solution and detector data
     time_offset = np.zeros(len(det_names)) 
     #Offsets
-    EL = pixel_offset
-    XEL = pixel_shift
+    EL = pixel_offset_EL
+    XEL = pixel_offset_xEL
     #EM Frequency band
     freqs = np.zeros(len(det_names))
     #---------------------------
