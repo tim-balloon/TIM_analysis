@@ -319,7 +319,7 @@ class apply_offset(object):
 
                 xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
                 EL_corrected_temp = el + EL_offset
-                xEL_corrected_temp = xEL + xEL_offset
+                xEL_corrected_temp = xEL - xEL_offset
                 AZ_corrected_temp = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(el)))
 
                 conv2radec = utils(AZ_corrected_temp, EL_corrected_temp, self.lst, self.lat) #deg, deg, hour, deg
