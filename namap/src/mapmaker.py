@@ -236,7 +236,7 @@ class wcs_world():
 
         world = []
         for c1,c2 in zip(coord1, coord2):
-            world.append(  w.world_to_pixel_values(c1,c2) )
+            world.append( w.world_to_pixel_values(c1,c2) )
         # w.world_to_pixel_values(pointing_paths[detector][:,0]+hdr['CRVAL1'], pointing_paths[detector][:,1])    
         
         return world, w
@@ -279,15 +279,11 @@ class mapmaking(object):
         '''
 
         if value is None: value = self.data.copy()
-        else: value = value
 
         if pixelmap is None: pixelmap = self.pixelmap.copy()
-        else: pixelmap = pixelmap
         
-        if noise is None:  noise = self.weight**2
-        else: noise = noise
+        if noise is None: noise = self.weight**2
 
-        import pickle
 
         Xmin = np.inf
         Xmax = -np.inf
