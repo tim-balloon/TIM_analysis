@@ -63,25 +63,23 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #---------------------------------
     num_frames, first_frame = P['num_frames'], P['first_frame']
 
-    #Lat and lst need to be implemented in strategy.py
-    lat, lst = P['lat'], P['lst']
     #Also need to be implemented. 
     telemetry = P['telemetry']
 
     #So far, only 'RA and DEC' is implemented and working. 
-    if P['ctype'] == 'RA and DEC':
+    if P['input_ctype'] == 'RA and DEC':
         coord1 = str('RA')
         coord2 = str('DEC')
         xystage = False
-    elif P['ctype'] == 'AZ and EL':
+    elif P['input_ctype'] == 'AZ and EL':
         coord1 = str('AZ')
         coord2 = str('EL')
         xystage = False
-    elif P['ctype'] == 'CROSS-EL and EL':
+    elif P['input_ctype'] == 'CROSS-EL and EL':
         coord1 = str('xEL')
         coord2 = str('EL')
         xystage = False
-    elif P['ctype'] == 'XY Stage':
+    elif P['input_ctype'] == 'XY Stage':
         coord1 = str('X')
         coord2 = str('Y')
         xystage = True
@@ -125,7 +123,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #---------------------------------
 
     #---------------------------------
-    corr = pt.apply_offset(coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
+    corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
     #---------------------------------
 
