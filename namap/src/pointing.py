@@ -240,7 +240,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, coord1, coord2, ctype, xsc_offset, det_offset = np.array([0.,0.]),\
+    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, det_offset = np.array([0.,0.]),\
                  lst = None, lat = None):
         
         """
@@ -266,6 +266,7 @@ class apply_offset(object):
         Returns
         -------
         """    
+        self.input_ctype = input_ctype          #Ctype of the coordinates
         self.coord1 = coord1                    #Array of coordinate 1
         self.coord2 = coord2                    #Array of coordinate 2
         self.ctype = ctype                      #Ctype of the map
@@ -303,8 +304,16 @@ class apply_offset(object):
         """  
         if self.ctype.lower() == 'ra and dec':
 
-            conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
-            az, el = conv2azel.radec2azel()
+    
+            if(self.input_ctype.lower() == 'ra and dec'): 
+                conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
+                az, el = conv2azel.radec2azel()
+            elif(self.input_ctype.lower() == 'az and el'):
+                az, el = self.coord1, self.coord2
+            else: 
+                el = self.coord2
+                az = np.degrees(np.radians(self.coord1)/np.cos(np.radians(el)))
+
 
             xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
             ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
@@ -333,37 +342,54 @@ class apply_offset(object):
         
         elif self.ctype.lower() == 'az and el':
 
-            xEL = np.degrees(np.radians(self.coord1)*np.cos(np.radians(self.coord2)))
+                
+            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
+                conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
+                az, el = conv2azel.radec2azel()
+            elif(self.input_ctype ==self.input_ctype.lower() == 'az and el'):
+                az, el = self.coord1, self.coord2
+            else: 
+                el = self.coord2
+                az = np.degrees(np.radians(self.coord1)/np.cos(np.radians(el)))
+
+            xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
+            cos_el = np.cos(np.radians(el))
             el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
             az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
 
             for i in range(int(np.size(self.det_offset)/2)):
                 
-                quaternion = quat.quaternions()
-                xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
-                det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
-                off_quat = quaternion.product(det_quat, xsc_quat)
-                xEL_offset, EL_offset, roll_offset = quaternion.quat2eul(off_quat)
-                xEL_corrected_temp = xEL+xEL_offset
-                az_corrected[i, :]  = np.degrees(np.radians(xEL_corrected_temp)/np.cos(np.radians(self.coord2)))
-                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+                #xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
+                #det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
 
-                '''
-                el_corrected[i, :] = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+                el_corrected[i, :] = el+self.xsc_offset[1]+self.det_offset[i, 1]
 
-                az_corrected[i, :] = (self.coord1*np.cos(np.radians(self.coord2))-self.xsc_offset[0]- ##!! self.xsc_offset[i]
-                                      self.det_offset[i, 0])/np.cos(np.radians(el_corrected[i, :]))
-                '''
+                az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
+
+                plt.plot(az_corrected[i, :], el_corrected[i, :])
+
+            plt.plot(self.coord1, self.coord1)
                
             return az_corrected, el_corrected
 
         else:
 
+            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
+                conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
+                az, el = conv2azel.radec2azel()
+                xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
+            elif(self.input_ctype == self.input_ctype.lower() == 'az and el'):
+                az, el = self.coord1, self.coord2
+                xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
+            else: 
+                el = self.coord2
+                xEL = self.coord1 
+
             el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
             xel_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
             for i in range(int(np.size(self.det_offset)/2)):
-                xel_corrected[i, :] = self.coord1-self.xsc_offset[0]-self.det_offset[i, 0]
-                el_corrected[i, :]  = self.coord2+self.xsc_offset[1]+self.det_offset[i, 1]
+                xel_corrected[i, :] = xEL-self.xsc_offset[0]-self.det_offset[i, 0]
+                el_corrected[i, :]  = el+self.xsc_offset[1]+self.det_offset[i, 1]
             return xel_corrected,el_corrected
         
 class compute_offset(object):
