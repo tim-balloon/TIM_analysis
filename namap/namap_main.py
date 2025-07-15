@@ -110,6 +110,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     detslice, coord1slice, coord2slice, lstslice, latslice, spf_data, spf_coord, lat_spf = dataload.values()
     #---------------------------------
 
+
+
     #--------------------
     #Do some corrections
     if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
