@@ -2,11 +2,11 @@
 #Array parameters used to geenrate the TODs and the KIDs file.
 detectors_name_file = 'TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
-nb_pixel_SW = 63 #Number of pixel per frequency band in the SW array.
-offset_SW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the SW array
+nb_pixel_SW = 64 #Number of pixel per frequency band in the SW array.
+offset_SW = 0.0145  #[deg] separation in angle between 2 consecutive pixels for the SW array
 nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
-offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the LW array
-arrays_separation = 0.3 #[deg]
+offset_LW = 0.0182 #[deg] separation in angle between 2 consecutive pixels for the LW array
+arrays_separation = 0.066 #[deg]
 theta = 0 #[deg] rotation angle of detectors. 
 f_range = 0.6 #spatial extent for the plots. 
 #---------------------------
@@ -45,7 +45,7 @@ old=False
 #Choose the scan to use: 
 scan='raster' #'loop', 'raster', 'crisscross'
 #Loop scan parameters
-az_size=0.65
+az_size=0.45
 alt_size= 0.017
 alt_step=0.00833
 acc=0.05
