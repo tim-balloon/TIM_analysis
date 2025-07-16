@@ -223,16 +223,15 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
-    print(P['crpix'])
     #--------------------
     #Create the maps
     maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), cleaned_data, coord1slice, coord2slice, convolution, std, 
-                   coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic)
+                   coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
     
     maps.wcs_proj()
     map_values = maps.map2d()
     #--------------------
-
+    print(P)
     #--------------------------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
