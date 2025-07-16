@@ -7,6 +7,9 @@ hdf5_file = 'fits_and_hdf5/TOD_1h0min0sec.hdf5'
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
 
+#if you want to use preselected good detectors list
+detectors_to_use = 'config/TIM_good_kids_table.tsv' 
+
 #Choose the frequency band to make a map from
 frequencies = (715.0, 719.0) #GHz
  

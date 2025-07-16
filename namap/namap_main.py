@@ -84,7 +84,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     cli.add_argument('--output', type=str, default='output.fits', help='Output file name')
     cli.add_argument('--hdf5_file', type=str, help='Path for TOD data (HDF5 format)')
     cli.add_argument('--detector_table', type=str, help='Path to detector table (TSV format)')
-    cli.add_argument('--frequencies', type=float, nargs=2, help='Frequency band in GHz, e.g. 715.0 719.0 to make map from')
+    cli.add_argument('--detectors_to_use', type=str, default = None,help='Path to detector to use table (TSV format)')
+    cli.add_argument('--frequencies', type=float, default=None, nargs=2, help='Frequency band in GHz, e.g. 715.0 719.0 to make map from')
     cli.add_argument('--num_frames', type=int, help='Integration time in seconds to be loaded')
     cli.add_argument('--first_frame', type=int, help='Starting frame index (in seconds)')
     cli.add_argument('--time_offset', type=int, help='Time offset between detector data and coordinates')
@@ -156,12 +157,18 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
         xystage = True
 
     filepath = P['hdf5_file']
-
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-    filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
+    if P['frequencies'] is not None:
+        filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
+    if P['detectors_to_use'] is not None:
+        good_kid_table = tb.Table.read(P['detectors_to_use'], format='ascii.tab')
+        filtered = btable[np.isin(btable['Name'], good_kid_table['Name'])]
+    if P['frequencies'] is None and P['detectors_to_use'] is None:
+        filtered = btable
     #option in the par file to good kids list
+   
     kid_num = filtered['Name']
-
+    print(kid_num)
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
     det_off, noise_det, resp = dettable.loadtable()
