@@ -16,7 +16,7 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, coadd=False, noise=1., telcoord=False, parang=None):
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, coadd=False, noise=1., telcoord=False, parang=None, params=None):
         '''
         Create an instance of maps
         Parameters
@@ -33,6 +33,7 @@ class maps():
         self.coord1 = coord1           #array of the first coordinate
         self.coord2 = coord2           #array of the second coordinate
         self.data = data               #cleaned TOD that is used to create a map
+        self.params = params           #parameters used to create the map
         self.w = 0.                    #initialization of the coordinates of the map in pixel coordinates
         self.proj = 0.                 #inizialization of the wcs of the map. see wcs_world for more explanation about projections
         self.convolution = convolution #parameters to check if the convolution is required
@@ -148,6 +149,7 @@ class maps():
             hdr["BITPIX"] = ("64", "array data type")
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+            hdr["INFO"] = self.params
             hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+f'coadd.fits', overwrite=True)
             hdu.close()
 
@@ -179,6 +181,7 @@ class maps():
                 hdr = hdu[0].header
                 hdr.set("map")
                 hdr.set("Datas")
+                hdr["INFO"] = self.params
                 hdr["BITPIX"] = ("64", "array data type")
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
