@@ -76,6 +76,8 @@ if __name__ == "__main__":
     T_trim = T[scan_flag==1]
     LST_trim = LST[scan_flag==1]
 
+    embed()
+
     #Generate the pointing on the sky for the center of the arrays
     scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
     #----------------------------------------
