@@ -184,15 +184,26 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
-    detslice, coord1slice, coord2slice, lstslice, latslice, spf_data, spf_coord, lat_spf = dataload.values()
+
+    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #---------------------------------
+
+
+    zoomsyncdata = ld.frame_zoom_sync(det_data, spf_data,  coord1_data, 
+                                        coord2_data, spf_coord, first_frame, num_frames, 
+                                        lst_data, lat_data, lat_spf, offset=0)
+
+    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
+
+
+    #--------------------
+    #Do we have xel directly ? 
+    if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
+    #--------------------
+
 
     embed()
 
-    #--------------------
-    #Do some corrections
-    if coord1.lower() == 'xel': coord1slice *= np.cos(np.radians(coord2slice)) 
-    #--------------------
 
     #---------------------------------
     #Offset with respect to star cameras in xEL and EL

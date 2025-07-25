@@ -274,4 +274,209 @@ class det_table():
 
         return det_off, noise, resp
 
- 
+class frame_zoom_sync():
+
+    '''
+    This class is designed to extract the frames of interest from the complete timestream and 
+    sync detector and coordinates timestream given a different sampling of the two
+    '''
+
+    def __init__(self, det_path, det_data, det_sample_frame,\
+                 coord1_data, coord2_data, coord_sample_frame, \
+                 startframe, numframes, lst_data, lat_data, lstlat_sample_frame, \
+                 offset = None, roach_number= None, roach_pps_path= None, \
+                 hwp_sample_frame=None, xystage=False):
+
+        self.det_path = det_path                                #Path of the detector dirfile
+        self.det_data = det_data                                #Detector data timestream
+        #self.det_fs = float(det_fs)                            #Detector frequency sampling
+        self.det_sample_frame = int(float(det_sample_frame))    #Detector samples in each frame of the timestream
+        self.coord1_data = coord1_data                          #Coordinate 1 data timestream
+        #self.coord_fs = float(coord_fs)                        #Coordinates frequency sampling
+        self.coord_sample_frame = int(float(coord_sample_frame))#Coordinates samples in each frame of the time stream
+        self.coord2_data = coord2_data                          #Coordinate 2 data timestream
+        self.startframe = int(float(startframe))                #Start frame
+        self.numframes = int(float(numframes))                  #Number of frames
+        self.lst_data = lst_data                                #LST timestream (if correction is required and coordinates are RA-DEC)
+        self.lat_data = lat_data                                #LAT timestream (if correction is required and coordinates are RA-DEC)
+        #self.lstlatfreq = lstlatfreq                            #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
+        self.lstlat_sample_frame = lstlat_sample_frame          #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
+        if roach_number is not None:
+            self.roach_number = int(float(roach_number))        #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
+        else:
+            self.roach_number = roach_number
+        self.roach_pps_path = roach_pps_path                    #Pulse per second of the roach used to sync the data
+        self.offset = offset                                    #Time offset between detector data and coordinates
+
+    def frame_zoom(self, data, sample_frame, fs, fps, offset = None):
+
+        '''
+        Selecting the frames of interest and associate a timestamp for each value.
+        '''
+
+        frames = fps.copy()
+
+        frames[0] = fps[0]*sample_frame
+        if fps[1] == -1:
+            frames[1] = len(data)*sample_frame
+        else:
+            frames[1] = fps[1]*sample_frame+1
+
+        if offset is not None:
+            delay = offset*np.floor(fs)/1000.
+            frames = frames.astype(float)+delay
+
+        if len(np.shape(data)) == 1:
+            time = (np.arange(np.diff(frames))+frames[0])/np.floor(fs)
+            return time, data[int(frames[0]):int(frames[1])]
+        else:
+            time = np.arange(len(data[0, :]))/np.floor(fs)
+            time = time[int(frames[0]):int(frames[1])]
+            return  time, data[:,int(frames[0]):int(frames[1])]
+
+    def coord_int(self, coord1, coord2, time_acs, time_det):
+
+        '''
+        Interpolates the coordinates values to compensate for the smaller frequency sampling
+        '''
+
+        coord1_int = interp1d(time_acs, coord1, kind='linear')
+        coord2_int = interp1d(time_acs, coord2, kind= 'linear')
+
+        return coord1_int(time_det), coord2_int(time_det)
+
+    def sync_data(self, telemetry=True):
+
+        '''
+        Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
+        and the associated time
+        '''
+
+        embed()  
+
+        #Load the timestamps
+        #----------------------------------------
+
+        #    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
+        time = data_value.loaddata(self.det_path, f'time', self.num_frames, self.first_frame) 
+        sample_ctime = self.coord_sample_frame
+        spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
+
+    
+        #ctime_start = ctime_mcp+ctime_usec/1e6+0.2
+        #----------------------------------------
+
+        interval = self.numframes
+
+
+        #Reframe the coords (and data?)
+     
+        coord1 = self.coord1_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                    interval*self.coord_sample_frame]
+        coord2 = self.coord2_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                    interval*self.coord_sample_frame]
+        
+
+        #make time for the coords, if different from loaded time
+                                
+
+        #make time for the data
+
+        kidutils = det.kidsutils()
+        
+        start_det_frame = self.startframe-self.bufferframe
+        end_det_frame = self.endframe+self.bufferframe
+
+        frames = np.array([start_det_frame, end_det_frame], dtype='int')
+
+        dettime, pps_bins = kidutils.det_time(self.roach_pps_path, self.roach_number, frames, \
+                                                ctime_start, ctime_mcp[-1], self.det_fs)
+        
+        #--------------------------
+        #interpolate
+
+        coord1int = interp1d(coord1time, coord1, kind='linear')
+        coord2int = interp1d(coord2time, coord2, kind= 'linear')
+
+        idx_roach_start, = np.where(np.abs(dettime-ctime_start) == np.amin(np.abs(dettime-ctime_start)))
+        idx_roach_end, = np.where(np.abs(dettime-ctime_end) == np.amin(np.abs(dettime-ctime_end)))
+
+
+        for i in range(len(self.det_data)):
+            self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins[pps_bins>350], self.det_fs)
+            self.det_data[i] = self.det_data[i, idx_roach_start[0]:idx_roach_end[0]]
+        
+        dettime = dettime[idx_roach_start[0]:idx_roach_end[0]]
+        dettime = ctime_start+np.append(0, np.cumsum(np.repeat(1/self.det_fs, len(self.det_data[0]))))
+
+        index1, = np.where(np.abs(dettime-coord1time[0]) == np.amin(np.abs(dettime-coord1time[0])))
+        index2, = np.where(np.abs(dettime-coord1time[-1]) == np.amin(np.abs(dettime-coord1time[-1])))
+
+        coord1_inter = coord1int(dettime[index1[0]+200:index2[0]-200])
+        coord2_inter = coord2int(dettime[index1[0]+200:index2[0]-200])
+        dettime = dettime[index1[0]+200:index2[0]-200]
+
+        if len(np.shape(self.det_data)) == 1:
+            self.det_data = self.det_data[index1[0]+200:index2[0]-200]
+        else:
+            for i in range(len(self.det_data)):
+                self.det_data[i] = self.det_data[i, index1[0]+200:index2[0]-200]
+
+
+        #Otherway: 
+        dettime, self.det_data = self.frame_zoom(self.det_data, self.det_sample_frame, \
+                                                    self.det_fs, np.array([self.startframe,self.endframe]), \
+                                                    self.offset)
+        coord1time, coord1 = self.frame_zoom(self.coord1_data, self.coord_sample_frame, \
+                                                self.coord_fs, np.array([self.startframe,self.endframe]))
+
+        coord2time, coord2 = self.frame_zoom(self.coord2_data, self.coord_sample_frame, \
+                                                self.coord_fs, np.array([self.startframe,self.endframe]))
+
+        dettime = dettime-dettime[0]
+        coord1time = coord1time-coord1time[0]
+
+        index1, = np.where(np.abs(dettime-coord1time[0]) == np.amin(np.abs(dettime-coord1time[0])))
+        index2, = np.where(np.abs(dettime-coord1time[-1]) == np.amin(np.abs(dettime-coord1time[-1])))
+
+        coord1_inter, coord2_inter = self.coord_int(coord1, coord2, \
+                                                    coord1time, dettime[index1[0]+10:index2[0]-10])
+
+        dettime = dettime[index1[0]+10:index2[0]-10]
+        self.det_data = self.det_data[index1[0]+10:index2[0]-10]
+
+    if self.lat_data is not None and self.lat_data is not None:
+
+        if self.experiment.lower() == 'blastpol':
+            lsttime, lst = self.frame_zoom(self.lst_data, self.lstlat_sample_frame, \
+                                            self.lstlatfreq, np.array([self.startframe,self.endframe]))
+
+            lattime, lat = self.frame_zoom(self.lat_data, self.lstlat_sample_frame, \
+                                            self.lstlatfreq, np.array([self.startframe,self.endframe]))
+
+            lsttime = lsttime-lsttime[0]
+            index1, = np.where(np.abs(dettime-lsttime[0]) == np.amin(np.abs(dettime-lsttime[0])))
+            index2, = np.where(np.abs(dettime-lsttime[-1]) == np.amin(np.abs(dettime-lsttime[-1])))
+
+            lst_inter, lat_inter = self.coord_int(lst, lat, \
+                                                    lsttime, dettime[index1[0]+10:index2[0]-10])
+
+        else:
+            lst = self.lst_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                interval*self.coord_sample_frame]
+            lat = self.lat_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                interval*self.coord_sample_frame]
+
+            lsttime = ctime_mcp.copy()
+            lattime = ctime_mcp.copy()
+
+            lstint = interp1d(lsttime, lst, kind='linear')
+            latint = interp1d(lattime, lat, kind= 'linear')
+
+            lst_inter = lstint(dettime)
+            lat_inter = latint(dettime)
+
+        del lst
+        del lat
+
+        return 0
