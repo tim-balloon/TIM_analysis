@@ -42,11 +42,9 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     To run: python namap_main.py params_namap.par
 
     Left to be done:
-        Implement the telemetry option 
         Implement respons correction
         Test parallactic angle 
         Implement noise detectors
-        Implement spectral axis 
     '''
 
     tracemalloc.start()
@@ -138,7 +136,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #Also need to be implemented. 
     telemetry = P['telemetry']
 
-    #So far, only 'RA and DEC' is implemented and working. 
+    #So far, only 'RA and DEC' is implemented and working.     embed()
+
     if P['input_ctype'] == 'RA and DEC':
         coord1 = str('RA')
         coord2 = str('DEC')
@@ -168,7 +167,6 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #option in the par file to good kids list
    
     kid_num = filtered['Name']
-    print(kid_num)
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
     det_off, noise_det, resp = dettable.loadtable()
@@ -189,7 +187,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     detslice, coord1slice, coord2slice, lstslice, latslice, spf_data, spf_coord, lat_spf = dataload.values()
     #---------------------------------
 
-
+    embed()
 
     #--------------------
     #Do some corrections

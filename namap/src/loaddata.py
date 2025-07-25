@@ -165,6 +165,7 @@ class data_value():
             the number of sample per frame of lat and lst. 
 
         """    
+        embed()
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
         kid_num  = self.det_name
