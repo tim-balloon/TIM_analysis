@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
-    dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = int(1/np.round(dt*3600,3)) #sample per frame defined here as the acquisition rate in Hz. 
+    spf = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/spf/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     T = np.arange(0,T_duration,dt) * 3600 #s
     #local sideral time
     LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
@@ -158,8 +158,8 @@ if __name__ == "__main__":
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
     lat = P['latitude']
-    spf_prime = 200
-    dt_coords = 1/200/3600
+    spf_prime = P['acquisition_frequency_coords']
+    dt_coords = 1/spf_prime/3600*np.pi/3.14
     T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
     LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
 
