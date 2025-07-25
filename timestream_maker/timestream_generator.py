@@ -131,8 +131,8 @@ if __name__ == "__main__":
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
     
-    dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = int(1/np.round(dt*3600,3)) #sample per frame defined here as the acquisition rate in Hz.
+    spf = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/spf/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
 
     tod_file=P['path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
     H = h5py.File(tod_file, "a")
