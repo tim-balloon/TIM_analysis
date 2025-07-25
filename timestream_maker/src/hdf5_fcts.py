@@ -1,7 +1,7 @@
 import h5py
 import pandas as pd
 
-def save_scan_path(tod_file, scan_path, spf, names):
+def save_scan_path(tod_file, scan_path, spf, keys):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -13,13 +13,14 @@ def save_scan_path(tod_file, scan_path, spf, names):
         (ra, dec) coordinates timestreams of the center pixel
     spf: int
         the number of samples per frame
-    lower_spf: bool
-        if save the rad dec with an spf lower than the spf of the data, change the name of the group. 
+    keys: list
+        list of names under which the two coordinates are saved
+    
     Returns
     -------
     """ 
     H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(names, (scan_path[:,0],scan_path[:,1]))):
+    for i, (name, coord) in enumerate(zip(keys, (scan_path[:,0],scan_path[:,1]))):
         namegrp = name
         if namegrp not in H: grp = H.create_group(namegrp)
         else:                grp = H[namegrp]
@@ -29,7 +30,7 @@ def save_scan_path(tod_file, scan_path, spf, names):
         grp.create_dataset('spf', data=spf)
     H.close() 
 
-def save_time_tod(tod_file, T, spf):
+def save_timestamps(tod_file, T, spf, key):
     '''
     Save the time tod in the .hdf5 format. 
 
@@ -41,11 +42,13 @@ def save_time_tod(tod_file, T, spf):
         time timestreams
     spf: int
         the number of samples per frame
+    key: string
+        name under which the timestamps are saved
     Returns
     -------
     '''
     H = h5py.File(tod_file, "a")
-    namegrp = f'time'
+    namegrp = key
     if namegrp not in H: grp = H.create_group(namegrp)
     else:                grp = H[namegrp]
     if('data' in grp): del grp['data'] 
@@ -109,111 +112,3 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     det_names_dict.loc[mask, 'Frequency'] = F
     det_names_dict.to_csv(dect_file, sep='\t', index=False)
 
-def save_lst_lat(tod_file, lst, lat, spf):
-    """
-    Save the scan path in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    lst: array
-        the local sideral time timestream, for the center of the array. 
-    lat: array 
-        the latitudetimestream, for the center of the array. 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('lst', 'lat'), (lst,lat))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
-
-def save_az_el(tod_file, azimuths, elevations, spf):
-    """
-    Save the scan path in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    azimuths: array
-        the azimuth timestream of the centre of the array
-    elevations: array 
-        the latitude timestream of the centre of the array
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('AZ', 'EL'), (azimuths,elevations))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
-
-def save_telescope_coord(tod_file, x_tel, y_tel, spf):
-    """
-    Save the scan path in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    azimuths: array
-    elevations: array 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('xEL', 'EL'), (x_tel,y_tel))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
-
-def save_PA(tod_file, PA, spf):
-    """
-    Save the parallactic angle in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    PA: array
-        the parallactic angle timestream 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('PA',), (PA,))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
