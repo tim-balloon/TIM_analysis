@@ -72,15 +72,14 @@ if __name__ == "__main__":
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
 
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
-    scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
-    T_trim = T[scan_flag==1]
-    LST_trim = LST[scan_flag==1]
-
-    embed()
+    #scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
+    #T_trim = T[scan_flag==1]
+    #LST_trim = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
-    scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
+    scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, ra, azel=True) 
     #----------------------------------------
+
 
     #----------------------------------------
     #Plot a scan route
@@ -120,7 +119,7 @@ if __name__ == "__main__":
     #----------------------------------------
 
     #latitude  timestream
-    lat = np.ones(len(LST_trim)) * lat
+    lat = np.ones(len(LST)) * lat
     #Generate the telescope coordinates and parallactic angle. 
 
     #RA and Dec
@@ -130,7 +129,7 @@ if __name__ == "__main__":
     cos_lat = np.cos(np.radians(lat))
     sin_lat = np.sin(np.radians(lat))
 
-    hour_angle = (LST_trim - ra / 15)*np.pi/12
+    hour_angle = (LST - ra / 15)*np.pi/12
     index, = np.where(hour_angle<0)
     hour_angle[index] += 2*np.pi
     
@@ -146,11 +145,38 @@ if __name__ == "__main__":
 
     #----------------------------------------
     #Save timestreams in a .hdf5 file 
-    save_PA(tod_file, np.degrees(pa), spf)
-    save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_lst_lat(tod_file, LST_trim, lat, spf)
-    save_az_el(tod_file, azel[:,0], azel[:,1], spf)
-    save_time_tod(tod_file, T_trim, spf)
-    save_scan_path(tod_file, scan_path_sky, spf, ('RA', 'DEC'))
-    save_scan_path(tod_file, scan_path, spf, ('RA_path', 'DEC_path'))
+    #save_PA(tod_file, np.degrees(pa), spf)
+    #save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
+    save_scan_path(tod_file, np.array((LST, lat)).T, spf, ('data_lst', 'data_lat'))
+    save_scan_path(tod_file, azel, spf,('data_AZ', 'data_EL'))
+    save_scan_path(tod_file, scan_path_sky, spf, ('data_RA', 'data_DEC'))
+    save_scan_path(tod_file, scan_path,     spf, ('data_RA_path', 'data_DEC_path'))
+    save_timestamps(tod_file, T, spf, 'data_time')
+    save_timestamps(tod_file, scan_flag, spf, ('data_turnaround_flags'))
     #-------------------------------------------
+
+
+    #----------------------------------------
+
+    #load the observer position
+    lat = P['latitude']
+
+    spf_prime = 1/P['dt_coords']/3600
+    dt_coords = P['dt_coords']
+    T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
+    LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
+
+    if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
+    if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
+    if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
+
+    scan_path, scan_flag = genScanPath(T_prime, alt, az, flag)
+    scan_path_sky, azel = genPointingPath(T_prime, scan_path, LST_prime, lat, dec, ra, azel=True) 
+    lat = np.ones(len(LST_prime)) * lat
+
+    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, ('lst', 'lat'))
+    save_scan_path(tod_file, azel, spf_prime,('AZ', 'EL'))
+    save_scan_path(tod_file, scan_path_sky, spf_prime, ('RA', 'DEC'))
+    save_scan_path(tod_file, scan_path,     spf_prime, ('RA_path', 'DEC_path'))
+    save_timestamps(tod_file, T_prime, spf_prime, 'time')
+    save_timestamps(tod_file, scan_flag, spf_prime, ('turnaround_flags'))
