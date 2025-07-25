@@ -155,14 +155,11 @@ if __name__ == "__main__":
     save_timestamps(tod_file, scan_flag, spf, ('data_turnaround_flags'))
     #-------------------------------------------
 
-
     #----------------------------------------
-
-    #load the observer position
+    #Create the coordinates sampled differently, to test the synchronization with data in Namap.
     lat = P['latitude']
-
-    spf_prime = 1/P['dt_coords']/3600
-    dt_coords = P['dt_coords']
+    spf_prime = 200
+    dt_coords = 1/200/3600
     T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
     LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
 
