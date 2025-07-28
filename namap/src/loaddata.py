@@ -107,6 +107,27 @@ class data_value():
         H.close()
         return spf
     
+    def load_acquisition_frequency(file, field):
+        """
+        Load the sample per frame of a field from a .hdf5 
+        Parameters
+        ----------
+        file: string
+            the name of the .hdf5 file
+        field: string
+            the field for which to get the spf
+        Returns
+        -------
+        spf: int
+            number of sample per frame
+        """    
+        H = h5py.File(file, "a")
+        f = H[field]
+        if('acquisition frequency' in f.keys()): spf = f['acquisition frequency'][()]
+        else: spf = None
+        H.close()
+        return spf
+    
     def loaddata(file, field, num_frames=None, first_frame=None):
         """
         Load the data from a .hdf5 
