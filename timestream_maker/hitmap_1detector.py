@@ -58,7 +58,7 @@ if __name__ == "__main__":
     T_duration = P['T_duration'] 
     acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = np.ceil(acquisition_frequency).astype(int)
+    spf = np.round(acquisition_frequency).astype(int)
     T = np.arange(0,T_duration,dt) * 3600 #s
     pps = np.floor(T).astype(int)
     #local sideral time
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
     dt_coords = 1/acquisition_frequency_prime/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf_prime = np.ceil(acquisition_frequency_prime).astype(int)
+    spf_prime = np.round(acquisition_frequency_prime).astype(int)
 
     T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
     pps = np.floor(T_prime).astype(int)
