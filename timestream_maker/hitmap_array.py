@@ -134,8 +134,7 @@ if __name__ == "__main__":
     wcs.wcs.cdelt = [res, res] # Pixel scale in degrees/pixel (RA, Dec)
     wcs.wcs.crval = [ra, dec]          # Reference coordinates (RA, Dec)
     wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]  # Projection type
-    d = {'wcs':wcs}
-    pickle.dump(d, open(P['wcs_dict'], 'wb'))
+    d = {'wcs':wcs}; pickle.dump(d, open(P['wcs_dict'], 'wb'))
 
     f = fits.PrimaryHDU(hit_map, header=wcs.to_header())
     hdu = fits.HDUList([f])
