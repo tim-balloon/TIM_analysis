@@ -45,6 +45,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
         Implement respons correction
         Test parallactic angle 
         Implement noise detectors
+        add buffer frames
     '''
 
     tracemalloc.start()
@@ -189,7 +190,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #---------------------------------
 
 
-    zoomsyncdata = ld.frame_zoom_sync(det_data, spf_data,  coord1_data, 
+    zoomsyncdata = ld.frame_zoom_sync(filepath, det_data, spf_data,  coord1_data, 
                                         coord2_data, spf_coord, first_frame, num_frames, 
                                         lst_data, lat_data, lat_spf, offset=0)
 
