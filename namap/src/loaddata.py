@@ -170,6 +170,8 @@ class data_value():
         kid_num  = self.det_name
         det_data = []
 
+        embed()
+
         for kid in kid_num: 
             kidutils = det.kidsutils()
             det_data.append(data_value.loaddata(self.det_path, f'kid_{kid}_roach', num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
@@ -352,13 +354,12 @@ class frame_zoom_sync():
         and the associated time
         '''
 
-        embed()  
 
         #Load the timestamps
         #----------------------------------------
 
         #    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
-        time = data_value.loaddata(self.det_path, f'time', self.num_frames, self.first_frame) 
+        time = data_value.loaddata(self.det_path, f'data_time', self.num_frames, self.first_frame) 
         sample_ctime = self.coord_sample_frame
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
 
@@ -445,38 +446,38 @@ class frame_zoom_sync():
         dettime = dettime[index1[0]+10:index2[0]-10]
         self.det_data = self.det_data[index1[0]+10:index2[0]-10]
 
-    if self.lat_data is not None and self.lat_data is not None:
+        if self.lat_data is not None and self.lat_data is not None:
 
-        if self.experiment.lower() == 'blastpol':
-            lsttime, lst = self.frame_zoom(self.lst_data, self.lstlat_sample_frame, \
-                                            self.lstlatfreq, np.array([self.startframe,self.endframe]))
+            if self.experiment.lower() == 'blastpol':
+                lsttime, lst = self.frame_zoom(self.lst_data, self.lstlat_sample_frame, \
+                                                self.lstlatfreq, np.array([self.startframe,self.endframe]))
 
-            lattime, lat = self.frame_zoom(self.lat_data, self.lstlat_sample_frame, \
-                                            self.lstlatfreq, np.array([self.startframe,self.endframe]))
+                lattime, lat = self.frame_zoom(self.lat_data, self.lstlat_sample_frame, \
+                                                self.lstlatfreq, np.array([self.startframe,self.endframe]))
 
-            lsttime = lsttime-lsttime[0]
-            index1, = np.where(np.abs(dettime-lsttime[0]) == np.amin(np.abs(dettime-lsttime[0])))
-            index2, = np.where(np.abs(dettime-lsttime[-1]) == np.amin(np.abs(dettime-lsttime[-1])))
+                lsttime = lsttime-lsttime[0]
+                index1, = np.where(np.abs(dettime-lsttime[0]) == np.amin(np.abs(dettime-lsttime[0])))
+                index2, = np.where(np.abs(dettime-lsttime[-1]) == np.amin(np.abs(dettime-lsttime[-1])))
 
-            lst_inter, lat_inter = self.coord_int(lst, lat, \
-                                                    lsttime, dettime[index1[0]+10:index2[0]-10])
+                lst_inter, lat_inter = self.coord_int(lst, lat, \
+                                                        lsttime, dettime[index1[0]+10:index2[0]-10])
 
-        else:
-            lst = self.lst_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
-                                interval*self.coord_sample_frame]
-            lat = self.lat_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
-                                interval*self.coord_sample_frame]
+            else:
+                lst = self.lst_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                    interval*self.coord_sample_frame]
+                lat = self.lat_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
+                                    interval*self.coord_sample_frame]
 
-            lsttime = ctime_mcp.copy()
-            lattime = ctime_mcp.copy()
+                lsttime = ctime_mcp.copy()
+                lattime = ctime_mcp.copy()
 
-            lstint = interp1d(lsttime, lst, kind='linear')
-            latint = interp1d(lattime, lat, kind= 'linear')
+                lstint = interp1d(lsttime, lst, kind='linear')
+                latint = interp1d(lattime, lat, kind= 'linear')
 
-            lst_inter = lstint(dettime)
-            lat_inter = latint(dettime)
+                lst_inter = lstint(dettime)
+                lat_inter = latint(dettime)
 
-        del lst
-        del lat
+            del lst
+            del lat
 
-        return 0
+            return 0
