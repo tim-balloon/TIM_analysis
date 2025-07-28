@@ -131,9 +131,9 @@ if __name__ == "__main__":
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
     
-    aquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
-    dt = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = np.ceil(aquisition_frequency).astype(int)
+    acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf = np.ceil(acquisition_frequency).astype(int)
 
     tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
     H = h5py.File(tod_file, "a")
@@ -247,7 +247,7 @@ if __name__ == "__main__":
             plt.close()
             #----------------------------------------
 
-            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf)
+            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency)
             
             bar.next()
         #------------------------------------------------------------------

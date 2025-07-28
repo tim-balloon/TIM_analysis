@@ -58,7 +58,7 @@ def save_timestamps(tod_file, T, spf, key):
 
     H.close()
 
-def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf):
+def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
 
@@ -76,10 +76,13 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         horizontal position of each pixel on the array with respect to the center 
     dect_file: string
         the name of the .csv where the info on each pixel is stored. This function add the frequency band info to the .csv file. 
+    F: float
+        the frequency band seen by the detectors [GHz]
     spf: int
         the number of samples per frame
-    F: astropy quantity
-        the frequency band seen by the detectors
+    acquisition_frequency: float
+        the acquisition frequency of the detectors [Hz]
+
 
     Returns
     -------
@@ -97,12 +100,13 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         if('pixel_offset_y' in grp): del grp['pixel_offset_y'] 
         if('pixel_offset_x' in grp): del grp['pixel_offset_x'] 
         if('frequency' in grp): del grp['frequency'] 
+        if('acquisition frequency' in grp): del grp['acquisition frequency'] 
         grp.create_dataset('data', data=samples[detector,:],
                             compression='gzip', compression_opts=9)
         grp.create_dataset('spf', data=spf)
         grp.create_dataset('pixel_offset_y', data=offset)
         grp.create_dataset('pixel_offset_x', data=shift)
-        grp.create_dataset('frequency', data=F)
+        grp.create_dataset('acquisition frequency', data=acquisition_frequency)
 
     H.close()
 
