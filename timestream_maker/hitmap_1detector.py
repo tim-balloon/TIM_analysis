@@ -56,9 +56,11 @@ if __name__ == "__main__":
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
-    spf = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
-    dt = 1/spf/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    aquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf = np.ceil(aquisition_frequency).astype(int)
     T = np.arange(0,T_duration,dt) * 3600 #s
+    pps = np.floor(T).astype(int)
     #local sideral time
     LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
 
@@ -152,15 +154,20 @@ if __name__ == "__main__":
     save_scan_path(tod_file, scan_path_sky, spf, ('data_RA', 'data_DEC'))
     save_scan_path(tod_file, scan_path,     spf, ('data_RA_path', 'data_DEC_path'))
     save_timestamps(tod_file, T, spf, 'data_time')
-    save_timestamps(tod_file, scan_flag, spf, ('data_turnaround_flags'))
+    save_timestamps(tod_file, pps, spf, 'data_pps')  
+    save_timestamps(tod_file, scan_flag, spf, 'data_turnaround_flags')
     #-------------------------------------------
 
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
     lat = P['latitude']
-    spf_prime = P['acquisition_frequency_coords']
-    dt_coords = 1/spf_prime/3600*np.pi/3.14
+
+    aquisition_frequency = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt_coords = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf_prime = np.ceil(aquisition_frequency).astype(int)
+
     T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
+    pps = np.floor(T_prime).astype(int)
     LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
 
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
@@ -176,4 +183,5 @@ if __name__ == "__main__":
     save_scan_path(tod_file, scan_path_sky, spf_prime, ('RA', 'DEC'))
     save_scan_path(tod_file, scan_path,     spf_prime, ('RA_path', 'DEC_path'))
     save_timestamps(tod_file, T_prime, spf_prime, 'time')
+    save_timestamps(tod_file, pps, spf, 'coords_pps')  
     save_timestamps(tod_file, scan_flag, spf_prime, ('turnaround_flags'))
