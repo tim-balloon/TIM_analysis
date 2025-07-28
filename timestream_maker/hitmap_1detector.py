@@ -56,9 +56,9 @@ if __name__ == "__main__":
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
-    aquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
-    dt = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = np.ceil(aquisition_frequency).astype(int)
+    acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf = np.ceil(acquisition_frequency).astype(int)
     T = np.arange(0,T_duration,dt) * 3600 #s
     pps = np.floor(T).astype(int)
     #local sideral time
@@ -151,22 +151,22 @@ if __name__ == "__main__":
     #Save timestreams in a .hdf5 file 
     #save_PA(tod_file, np.degrees(pa), spf)
     #save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_scan_path(tod_file, np.array((LST, lat)).T, spf, ('data_lst', 'data_lat'))
-    save_scan_path(tod_file, azel, spf,('data_AZ', 'data_EL'))
-    save_scan_path(tod_file, scan_path_sky, spf, ('data_RA', 'data_DEC'))
-    save_scan_path(tod_file, scan_path,     spf, ('data_RA_path', 'data_DEC_path'))
-    save_timestamps(tod_file, T, spf, 'data_time')
-    save_timestamps(tod_file, pps, spf, 'data_pps')  
-    save_timestamps(tod_file, scan_flag, spf, 'data_turnaround_flags')
+    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'))
+    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'))
+    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'))
+    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'))
+    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time')
+    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps')  
+    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags')
     #-------------------------------------------
 
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
     lat = P['latitude']
 
-    aquisition_frequency = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
-    dt_coords = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf_prime = np.ceil(aquisition_frequency).astype(int)
+    acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt_coords = 1/acquisition_frequency_prime/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf_prime = np.ceil(acquisition_frequency_prime).astype(int)
 
     T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
     pps = np.floor(T_prime).astype(int)
@@ -180,10 +180,10 @@ if __name__ == "__main__":
     scan_path_sky, azel = genPointingPath(T_prime, scan_path, LST_prime, lat, dec, ra, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
 
-    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, ('lst', 'lat'))
-    save_scan_path(tod_file, azel, spf_prime,('AZ', 'EL'))
-    save_scan_path(tod_file, scan_path_sky, spf_prime, ('RA', 'DEC'))
-    save_scan_path(tod_file, scan_path,     spf_prime, ('RA_path', 'DEC_path'))
-    save_timestamps(tod_file, T_prime, spf_prime, 'time')
-    save_timestamps(tod_file, pps, spf, 'coords_pps')  
-    save_timestamps(tod_file, scan_flag, spf_prime, ('turnaround_flags'))
+    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
+    save_scan_path(tod_file, azel, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
+    save_scan_path(tod_file, scan_path_sky, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
+    save_scan_path(tod_file, scan_path,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'time')
+    save_timestamps(tod_file, pps, spf, acquisition_frequency_prime,'coords_pps')  
+    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
