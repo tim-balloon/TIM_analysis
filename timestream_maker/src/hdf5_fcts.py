@@ -1,7 +1,7 @@
 import h5py
 import pandas as pd
 
-def save_scan_path(tod_file, scan_path, spf, keys):
+def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -26,11 +26,13 @@ def save_scan_path(tod_file, scan_path, spf, keys):
         else:                grp = H[namegrp]
         if('data' in grp): del grp['data'] 
         if('spf' in grp): del grp['spf'] 
+        if('acquisition frequency' in grp): del grp['acquisition frequency'] 
         grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
         grp.create_dataset('spf', data=spf)
+        grp.create_dataset('acquisition frequency', data=acquisition_frequency)
     H.close() 
 
-def save_timestamps(tod_file, T, spf, key):
+def save_timestamps(tod_file, T, spf, acquisition_frequency, key):
     '''
     Save the time tod in the .hdf5 format. 
 
@@ -53,8 +55,10 @@ def save_timestamps(tod_file, T, spf, key):
     else:                grp = H[namegrp]
     if('data' in grp): del grp['data'] 
     if('spf' in grp): del grp['spf'] 
+    if('acquisition frequency' in grp): del grp['acquisition frequency'] 
     grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
     grp.create_dataset('spf', data=spf)
+    grp.create_dataset('acquisition frequency', data=acquisition_frequency)
 
     H.close()
 
