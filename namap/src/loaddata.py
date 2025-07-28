@@ -170,8 +170,6 @@ class data_value():
         kid_num  = self.det_name
         det_data = []
 
-        embed()
-
         for kid in kid_num: 
             kidutils = det.kidsutils()
             det_data.append(data_value.loaddata(self.det_path, f'kid_{kid}_roach', num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
@@ -353,36 +351,25 @@ class frame_zoom_sync():
         Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
         and the associated time
         '''
-
-
-        #Load the timestamps
+        print('here')
+        embed()
         #----------------------------------------
+        #Load the timestamps
 
-        #    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
-        time = data_value.loaddata(self.det_path, f'data_time', self.num_frames, self.first_frame) 
-        sample_ctime = self.coord_sample_frame
-        spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
+        time = data_value.loaddata(self.det_path, f'data_time', self.numframes, self.startframe) 
+        spf_time = data_value.loadspf(self.det_path, f'data_time')
 
-    
+        '''
+        idx_roach_start, = np.where(np.abs(dettime-ctime_start) == np.amin(np.abs(dettime-ctime_start)))
+        idx_roach_end, = np.where(np.abs(dettime-ctime_end) == np.amin(np.abs(dettime-ctime_end)))
+        '''
+
         #ctime_start = ctime_mcp+ctime_usec/1e6+0.2
         #----------------------------------------
-
-        interval = self.numframes
-
-
-        #Reframe the coords (and data?)
-     
-        coord1 = self.coord1_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
-                                    interval*self.coord_sample_frame]
-        coord2 = self.coord2_data[self.bufferframe*self.coord_sample_frame:self.bufferframe*self.coord_sample_frame+\
-                                    interval*self.coord_sample_frame]
-        
-
-        #make time for the coords, if different from loaded time
-                                
-
-        #make time for the data
-
+       
+        #----------------------------------------
+        #load the pulses per second (pps)
+        '''
         kidutils = det.kidsutils()
         
         start_det_frame = self.startframe-self.bufferframe
@@ -392,16 +379,15 @@ class frame_zoom_sync():
 
         dettime, pps_bins = kidutils.det_time(self.roach_pps_path, self.roach_number, frames, \
                                                 ctime_start, ctime_mcp[-1], self.det_fs)
+        '''
+        pps = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
         
         #--------------------------
+
         #interpolate
 
         coord1int = interp1d(coord1time, coord1, kind='linear')
         coord2int = interp1d(coord2time, coord2, kind= 'linear')
-
-        idx_roach_start, = np.where(np.abs(dettime-ctime_start) == np.amin(np.abs(dettime-ctime_start)))
-        idx_roach_end, = np.where(np.abs(dettime-ctime_end) == np.amin(np.abs(dettime-ctime_end)))
-
 
         for i in range(len(self.det_data)):
             self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins[pps_bins>350], self.det_fs)
