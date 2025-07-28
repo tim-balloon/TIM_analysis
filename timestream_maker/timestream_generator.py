@@ -134,7 +134,7 @@ if __name__ == "__main__":
     spf = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
     dt = 1/spf/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
 
-    tod_file=P['path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
     H = h5py.File(tod_file, "a")
     T = H['time']['data'][()]
     LST = H['lst']['data'][()]

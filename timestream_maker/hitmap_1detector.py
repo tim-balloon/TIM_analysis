@@ -64,7 +64,7 @@ if __name__ == "__main__":
     #local sideral time
     LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
 
-    tod_file=P['path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------    
@@ -125,6 +125,7 @@ if __name__ == "__main__":
     #Generate the telescope coordinates and parallactic angle. 
 
     #RA and Dec
+    '''
     coord1 = np.radians(scan_path_sky[:,0])
     coord2 = np.radians(scan_path_sky[:,1])
 
@@ -143,6 +144,7 @@ if __name__ == "__main__":
     #Telescope coordinates
     x_tel = coord1*np.cos(pa)-coord2*np.sin(pa)
     y_tel = coord2*np.cos(pa)+coord1*np.sin(pa)
+    '''
     #----------------------------------------
 
     #----------------------------------------
