@@ -184,6 +184,6 @@ if __name__ == "__main__":
     save_scan_path(tod_file, azel, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
     save_scan_path(tod_file, scan_path_sky, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
     save_scan_path(tod_file, scan_path,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
-    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'time')
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
     save_timestamps(tod_file, pps, spf, acquisition_frequency_prime,'coords_pps')  
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
