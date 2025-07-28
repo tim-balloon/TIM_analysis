@@ -25,8 +25,8 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_duration= 0+5/60+0/3600 #hour , duration of the scan
-acquisition_frequency = 488
-acquisition_frequency_coords = 237
+acquisition_frequency = 488.3
+acquisition_frequency_coords = 200.3
 #---------------------------
 
 #----- Sky simulation -----
