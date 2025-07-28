@@ -401,6 +401,7 @@ class frame_zoom_sync():
         #----------------------------------------
         #Load the timestamps
         #Assume that "time" is the coordinates timestamps. 
+        embed()
         ctime = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
         spf_time = data_value.loadspf(self.det_path, f'coords_time')
         pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
