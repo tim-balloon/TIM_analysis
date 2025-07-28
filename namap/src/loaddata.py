@@ -380,10 +380,6 @@ class frame_zoom_sync():
         and the associated time
         '''
 
-        print('here')
-        embed()
-
-
         #----------------------------------------
         #Load the timestamps and pulse per second
         #Assume that "data_time" is the data timestamps
@@ -392,6 +388,7 @@ class frame_zoom_sync():
         pps_data = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
         bn = np.bincount(pps_data)
         pps_bins = bn[bn>0]
+
         #----------------------------------------
 
         kidutils = det.kidsutils()
@@ -399,23 +396,32 @@ class frame_zoom_sync():
             #self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
             a = self.det_data[i]
             b = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
-            print(len(a), len(b))
 
 
         #----------------------------------------
         #Load the timestamps
         #Assume that "time" is the coordinates timestamps. 
-        time = data_value.loaddata(self.det_path, f'time', self.numframes, self.startframe) 
-        spf_time = data_value.loadspf(self.det_path, f'time')
+        ctime = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
+        spf_time = data_value.loadspf(self.det_path, f'coords_time')
         pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
         bn = np.bincount(pps)
         pps_bins = bn[bn>0]
+
+        embed()
+        if pps_bins[0] < spf_time:
+            pps = pps[pps_bins[0]:]
+            ctime = ctime[pps_bins[0]:]
+        if pps_bins[-1] < spf_time:
+            pps = pps[:-pps_bins[-1]]
+            ctime = ctime[:-pps_bins[-1]]
+
+        pps_duration =  pps[-1]-pps[0]+1
+        pps_final =  pps[0]+np.arange(0, pps_duration, 1/self.coord_fs) 
         #----------------------------------------
         
         kidutils = det.kidsutils()
         coord1 = kidutils.interpolation_roach(self.coord1_data, pps_bins, self.coord_fs)
         coord2 = kidutils.interpolation_roach(self.coord2_data, pps_bins, self.coord_fs)
-        embed()
         #-----------------------------------------
 
 
