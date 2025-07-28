@@ -7,6 +7,7 @@ from IPython import embed
 import src.detector as det 
 import h5py
 import matplotlib.pyplot as plt
+from detector import kidsutils
 
 def load_params(path):
     """
@@ -197,18 +198,25 @@ class data_value():
             # Assume all the data have the same spf       
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach')
+        acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
-        
-        coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', num, first_frame) 
+
         coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', num, first_frame) 
+        if self.coord1_name.lower() == 'xel': 
+            coord1_data = data_value.loaddata(self.det_path, 'EL', num, first_frame) 
+            coord1_data *= np.cos(np.radians(coord2_data)) 
+        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', num, first_frame) 
+
         spf_coord = data_value.loadspf(self.det_path, self.coord2_name, )
+        acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
 
         #---------------------------------------------------------------------------------
         lat = data_value.loaddata(self.det_path, 'lat',num, first_frame)
         lst = data_value.loaddata(self.det_path, 'lst',num, first_frame)
         lst_lat_spf = data_value.loadspf(self.det_path, 'lst')
+        acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """
@@ -302,32 +310,32 @@ class frame_zoom_sync():
     sync detector and coordinates timestream given a different sampling of the two
     '''
 
-    def __init__(self, det_path, det_data, det_sample_frame,\
-                 coord1_data, coord2_data, coord_sample_frame, \
-                 startframe, numframes, lst_data, lat_data, lstlat_sample_frame, \
+    def __init__(self, det_path, det_data,det_fs, det_sample_frame,\
+                 coord1_data, coord2_data, coord_fs, coord_sample_frame, \
+                 startframe, numframes, lst_data, lat_data, lstlat_fs, lstlat_sample_frame, \
                  offset = None, roach_number= None, roach_pps_path= None, \
                  hwp_sample_frame=None, xystage=False):
 
-        self.det_path = det_path                                #Path of the detector dirfile
-        self.det_data = det_data                                #Detector data timestream
-        #self.det_fs = float(det_fs)                            #Detector frequency sampling
-        self.det_sample_frame = int(float(det_sample_frame))    #Detector samples in each frame of the timestream
-        self.coord1_data = coord1_data                          #Coordinate 1 data timestream
-        #self.coord_fs = float(coord_fs)                        #Coordinates frequency sampling
-        self.coord_sample_frame = int(float(coord_sample_frame))#Coordinates samples in each frame of the time stream
-        self.coord2_data = coord2_data                          #Coordinate 2 data timestream
-        self.startframe = int(float(startframe))                #Start frame
-        self.numframes = int(float(numframes))                  #Number of frames
-        self.lst_data = lst_data                                #LST timestream (if correction is required and coordinates are RA-DEC)
-        self.lat_data = lat_data                                #LAT timestream (if correction is required and coordinates are RA-DEC)
-        #self.lstlatfreq = lstlatfreq                            #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
-        self.lstlat_sample_frame = lstlat_sample_frame          #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
+        self.det_path = det_path                                 #Path of the detector dirfile
+        self.det_data = det_data                                 #Detector data timestream
+        self.det_fs = float(det_fs)                              #Detector frequency sampling
+        self.det_sample_frame = int(float(det_sample_frame))     #Detector samples in each frame of the timestream
+        self.coord1_data = coord1_data                           #Coordinate 1 data timestream
+        self.coord_fs = float(coord_fs)                          #Coordinates frequency sampling
+        self.coord_sample_frame = int(float(coord_sample_frame)) #Coordinates samples in each frame of the time stream
+        self.coord2_data = coord2_data                           #Coordinate 2 data timestream
+        self.startframe = int(float(startframe))                 #Start frame
+        self.numframes = int(float(numframes))                   #Number of frames
+        self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
+        self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
+        self.lstlatfreq = lstlat_fs                              #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
+        self.lstlat_sample_frame = lstlat_sample_frame           #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
         if roach_number is not None:
-            self.roach_number = int(float(roach_number))        #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
+            self.roach_number = int(float(roach_number))         #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
         else:
             self.roach_number = roach_number
-        self.roach_pps_path = roach_pps_path                    #Pulse per second of the roach used to sync the data
-        self.offset = offset                                    #Time offset between detector data and coordinates
+        self.roach_pps_path = roach_pps_path                     #Pulse per second of the roach used to sync the data
+        self.offset = offset                                     #Time offset between detector data and coordinates
 
     def frame_zoom(self, data, sample_frame, fs, fps, offset = None):
 
@@ -402,6 +410,8 @@ class frame_zoom_sync():
                                                 ctime_start, ctime_mcp[-1], self.det_fs)
         '''
         pps = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
+        bn = np.bincount(pps)
+        pps_bins = bn[bn>0]
         
         #--------------------------
 
@@ -411,7 +421,8 @@ class frame_zoom_sync():
         coord2int = interp1d(coord2time, coord2, kind= 'linear')
 
         for i in range(len(self.det_data)):
-            self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins[pps_bins>350], self.det_fs)
+            kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
+            self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
             self.det_data[i] = self.det_data[i, idx_roach_start[0]:idx_roach_end[0]]
         
         dettime = dettime[idx_roach_start[0]:idx_roach_end[0]]
