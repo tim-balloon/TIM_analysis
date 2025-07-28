@@ -405,6 +405,7 @@ class frame_zoom_sync():
         ctime = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
         spf_time = data_value.loadspf(self.det_path, f'coords_time')
         pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
+        spf_pps= data_value.loadspf(self.det_path, f'coords_pps')
         bn = np.bincount(pps)
         pps_bins = bn[bn>0]
 
