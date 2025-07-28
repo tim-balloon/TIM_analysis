@@ -7,7 +7,6 @@ from IPython import embed
 import src.detector as det 
 import h5py
 import matplotlib.pyplot as plt
-from detector import kidsutils
 
 def load_params(path):
     """
@@ -380,10 +379,45 @@ class frame_zoom_sync():
         Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
         and the associated time
         '''
+
         print('here')
         embed()
+
+
+        #----------------------------------------
+        #Load the timestamps and pulse per second
+        #Assume that "data_time" is the data timestamps
+        time_data = data_value.loaddata(self.det_path, f'data_time', self.numframes, self.startframe) 
+        spf_time_data = data_value.loadspf(self.det_path, f'data_time')
+        pps_data = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
+        bn = np.bincount(pps_data)
+        pps_bins = bn[bn>0]
+        #----------------------------------------
+
+        kidutils = det.kidsutils()
+        for i in range(len(self.det_data)):
+            #self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
+            a = self.det_data[i]
+            b = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
+            print(len(a), len(b))
+
+
         #----------------------------------------
         #Load the timestamps
+        #Assume that "time" is the coordinates timestamps. 
+        time = data_value.loaddata(self.det_path, f'time', self.numframes, self.startframe) 
+        spf_time = data_value.loadspf(self.det_path, f'time')
+        pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
+        bn = np.bincount(pps)
+        pps_bins = bn[bn>0]
+        #----------------------------------------
+        
+        kidutils = det.kidsutils()
+        coord1 = kidutils.interpolation_roach(self.coord1_data, pps_bins, self.coord_fs)
+        coord2 = kidutils.interpolation_roach(self.coord2_data, pps_bins, self.coord_fs)
+        embed()
+        #-----------------------------------------
+
 
         time = data_value.loaddata(self.det_path, f'data_time', self.numframes, self.startframe) 
         spf_time = data_value.loadspf(self.det_path, f'data_time')
@@ -420,49 +454,14 @@ class frame_zoom_sync():
         coord1int = interp1d(coord1time, coord1, kind='linear')
         coord2int = interp1d(coord2time, coord2, kind= 'linear')
 
+        kidutils = det.kidsutils()
         for i in range(len(self.det_data)):
-            kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
             self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
-            self.det_data[i] = self.det_data[i, idx_roach_start[0]:idx_roach_end[0]]
-        
-        dettime = dettime[idx_roach_start[0]:idx_roach_end[0]]
-        dettime = ctime_start+np.append(0, np.cumsum(np.repeat(1/self.det_fs, len(self.det_data[0]))))
 
-        index1, = np.where(np.abs(dettime-coord1time[0]) == np.amin(np.abs(dettime-coord1time[0])))
-        index2, = np.where(np.abs(dettime-coord1time[-1]) == np.amin(np.abs(dettime-coord1time[-1])))
-
-        coord1_inter = coord1int(dettime[index1[0]+200:index2[0]-200])
-        coord2_inter = coord2int(dettime[index1[0]+200:index2[0]-200])
-        dettime = dettime[index1[0]+200:index2[0]-200]
-
-        if len(np.shape(self.det_data)) == 1:
-            self.det_data = self.det_data[index1[0]+200:index2[0]-200]
-        else:
-            for i in range(len(self.det_data)):
-                self.det_data[i] = self.det_data[i, index1[0]+200:index2[0]-200]
-
-
-        #Otherway: 
-        dettime, self.det_data = self.frame_zoom(self.det_data, self.det_sample_frame, \
-                                                    self.det_fs, np.array([self.startframe,self.endframe]), \
-                                                    self.offset)
-        coord1time, coord1 = self.frame_zoom(self.coord1_data, self.coord_sample_frame, \
-                                                self.coord_fs, np.array([self.startframe,self.endframe]))
-
-        coord2time, coord2 = self.frame_zoom(self.coord2_data, self.coord_sample_frame, \
-                                                self.coord_fs, np.array([self.startframe,self.endframe]))
-
-        dettime = dettime-dettime[0]
-        coord1time = coord1time-coord1time[0]
-
-        index1, = np.where(np.abs(dettime-coord1time[0]) == np.amin(np.abs(dettime-coord1time[0])))
-        index2, = np.where(np.abs(dettime-coord1time[-1]) == np.amin(np.abs(dettime-coord1time[-1])))
 
         coord1_inter, coord2_inter = self.coord_int(coord1, coord2, \
                                                     coord1time, dettime[index1[0]+10:index2[0]-10])
 
-        dettime = dettime[index1[0]+10:index2[0]-10]
-        self.det_data = self.det_data[index1[0]+10:index2[0]-10]
 
         if self.lat_data is not None and self.lat_data is not None:
 
