@@ -187,16 +187,17 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
 
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
-    #---------------------------------
-
-
+    #-------------------------------
+    
     zoomsyncdata = ld.frame_zoom_sync(filepath, det_data, acqfreq_data, spf_data,  coord1_data, 
                                         coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
                                         lst_data, lat_data, acqfreq_lstlat, lat_spf, offset=0)
 
-    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
+    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
+    
 
 
+    #detslice, coord1slice, coord2slice, lstslice, latslice = det_data, coord1_data, coord2_data, lst_data, lat_data, 
     #---------------------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 

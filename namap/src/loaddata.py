@@ -440,7 +440,7 @@ class frame_zoom_sync():
         ctime            = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
         turnarounds_mask = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
         turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
-        spf_ctime        = data_value.loadspf(self.det_path, f'coords_time')
+        spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
         # Load the pulse per second (pps). It indicates to which second an element belongs to. 
         pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
         #---------------------------------------------------------------
@@ -469,9 +469,9 @@ class frame_zoom_sync():
             self.lst_data = self.lst_data[:-pps_bins[-1]]
             turnaround_flags = turnaround_flags[:-pps_bins[-1]]
         '''
+        
         bn = np.bincount(pps)
         pps_bins = bn[bn>0]
-        
         
         kidutils = det.kidsutils()
         
@@ -498,6 +498,7 @@ class frame_zoom_sync():
         self.coord2_data = self.coord2_data[:len(dettime)]
         self.lst_data = self.lst_data[:len(dettime)]
         self.lat_data = self.lat_data[:len(dettime)]
+        
         #---------------------------------------------------------------
 
 
@@ -526,4 +527,4 @@ class frame_zoom_sync():
         self.coord1_data = self.coord1_data[turnaround_flags_interp==1] 
         '''
 
-        return dettime, self.det_data, self.coord2_data, self.coord1_data, self.lst_data, self.lat_data
+        return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data
