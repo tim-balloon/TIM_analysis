@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
-    '''
+    
     lat = P['latitude']
 
     acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
@@ -180,15 +180,14 @@ if __name__ == "__main__":
     scan_path, scan_flag = genScanPath(T_prime, alt, az, flag)
     scan_path_sky, azel = genPointingPath(T_prime, scan_path, LST_prime, lat, dec, ra, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
-    '''
+    
+    #spf_prime = spf
+    #acquisition_frequency_prime = acquisition_frequency
 
-    spf_prime = spf
-    acquisition_frequency_prime = acquisition_frequency
-
-    save_scan_path(tod_file, np.array((LST, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
+    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
     save_scan_path(tod_file, azel, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
     save_scan_path(tod_file, scan_path_sky, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
     save_scan_path(tod_file, scan_path,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
-    save_timestamps(tod_file, T, spf_prime, acquisition_frequency_prime,'coords_time')
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
     save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps')  
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
