@@ -137,7 +137,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #Also need to be implemented. 
     telemetry = P['telemetry']
 
-    #So far, only 'RA and DEC' is implemented and working.     embed()
+    #So far, only 'RA and DEC' is implemented and working.   
 
     if P['input_ctype'] == 'RA and DEC':
         coord1 = str('RA')
@@ -195,11 +195,6 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
                                         lst_data, lat_data, acqfreq_lstlat, lat_spf, offset=0)
 
     timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()
-
-
-
-
-    embed()
 
 
     #---------------------------------
