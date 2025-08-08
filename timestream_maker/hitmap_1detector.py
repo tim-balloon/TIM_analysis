@@ -34,6 +34,7 @@ if __name__ == "__main__":
     ra = 0 
     rafield = c.ra.value
     dec = c.dec.value
+    embed()
     #The contour of the field
     contours = P['contours']
     x_cen, y_cen = np.mean(contours[:, 1]), np.mean(contours[:, 0])
