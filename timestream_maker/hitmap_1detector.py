@@ -34,7 +34,6 @@ if __name__ == "__main__":
     ra = 0 
     rafield = c.ra.value
     dec = c.dec.value
-    embed()
     #The contour of the field
     contours = P['contours']
     x_cen, y_cen = np.mean(contours[:, 1]), np.mean(contours[:, 0])
@@ -57,13 +56,20 @@ if __name__ == "__main__":
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
+    T_integration= P['T_integration']
     acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(acquisition_frequency).astype(int)
-    T = np.arange(0,T_duration,dt) * 3600 #s
-    pps = np.floor(T).astype(int)
+
     #local sideral time
-    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    LST = []
+    times = np.arange(-T_duration/2,T_duration/2,6/60)
+    for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
+    #LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    #---
+    T = LST*3600 #s
+    pps = np.floor(T).astype(int)
+    subsecond_ps = T-pps
 
     tod_file=P['output_path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
     #------------------------------------------------------------------------------------------
@@ -76,13 +82,12 @@ if __name__ == "__main__":
 
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
     #scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
-    #T_trim = T[scan_flag==1]
-    #LST_trim = LST[scan_flag==1]
+    #T = T[scan_flag==1]
+    #LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
     scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, ra, azel=True) 
     #----------------------------------------
-
 
     #----------------------------------------
     #Plot a scan route
@@ -158,6 +163,7 @@ if __name__ == "__main__":
     save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'))
     save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time')
     save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps')  
+    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps')  
     save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags')
     #-------------------------------------------
 
@@ -170,9 +176,10 @@ if __name__ == "__main__":
     dt_coords = 1/acquisition_frequency_prime/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf_prime = np.round(acquisition_frequency_prime).astype(int)
 
-    T_prime = np.arange(0,T_duration,dt_coords) * 3600 #s
-    pps = np.floor(T_prime).astype(int)
     LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
+    T_prime = LST_prime * 3600 #s np.arange(0,T_duration,dt_coords)
+    pps = np.floor(T_prime).astype(int)
+    subsecond_ps = T_prime-pps
 
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
@@ -191,4 +198,5 @@ if __name__ == "__main__":
     save_scan_path(tod_file, scan_path,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
     save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
     save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps')  
+    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps')  
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))

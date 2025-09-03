@@ -33,6 +33,7 @@ if __name__ == "__main__":
         matplotlib.use("Agg")
 
     P = load_params(args.params)
+    print(f'running arrays detector {args.params}')
     #------------------------------------------------------------------------------------------
 
     #-----------------------------
@@ -124,7 +125,7 @@ if __name__ == "__main__":
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #-------------------------------
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     hdr["BITPIX"] = ("64", "array data type")
     hdr["BUNIT"] = 'counts'
     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-    hdu.writeto( f'fits_and_hdf5/hit_map_array_{format_duration(P["T_duration"])}.fits', overwrite=True)
+    hdu.writeto( f'fits_and_hdf5/hit_map_array_{P["az_size"]:.1f}_{P["alt_step"]:.1f}deg2_{format_duration(P["T_integration"])}_{format_duration(P["T_duration"])}.fits', overwrite=True)
     hdu.close()
     #-------------------------------
 
