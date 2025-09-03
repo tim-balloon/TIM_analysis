@@ -62,10 +62,13 @@ if __name__ == "__main__":
     spf = np.round(acquisition_frequency).astype(int)
 
     #local sideral time
+    '''
     LST = []
     times = np.arange(-T_duration/2,T_duration/2,6/60)
     for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
-    #LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    '''
+    
+    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
     #---
     T = LST*3600 #s
     pps = np.floor(T).astype(int)

@@ -137,10 +137,10 @@ if __name__ == "__main__":
 
     tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
     H = h5py.File(tod_file, "a")
-    T = H['time']['data'][()]
-    LST = H['lst']['data'][()]
-    RA_path = H['RA_path']['data'][()]
-    DEC_path = H['DEC_path']['data'][()]
+    T = H['data_time']['data'][()]
+    LST = H['data_lst']['data'][()]
+    RA_path = H['data_RA_path']['data'][()]
+    DEC_path = H['data_DEC_path']['data'][()]
     scan_path = np.asarray((RA_path, DEC_path)).T
     H.close()
     #-----------------------------
