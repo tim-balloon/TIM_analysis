@@ -145,7 +145,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
 
     #----
     #Compute Number of Vertical Steps 
-    vertical_steps = 1 #int(alt_size//alt_step) 
+    vertical_steps = int(alt_size//alt_step) 
 
     #Compute Time for Scan and Turns
     scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
@@ -159,7 +159,8 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
     az_acc = np.tile(az_acc,vertical_steps)
 
     #Compute the Altitude Acceleration
-    acc_alt_value =  alt_step/(turn_time/2)**2   
+    if(vertical_steps >1): acc_alt_value =  alt_step/(turn_time/2)**2   
+    else: acc_alt_value = 0
 
     #Generate Altitude Acceleration Pattern (acc_alt)
     #The altitude changes slightly during turns, using a small acceleration.
@@ -276,19 +277,15 @@ def genScanPath(T, alt, az, flag, plot=False):
     flag: array
         constant scan speed part. 
     """ 
-
     coor = np.zeros((len(T),2))
-    #v_list = np.zeros((len(T),2))
-
 
     idx = np.int_(np.fmod(T,len(alt)/100)*100)
     
     coor[:,0] = az[idx]-np.mean(az)
     coor[:,1] = alt[idx]-np.mean(alt)
-
+    #v_list = np.zeros((len(T),2))
     #v_list[:,0] = v[idx,0]
     #v_list[:,1] = v[idx,1]
-
     flag = flag[idx]
     
     return coor , flag #,v_list,flag
@@ -394,7 +391,9 @@ def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
         2d histogram of hit on the sky
 
     """ 
-    x_range = f_range
+    pointings = np.concatenate([pixel for pixel in pointing_paths])
+
+    x_range = np.max((np.abs(pointings[:,0].min()),pointings[:,0].max(),np.abs(pointings[:,1].min()),pointings[:,1].max()))
     y_range = x_range
 
     x_res = res
@@ -403,7 +402,7 @@ def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
     xedges = ra+np.arange(-x_range, x_range+x_res, x_res)
     yedges = dec+np.arange(-y_range, y_range+y_res, y_res)
 
-    pointings = np.concatenate([pixel for pixel in pointing_paths])
+    #pointings = np.concatenate([pixel for pixel in pointing_paths])
     hit_map   = binning(xedges,yedges, pointings)
     return xedges,yedges,hit_map
 
