@@ -417,6 +417,7 @@ class frame_zoom_sync():
        
         #---------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst. 
+        embed()
         ctime            = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
         turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
         spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
