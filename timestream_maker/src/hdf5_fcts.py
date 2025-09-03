@@ -119,4 +119,3 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     mask = det_names_dict["Name"].isin(det_names)
     det_names_dict.loc[mask, 'Frequency'] = F
     det_names_dict.to_csv(dect_file, sep='\t', index=False)
-

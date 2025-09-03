@@ -24,9 +24,10 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration= 0+5/60+0/3600 #hour , duration of the scan
+T_integration = 0+5/60+0/3600 #hour , duration of the scan
+T_duration = 15/60
 acquisition_frequency = 488.3
-acquisition_frequency_coords = 200.3
+acquisition_frequency_coords = 200.25
 #---------------------------
 
 #----- Sky simulation -----
@@ -48,11 +49,10 @@ old=False
 scan='raster' #'loop', 'raster', 'crisscross'
 #Loop scan parameters
 az_size=0.45
-alt_size= 0.017
-alt_step=0.00833
+alt_size= 0.2
+alt_step= 0.2
 acc=0.05
-scan_v=0.05
-dt_scan=0.001
+scan_v=0.1
 #---------------------------
 
 #----- Noise ---------------
