@@ -9,7 +9,6 @@ import h5py
 import matplotlib.pyplot as plt
 from scipy.interpolate import PchipInterpolator
 
-
 def load_params(path):
     """
     Return as a dictionary the parameters stores in a .par file
@@ -417,12 +416,13 @@ class frame_zoom_sync():
        
         #---------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst. 
-        embed()
-        ctime            = data_value.loaddata(self.det_path, f'coords_time', self.numframes, self.startframe) 
+        pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
+        pps -= pps.min()
+        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps', self.numframes, self.startframe) 
+        ctime  = pps+subsec 
         turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
         spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
         # Load the pulse per second (pps). It indicates when, more precisely at which second, an element has been recorded. 
-        pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
         #---------------------------------------------------------------
 
         #---------------------------------------------------------------
@@ -476,9 +476,12 @@ class frame_zoom_sync():
 
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
-        dettime = data_value.loaddata(self.det_path, f'data_time', self.numframes, self.startframe) 
         spf_time = data_value.loadspf(self.det_path, f'data_time')
         pps = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
+        pps -= pps.min()
+        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps', self.numframes, self.startframe) 
+        dettime = pps+subsec
+        dettime -= dettime.min()
         #--------------------------------------------------------------
 
         #---------------------------------------------------------------
