@@ -244,7 +244,7 @@ if __name__ == "__main__":
                 if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-            plt.close()
+            plt.show()
             #----------------------------------------
 
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency)
