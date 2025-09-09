@@ -18,16 +18,12 @@ from astropy.wcs.utils import pixel_to_skycoord, skycoord_to_pixel
 from astropy.coordinates import SkyCoord
 from IPython import embed
 import datetime
+from matplotlib.path import Path
 
 if __name__ == "__main__":
 
     '''
-    PAR_files/params_strategy.par is a file containing all the modifiable parameters. 
-    To generate your TODs: 
-
-    Step 1/3: Generate your observation scan path with python hitmap_1detector.py.py PAR_files/params_strategy.par
-    Step 2/3: Generate your detector array with python gen_detectors_arrays.py PAR_files/params_strategy.par
-    Step 3/3: Sample the TODs for your detector array following your observation scan path from a simulation with python timestream_generator.py PAR_files/params_strategy.par
+    From a TOD file, a simualted spectral cube and a given NEI, generate a noisy extragalactic mock cube. 
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
