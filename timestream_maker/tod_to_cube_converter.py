@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../simulations')
+#$sys.path.append('../simulations')
 import argparse
 import numpy as np
 from pylab import *
@@ -16,6 +16,7 @@ from astropy.io import fits
 import pickle
 from progress.bar import Bar
 import time
+from src.load_params import load_params
 
 def make_cube_from_TODs(key, P ):
         
