@@ -36,7 +36,7 @@ path = 'fits_and_hdf5/'
 output_path = '/home/mvancuyck/Desktop/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
-res = None #[deg] if res is None, the res is the resolution of the sky fits file
+res = 0.01 #[deg] if res is None, the res is the resolution of the sky fits file
 wcs_dict = 'wcs.p'
 #---------------------------
 
@@ -49,8 +49,8 @@ old=False
 scan='raster' #'loop', 'raster', 'crisscross'
 #Loop scan parameters
 az_size=0.45
-alt_size= 0.2
-alt_step= 0.2
+alt_size= 0.1
+alt_step= 0.1
 acc=0.05
 scan_v=0.1
 #---------------------------

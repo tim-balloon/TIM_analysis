@@ -14,17 +14,9 @@ import time
 import astropy.table as tb
 from progress.bar import Bar
 
-
-def add_polynome_to_timestream(timestream, time, percent_slope=30):
-
-    #Add a slope
-    delta = percent_slope/100 * (np.max(timestream) - np.min(timestream))  # 30% of the data range
-    slope = delta / (time[-1] - time[0])
-    return slope * (time - time[0]) 
-
-
 if __name__ == "__main__":
     '''
+    Description
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
@@ -134,7 +126,7 @@ if __name__ == "__main__":
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #-------------------------------
