@@ -1,6 +1,11 @@
 import numpy as np
 from src.astrometry_fcts import *
 from IPython import embed
+import pandas as pd
+import scipy.constants as cst 
+from specutils import Spectrum1D
+from specutils.manipulation import LinearInterpolatedResampler
+from scipy import interpolate
 
 def hitsPerSqdeg(total_hits, area):
     """
@@ -170,6 +175,10 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
             np.ones(int(turn_time / dt / 2)) * -acc_alt_value
         ]), 1
     )
+
+    #0.01
+
+
     # Ensure no extra oscillation at the ends of azimuth scan
     acc_alt = np.concatenate((oscillation, np.zeros(int(scan_time / dt))))
     #acc_alt = np.concatenate((acc_alt, -1 * acc_alt))  # Repeat for downward scan
@@ -369,7 +378,7 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=F
     if(azel): return path, azel_path
     else: return path
 
-def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
+def binMap(pointing_paths, res=0.02, f_range=1,  dec=0, ra=0, shape=None):
     
     """
     Binning the pointing into 2d array
@@ -391,19 +400,26 @@ def binMap(pointing_paths, res=0.02, f_range=1,dec=0, ra=0):
         2d histogram of hit on the sky
 
     """ 
-    pointings = np.concatenate([pixel for pixel in pointing_paths])
-
-    x_range = np.max((np.abs(pointings[:,0].min()),pointings[:,0].max(),np.abs(pointings[:,1].min()),pointings[:,1].max()))
-    y_range = x_range
-
     x_res = res
     y_res = x_res
 
-    xedges = ra+np.arange(-x_range, x_range+x_res, x_res)
-    yedges = dec+np.arange(-y_range, y_range+y_res, y_res)
+    pointings = np.concatenate([pixel for pixel in pointing_paths])
 
-    #pointings = np.concatenate([pixel for pixel in pointing_paths])
-    hit_map   = binning(xedges,yedges, pointings)
+    if(shape is None):
+
+        x_range =  np.max((np.abs(pointings[:,0].max() - pointings[:,0].min()), np.abs(pointings[:,1].max() - pointings[:,1].min())))
+        y_range =  x_range
+
+        xedges = ra+np.arange(-x_range/2, x_range/2+x_res, x_res)
+        yedges = dec+np.arange(-y_range/2, y_range/2+y_res, y_res)
+
+    else: 
+
+        xedges = ra+(np.arange(-shape[1]/2, shape[1]/2 + 1)) * x_res
+        yedges = dec+(np.arange(-shape[0]/2, shape[0]/2 + 1)) * y_res
+
+    hit_map = binning(xedges,yedges, pointings)
+
     return xedges,yedges,hit_map
 
 def binning(xedges,yedges,pointings):
@@ -426,3 +442,225 @@ def binning(xedges,yedges,pointings):
     H, xedges, yedges = np.histogram2d(pointings[:,0], pointings[:,1], bins=(xedges, yedges))
     return H.T
 
+def noise_map(hitmap, nei, dt):
+
+    """
+    Generate a white noise map in Jy.sr**-1
+    Parameters
+    ----------
+    hitmap: 2d array
+        the hitmap from the scan strategy
+    nei: float
+        the net equivalent intensiy in Jy.sr**-1.s**-1/2
+    Returns
+    -------
+    noise_map: 2d array
+        the white map in Jy.sr**-1
+    """ 
+
+    t_pix = hitmap * dt
+
+    ny, nx = hitmap.shape
+    n_chan = len(nei)
+
+    # Initialize cube
+    noise_cube = np.zeros((n_chan, ny, nx, ))
+
+    # Generate noise slice by slice
+    '''
+    for i, I in enumerate(nei):
+        sigma = np.zeros_like(hitmap, dtype=float)
+        sigma[hitmap > 0] = I / np.sqrt(t_pix[hitmap > 0])
+        sigma[hitmap == 0] = 0
+        noise_cube[i,:, :] = np.random.normal(loc=0.0, scale=sigma)
+        noise_cube_list.append(noise_cube)
+        if(False):
+            BS = 8; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
+            fig, axs = plt.subplots(figsize=(4,3), dpi=160,)# sharey=True, sharex=True)
+            #---
+            img = axs.imshow(noise_cube[i,:,:], origin = 'lower', vmin = 0.1*noise_cube[i,:,:].min(), vmax = 0.1*noise_cube[i,:,:].max(), cmap = 'binary')
+            fig.colorbar(img, ax=axs, label='Noise [MJy/sr]')
+    '''
+
+    for i, I in enumerate(nei):
+
+        sigma = np.zeros_like(hitmap, dtype=float)
+        sigma[hitmap > 0] = I / np.sqrt(t_pix[hitmap > 0])
+        sigma[hitmap == 0] = np.nan  # optional: mark empty pixels
+        noise = np.random.normal(loc=0.0, scale=sigma)
+
+        fig, axs = plt.subplots(1,3, figsize=(12,4), dpi=150)
+        im = axs[0].imshow(noise, origin='lower', cmap='binary')
+        #noise[hitmap > 0]  *= 1 / np.sqrt(t_pix[hitmap > 0])
+        cbar = fig.colorbar(im, ax=axs[0], orientation='vertical',)
+        cbar.set_label('noise [MJy/sr/s^1/2]')  # Adjust the label if needed
+        noise  *= 1 / np.sqrt(t_pix)
+        noise[hitmap <= 0] = 0
+
+        im = axs[1].imshow(noise, origin='lower', cmap = 'binary', )
+        cbar = fig.colorbar(im, ax=axs[1], orientation='vertical',)
+        cbar.set_label('noise [MJy/sr]')  # Adjust the label if needed
+        im = axs[2].imshow(hitmap, origin='lower')
+        cbar = fig.colorbar(im, ax=axs[2], orientation='vertical',)
+        cbar.set_label('hit counts')  # Adjust the label if needed
+        fig.tight_layout()
+        plt.close()
+        noise_cube[i,:, :] = noise
+
+    return noise_cube
+
+def gaussian_random_field(k, pk, ny, nx, res, k_cutoff=None, pk_map = None, force = True):
+
+
+    """
+    Create a map of a Gaussian random field, given its angular power spectrum.
+    
+    Parameters
+    ----------
+    k: 1d array
+        wavenumber array
+    pk: 1d array
+        power spectrum array
+    ny: int
+        the size of the y side in pixel of the map to generate
+    ny: int
+        the size of the x side in pixel of the map to generate
+    res: float
+        the resolution of the map in rad
+    k_cutoff: float
+        the maximum multipol to taken into account in the map generation
+    cl_map:
+        power amplitude map of size (ny,nx). If provided, it is not recomputed.
+    force: bool
+        set the negative values in the power spectrum map to zero. 
+    Returns
+    -------
+    real_space_map: 2d array
+        the generated map in real space.
+    pk_map: 2d array
+        the angular power spectrum map
+    """
+
+    kmap_rad_y = ny*res
+    kmap_rad_x = nx*res
+    #Generate gaussian amplitudes
+    norm = 1/res
+
+    np.random.seed()
+
+    noise = np.random.normal(loc=0, scale=1, size=(ny,nx))
+    dmn1  = np.fft.fft2( noise )
+
+    #Interpolate input power spectrum
+    if(pk_map is None):
+
+        k_map = give_map_spatial_freq(res, ny, nx)
+
+        if(k_cutoff is not None): kmax = np.minimum(k_cutoff, k.max())
+        else: kmax = np.minimum(k.max(), k_map.max())
+        
+        pk_map = np.zeros(k_map.shape)
+        w = np.where((k_map>k.min()) & (k_map<=kmax))
+        if(not w[0].any()): print("wrong k range")
+        else:
+            #Power law spectrum
+            print("interpolate")
+            f = interpolate.interp1d( k, pk,  kind='linear')
+            pk_map[w] = f(k_map[w])
+            w1 = np.where( pk_map <= 0)
+            if(w1[0].shape[0] != 0 and force): pk_map[w1] = 0
+            pk_map = pk_map
+
+    #Fill amn_t
+    amn_t = dmn1 * norm * np.sqrt( pk_map )
+    
+    #Output map
+    real_space_map = np.real(np.fft.ifft2( amn_t ))
+    
+    return real_space_map, pk_map
+
+def give_map_spatial_freq(res, ny, nx):
+    """
+    Create a map of a Gaussian random field, given its angular power spectrum.
+    
+    Parameters
+    ----------
+    res: float
+        resolution in radians
+    ny: int
+        the size of the y side in pixel 
+    ny: int
+        the size of the x side in pixel 
+    Returns
+    -------
+    map_k: 2d array
+        the angular power spectrum map
+    """
+    lmap_y = ny*res #rad
+    lmap_x = nx*res #rad
+    map_ky = np.float64(np.zeros((ny, nx)))
+    map_kx = np.float64(np.zeros((ny, nx)))
+    map_k  = np.float64(np.zeros((ny, nx)))
+    for m in range(0,nx):
+        if(m <= nx/2): m1 = m
+        else: m1 = m - nx
+        for n in range(0,ny):
+            if(n <= ny/2): n1 = n
+            else: n1 = n - ny
+            kx = np.float64(m1/lmap_x) 
+            ky = np.float64(n1/lmap_y)
+            
+            map_kx[n,m] = kx
+            map_ky[n,m] = ky
+            map_k[n,m] = np.float64(np.sqrt( kx**2 + ky**2))
+
+    return map_k
+
+def load_TIM_noise(observed_frequencies = None, HF_noise = 'TIM_SW_loading.tsv', LF_noise = 'TIM_LW_loading.tsv', ):
+
+    """
+    Load the Net Equivalent Intensity (NEI) in MJy/sr/s**1/2 use to generate the white noise from the hitmap. 
+
+    Parameters
+    ----------
+    HF_noise: str
+        the file for the high frequency array NEI
+    
+    LF_noise: str
+        the file for the low frequency array NEI
+    Returns
+    -------
+    freqs: 1d array
+        the frequency addresses in GHz
+    noise: 1d array
+        the NEI values in MJy/sr/s**1/2 associated with the frequencies.    
+    """ 
+
+    #------------------------------------------------------------------------------------------
+    #TIM params
+    noise_model_HF = pd.read_csv(HF_noise, sep='\t')
+    noise_model_LF = pd.read_csv(LF_noise, sep='\t')
+
+    lambda_HF = noise_model_HF["# Wavelength[um]"]*1e3 #nm
+    nu_HF = cst.c/(lambda_HF*1e-9)/1e9 #GHz
+    nHF = noise_model_HF["NEI[Jy/sr s^1/2]"]
+    lambda_LF = noise_model_LF["# Wavelength[um]"]*1e3 #nm
+    nu_LF = cst.c/(lambda_LF*1e-9)/1e9 #GHz
+    nLF = noise_model_LF["NEI[Jy/sr s^1/2]"]
+    model_frequencies = np.concatenate((nu_LF[::-1], nu_HF[::-1]))
+    noise = (np.concatenate((nLF[::-1], nHF[::-1]))*u.Jy/u.sr).to(u.MJy/u.sr).value
+
+    if(observed_frequencies is None): return model_frequencies, noise
+
+    else: 
+
+        # Make Spectrum1D object
+        spec = Spectrum1D(spectral_axis=model_frequencies*u.GHz, flux=noise*u.MJy/u.sr)
+        # -----------------------------
+        # Resample spectrum
+        # -----------------------------
+        resampler = LinearInterpolatedResampler()
+        resampled_spec = resampler(spec, observed_frequencies)
+
+        return resampled_spec.spectral_axis,resampled_spec.flux
+    #------------------------------------------------------------------------------------------

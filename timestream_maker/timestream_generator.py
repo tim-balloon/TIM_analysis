@@ -16,7 +16,44 @@ from astropy.wcs import WCS
 
 from IPython import embed
 
-def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths):
+def add_polynome_to_timestream(timestream, time, order=1, percent_scale=30, random_coeffs=True):
+    """
+    Add a polynomial trend (order 1 to 4) to a timestream.
+
+    Parameters
+    ----------
+    timestream : array
+        Input data array (only used to set scale).
+    time : array
+        Time array (same length as timestream).
+    order : int, default=1
+        Order of polynomial (1 = linear, up to 4).
+    percent_scale : float, default=30
+        Scale of polynomial relative to data range, in percent.
+    random_coeffs : bool, default=True
+        If True, coefficients are randomized within scale. 
+        If False, only the highest order term is used.
+    """
+    assert 1 <= order <= 4, "Order must be between 1 and 4."
+
+    # Normalize time to [0,1] for stability
+    t = (time - time[0]) / (time[-1] - time[0])
+
+    data_range = np.max(timestream) - np.min(timestream)
+    scale = (percent_scale / 100) * data_range
+
+    # Generate coefficients
+    if random_coeffs:
+        coeffs = np.random.uniform(-scale, scale, order + 1)
+    else:
+        coeffs = np.zeros(order + 1)
+        coeffs[-1] = scale  # only highest-order term
+
+    poly = np.polyval(coeffs, t)
+
+    return poly
+
+def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
 
     """
     Generate the tod for one array of TIM detectors from a simulated map.
@@ -81,6 +118,9 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always", RuntimeWarning)  # Catch all runtime warnings
         hist /= norm  # Perform the division
+
+    for i,s in enumerate(samples):
+        samples[i] += add_polynome_to_timestream(s, T, order=3, percent_scale=30, random_coeffs=True)
 
     return hist, norm, samples, positions_x, positions_y
 
@@ -226,7 +266,7 @@ if __name__ == "__main__":
             #----------------------------------------
 
             #----------------------------------------
-            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save)
+            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save, T=T)
             #----------------------------------------
 
             #----------------------------------------
@@ -244,7 +284,7 @@ if __name__ == "__main__":
                 if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-            plt.show()
+            plt.close()
             #----------------------------------------
 
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency)

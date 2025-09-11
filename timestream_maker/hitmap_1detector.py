@@ -63,10 +63,10 @@ if __name__ == "__main__":
 
     #local sideral time
     
-    LST = []
-    times = np.arange(-T_duration/2,T_duration/2,6/60)
-    for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
-    #LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    #LST = []
+    #times = np.arange(-T_duration/2,T_duration/2,6/60)
+    #for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
+    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
     
     #---
     T = LST*3600 #s
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     patchs = []
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #latitude  timestream
