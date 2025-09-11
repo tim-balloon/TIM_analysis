@@ -168,6 +168,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     #option in the par file to good kids list
    
     kid_num = filtered['Name']
+    print(len(kid_num))
+
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
     det_off, noise_det, resp = dettable.loadtable()
@@ -184,6 +186,7 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
+    
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
 
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
