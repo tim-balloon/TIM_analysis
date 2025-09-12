@@ -114,8 +114,9 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
 
     H.close()
 
-    #Finally, update the detectors file with the central frequency of the detectors
-    det_names_dict = pd.read_csv(dect_file, sep='\t')
-    mask = det_names_dict["Name"].isin(det_names)
-    det_names_dict.loc[mask, 'Frequency'] = F
-    det_names_dict.to_csv(dect_file, sep='\t', index=False)
+    if(False):
+        #Finally, update the detectors file with the central frequency of the detectors
+        det_names_dict = pd.read_csv(dect_file, sep='\t')
+        mask = det_names_dict["Name"].isin(det_names)
+        det_names_dict.loc[mask, 'Frequency'] = F
+        det_names_dict.to_csv(dect_file, sep='\t', index=False)

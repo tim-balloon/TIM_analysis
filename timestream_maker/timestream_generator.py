@@ -119,8 +119,9 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
         warnings.simplefilter("always", RuntimeWarning)  # Catch all runtime warnings
         hist /= norm  # Perform the division
 
-    for i,s in enumerate(samples):
-        samples[i] += add_polynome_to_timestream(s, T, order=3, percent_scale=30, random_coeffs=True)
+    if(False):
+        for i,s in enumerate(samples):
+            samples[i] += add_polynome_to_timestream(s, T, order=3, percent_scale=30, random_coeffs=True)
 
     return hist, norm, samples, positions_x, positions_y
 
