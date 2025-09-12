@@ -5,6 +5,9 @@ from src.astrometry_fcts import *
 from src.hdf5_fcts import *
 from astropy.io import fits 
 import os
+from astropy.wcs import WCS
+from timestream_generator import gen_tod
+
 
 if __name__ == "__main__":
     '''
@@ -187,8 +190,8 @@ if __name__ == "__main__":
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
 
-    scan_path, scan_flag = genScanPath(T_prime, alt, az, flag)
-    scan_path_sky, azel = genPointingPath(T_prime, scan_path, LST_prime, lat, dec, ra, azel=True) 
+    scan_path_prime, scan_flag = genScanPath(T_prime, alt, az, flag)
+    scan_path_sky_prime, azel = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, ra, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
     
     #spf_prime = spf
@@ -196,9 +199,61 @@ if __name__ == "__main__":
 
     save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
     save_scan_path(tod_file, azel, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
-    save_scan_path(tod_file, scan_path_sky, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
-    save_scan_path(tod_file, scan_path,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
+    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
+    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
     save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
     save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps')  
     save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps')  
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
+
+    if(True):
+        #-------------------------------
+        #Load the sky simulation from which to generate the TODs from
+        simu_sky_path = P['path']+P['file'] #os.getcwd()
+        hdr  = fits.getheader(simu_sky_path)
+        pix_size = ((hdr['CDELT1']*u.Unit(hdr['CUNIT1']))**2).to(u.sr).value
+        hdr['CRVAL1'] = ra 
+        hdr['CRVAL2'] = dec
+        hdr['CRPIX1'] = hdr['NAXIS1']//2
+        hdr['CRPIX2'] = hdr['NAXIS2']//2
+        wcs = WCS(hdr, naxis=2) 
+        #Create the list of frequency channels of the simulated cube. 
+        freqs =( np.arange(hdr['CRVAL3'], hdr['CRVAL3']+hdr['NAXIS3']*hdr['CDELT3'], hdr['CDELT3'])*u.Unit(hdr['CUNIT3']) ).to(u.GHz)
+        #Create the binning of the map in pixel coordinates. 
+        xbins = np.arange(-0.5, hdr['NAXIS1']+0.5, 1)
+        ybins = np.arange(-0.5, hdr['NAXIS2']+0.5, 1)
+        #load the angular spectral cube. 
+        
+        cube = fits.getdata(simu_sky_path)
+        #Remove the mean in each map, to wich we are not sensitive. 
+        cubemean = np.mean(cube, axis=(1,2)) 
+        cube -= cubemean[:, None, None]
+        cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
+        #-----------------------------
+        I = 1
+        pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
+        pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
+        pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, ra, offsets) for offsets in pixel_offsets]
+
+
+        det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+        # Extract the Name column as a list
+        names = det_names_dict["Name"].tolist()
+        # Split into chunks of 10
+        chunks = [names[i:i+I] for i in range(0, len(names), I+1)]
+        # Example: print them
+        print('')
+        for idx, group in enumerate(chunks):
+
+            if(idx>15): continue
+            print(idx, group)
+            Map = cube[idx,:,:]
+            #----------------------------------------
+            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=T)
+            #----------------------------------------
+            save_tod_in_hdf5(tod_file, group, samples, pixel_offset_EL, pixel_offset_xEL, P['detectors_name_file'], (freqs[idx].value,), spf, acquisition_frequency)
+
+
+
+
+    
