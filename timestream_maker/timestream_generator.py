@@ -56,7 +56,7 @@ def add_polynome_to_timestream(timestream, time, order=1, percent_scale=30, rand
 def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
 
     """
-    Generate the tod for one array of TIM detectors from a simulated map.
+    Generate the sky amplitude TODs for a set of detectors from the same (electromagnetic) frequency channel, using a simulated sky map.
 
     Parameters
     ----------
@@ -87,22 +87,23 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
     positions_y: list
         list of DEC coordinates timestreams of each detectors 
     """ 
-
     
     positions_x = np.zeros((len(pointing_paths), len(pointing_paths[0][:,0])))
     positions_y = np.zeros((len(pointing_paths), len(pointing_paths[0][:,0])))
     samples = np.zeros((len(pointing_paths), len(pointing_paths[0][:,0])))
     
+    #We sample the map for each detector, following its path on the sky. 
     for detector, path in enumerate(pointing_paths):
         
+        #Convert the path on the sky from WCS to pixel coordinates.
         y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(pointing_paths[detector][:,0], pointing_paths[detector][:,1])    
         # Round the positions and convert to integer indices
         x_pixel_coords_rounded = np.round(x_pixel_coords).astype(int)
         y_pixel_coords_rounded = np.round(y_pixel_coords).astype(int)
-        # Create a mask for positions within bounds
+        # Create a mask for positions within bounds of the map
         valid_mask = (
             (x_pixel_coords_rounded >= 0) & (x_pixel_coords_rounded < hdr['NAXIS1'] - 1) &  # x within bounds
-            (y_pixel_coords_rounded >= 0) & (y_pixel_coords_rounded < hdr['NAXIS2'] - 1) )   # y within bounds
+            (y_pixel_coords_rounded >= 0) & (y_pixel_coords_rounded < hdr['NAXIS2'] - 1) )  # y within bounds
         # Initialize the output array with zeros
         values = np.zeros_like(x_pixel_coords_rounded, dtype=float)
         # Assign values from the map for valid positions
@@ -111,15 +112,18 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
         positions_x[detector,:] = x_pixel_coords
         positions_y[detector,:] = y_pixel_coords
 
+    #Compute the number of times each sky pixel is hit by the detectors.
     norm, edges = np.histogramdd(sample=(positions_x.ravel(), positions_y.ravel()), bins=(xbins,ybins),  )
     hist, edges = np.histogramdd(sample=(positions_x.ravel(), positions_y.ravel()), bins=(xbins,ybins), weights=samples.ravel())
 
+    #Create the observed map: 
     import warnings
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always", RuntimeWarning)  # Catch all runtime warnings
         hist /= norm  # Perform the division
 
-    if(False):
+    #Add a polynomial slope to data if the timestamps are provided, for Namap testing purposes only. 
+    if(T is not None):
         for i,s in enumerate(samples):
             samples[i] += add_polynome_to_timestream(s, T, order=3, percent_scale=30, random_coeffs=True)
 

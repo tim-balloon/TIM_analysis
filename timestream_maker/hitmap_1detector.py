@@ -8,7 +8,6 @@ import os
 from astropy.wcs import WCS
 from timestream_generator import gen_tod
 
-
 if __name__ == "__main__":
     '''
     '''
@@ -86,9 +85,9 @@ if __name__ == "__main__":
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
 
     scan_path, scan_flag = genScanPath(T, alt, az, flag)
-    #scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
-    #T = T[scan_flag==1]
-    #LST = LST[scan_flag==1]
+    scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
+    T = T[scan_flag==1]
+    LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
     scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, ra, azel=True) 
@@ -206,7 +205,10 @@ if __name__ == "__main__":
     save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps')  
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
 
-    if(True):
+
+    #Extra piece of code to measure the TOD file size with data in MB.
+    #-------------------------------------------------------
+    if(False):
         #-------------------------------
         #Load the sky simulation from which to generate the TODs from
         simu_sky_path = P['path']+P['file'] #os.getcwd()
@@ -230,11 +232,10 @@ if __name__ == "__main__":
         cube -= cubemean[:, None, None]
         cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
         #-----------------------------
-        I = 1
+        I = 3
         pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
         pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
         pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, ra, offsets) for offsets in pixel_offsets]
-
 
         det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
         # Extract the Name column as a list
@@ -245,14 +246,14 @@ if __name__ == "__main__":
         print('')
         for idx, group in enumerate(chunks):
 
-            if(idx>15): continue
+            if(idx>10): continue
             print(idx, group)
             Map = cube[idx,:,:]
             #----------------------------------------
             hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=T)
             #----------------------------------------
             save_tod_in_hdf5(tod_file, group, samples, pixel_offset_EL, pixel_offset_xEL, P['detectors_name_file'], (freqs[idx].value,), spf, acquisition_frequency)
-
+    #-------------------------------------------------------
 
 
 
