@@ -1,5 +1,6 @@
 import h5py
 import pandas as pd
+import os
 
 def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys):
     """
@@ -114,7 +115,15 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
 
     H.close()
 
-    if(False):
+    if( not os.path.isfile(dect_file) ):
+
+        with open(dect_file, 'w') as f:
+            f.write("Name\tEL\tXEL\tFrequency\n")  # Column headers
+            for name in det_names:
+                f.write(f"{name}\t\t\t\t\t\t\n")  # Tab-separated values
+    #---------------------------
+
+    if(True):
         #Finally, update the detectors file with the central frequency of the detectors
         det_names_dict = pd.read_csv(dect_file, sep='\t')
         mask = det_names_dict["Name"].isin(det_names)
