@@ -89,7 +89,7 @@ if __name__ == "__main__":
     pointing_paths = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
 
     #Generate the hitmap, using all the detectors. 
-    xedges,yedges,hit_map = binMap(pointing_paths,res=res,f_range=P['f_range'],dec=dec,ra=ra) 
+    xedges,yedges,hit_map = binMap(pointing_paths,res=res,dec=dec,ra=ra) 
     #-------------------------------
 
     #----------------------------------------
@@ -103,6 +103,7 @@ if __name__ == "__main__":
     axradec.set_ylabel('Dec [deg]')
     #axradec.set_aspect(aspect=1)
     #---
+    P['f_range'] = 1.2
     img = axp.imshow((hit_map), extent=[x_cen-P['f_range'], x_cen+P['f_range'],y_cen-P['f_range'], y_cen+P['f_range'],], 
                     interpolation='nearest', origin='lower', vmin=0, vmax=np.max(hit_map), cmap='binary' )
     if(contours is not None): axp.plot(contours[:, 1], contours[:, 0], c= 'g')
@@ -126,7 +127,7 @@ if __name__ == "__main__":
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.close()
+    plt.show()
     #----------------------------------------
 
     #-------------------------------

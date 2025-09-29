@@ -378,7 +378,7 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=F
     if(azel): return path, azel_path
     else: return path
 
-def binMap(pointing_paths, res=0.02, f_range=1,  dec=0, ra=0, shape=None):
+def binMap(pointing_paths, res=0.02,  dec=0, ra=0, shape=None):
     
     """
     Binning the pointing into 2d array
@@ -388,8 +388,6 @@ def binMap(pointing_paths, res=0.02, f_range=1,  dec=0, ra=0, shape=None):
         coordinates timestream of the pointing
     res: float
         spatial resolution of the map
-    f_range: float
-        range
     Returns
     -------
     xedges: array
@@ -413,8 +411,7 @@ def binMap(pointing_paths, res=0.02, f_range=1,  dec=0, ra=0, shape=None):
         xedges = ra+np.arange(-x_range/2, x_range/2+x_res, x_res)
         yedges = dec+np.arange(-y_range/2, y_range/2+y_res, y_res)
 
-    else: 
-
+    else:
         xedges = ra+(np.arange(-shape[1]/2, shape[1]/2 + 1)) * x_res
         yedges = dec+(np.arange(-shape[0]/2, shape[0]/2 + 1)) * y_res
 
