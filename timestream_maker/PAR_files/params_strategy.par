@@ -25,9 +25,9 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_integration = 0+5/60+0/3600 #hour , duration of the scan
-T_duration = 5/60
-acquisition_frequency = 488.3
-acquisition_frequency_coords = 200.25
+T_duration = 5
+acquisition_frequency = 50
+acquisition_frequency_coords =  50
 #---------------------------
 
 #----- Sky simulation -----
@@ -36,8 +36,9 @@ path = 'fits_and_hdf5/'
 output_path = '/home/mvancuyck/Desktop/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
-res = None #[deg] if res is None, the res is the resolution of the sky fits file
+res = 40/3600 #[deg] if res is None, the res is the resolution of the sky fits file
 wcs_dict = 'wcs.p'
+f_range = 1 #deg
 #---------------------------
 
 #----- Scan parameters -----
@@ -46,9 +47,9 @@ wcs_dict = 'wcs.p'
 #Use old=False to get a map compatible with Namap. 
 old=False
 #Choose the scan to use: 
-scan='raster' #'loop', 'raster', 'crisscross'
+scan='loop' #'loop', 'raster', 'crisscross'
 #Loop scan parameters
-az_size=0.45
+az_size=0.2
 alt_size= 0.1
 alt_step= 0.1
 acc=0.05
