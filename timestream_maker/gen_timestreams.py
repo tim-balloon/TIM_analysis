@@ -250,7 +250,7 @@ if __name__ == "__main__":
         #-------------------------------
         pixel_offsets = pixels_rotations(el, xel, P['theta'])
         #Generate the pointing on the sky of each pixel. 
-        pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
+        pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, offsets) for offsets in pixel_offsets]
         #-------------------------------
 
         #------------------------------------------------------------------
