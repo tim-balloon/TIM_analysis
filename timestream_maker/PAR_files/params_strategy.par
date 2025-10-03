@@ -25,7 +25,7 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_integration = 0+5/60+0/3600 #hour , duration of the scan
-T_duration = 5
+T_duration = 12
 acquisition_frequency = 50
 acquisition_frequency_coords =  50
 #---------------------------
@@ -47,7 +47,7 @@ f_range = 1 #deg
 #Use old=False to get a map compatible with Namap. 
 old=False
 #Choose the scan to use: 
-scan='loop' #'loop', 'raster', 'crisscross'
+scan='raster' #'loop', 'raster', 'crisscross'
 #Loop scan parameters
 az_size=0.2
 alt_size= 0.1
@@ -65,4 +65,9 @@ tod_noise_level = 5 #in Jy/sqrt(seconds),s units. (Fig. 11 of https://arxiv.org/
 fknee = 5e-2 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
 alphaknee = 3.
 rho_one_over_f = 0.9 #some level of 1/f correlation between detectors.
+#-------------------
+#When generating a noisy cube 
+number_of_observations = 1
+#-------------------
+
 #---------------------------
