@@ -153,15 +153,16 @@ if __name__ == "__main__":
         #Generate the pointing paths on the sky for each pixel
         pixel_offsets = pixels_rotations(el, xel, P['theta'])
         pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
-        xedges,yedges,hit_map = binMap(pointing_paths_to_save,res=res,f_range=P['f_range'],dec=dec,ra=ra,shape=cube.shape[1:]) 
+        xedges,yedges,hit_map = binMap(pointing_paths_to_save,res=res,dec=dec,ra=ra,shape=cube.shape[1:]) 
 
-        #------------
-        # Increase the integration time by a given factor if wanted
-        hit_map *= 30
-        #------------
+        #---
+        #If one wants to generate a nosie map for a longer integration time than one single observation: 
+        hit_map *= P['number_of_observations']
+        #---
 
         #Save the hitmap for the frequency range. 
         hit_cube[index_freqs,:,:] = hit_map[None,:,:]
+        #-------------------------------
 
         #-----------------------------------------
         #Load the NEI model for the given frequency range in MJy/sr
@@ -170,6 +171,7 @@ if __name__ == "__main__":
         noise_slice = noise_map(hit_map, noise, dt)
         #And save them. 
         noise_cube[index_freqs,:,:] = noise_slice
+        #-----------------------------------------
 
         # Build boolean masks
         mask_zero = (hit_map == 0)   # shape (Ny, Nx)
@@ -188,7 +190,6 @@ if __name__ == "__main__":
                 cbar = fig.colorbar(im, ax=axs[1], orientation='vertical',)
                 cbar.set_label('with noise [MJy/sr/s^1/2]')  # Adjust the label if needed
                 plt.close()
-            
     # Save the extragalactic cube, the noisy cube, the noise cube and the hit cube in one fits file. 
     cubes = [cube, cube_noisy, noise_cube, hit_cube]
     hdr["DATE"]  = (str(datetime.datetime.now()), "date of creation")
@@ -205,7 +206,7 @@ if __name__ == "__main__":
         else:
             # Following cubes go as ImageHDUs
             hdu = fits.ImageHDU(cube_i, header=hdr_i, name=f"CUBE{i}")
-        hdus.append(hdu)   # ✅ append each time!
+        hdus.append(hdu)   
 
     # Write all to one FITS file
     hdul = fits.HDUList(hdus)
@@ -214,5 +215,5 @@ if __name__ == "__main__":
     print('save '+f'fits_and_hdf5/noisy_cubes_{P["file"][:-5]}.fits')
     #-----------------------------------------
 
-
-    
+    #To open all the extensions with ds9:
+    #ds9 -multiframe -tile noisy_cubes[...].fits
