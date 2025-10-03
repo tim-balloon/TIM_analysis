@@ -19,115 +19,30 @@ import tracemalloc
 import time
 
 
-if __name__ == "__main__":
+def load_par_file(filepath):
+    """Loads .par file as a dictionary with literal-evaluated values."""
+    params = {}
+    with open(filepath, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip()
+                try:
+                    val = ast.literal_eval(val)
+                except Exception:
+                    pass  # fallback: treat as string
+                params[key] = val
+    return params
 
-    '''
-    If you want to modify this code, please create your own branch. 
+def main(P):
 
-    Instructions: 
-
-    1/4: git clone from TIM_analysis/namap
-
-    (Optional, needed for 4/4A) 2/4: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
-    and put it in namap/fits_and_hdf5/
-    
-    3/4: generate the KIDs file: python gen_det_names.py params_strategy.par
-
-    4/4A: generate the TOD file: python strategy.py params_strategy.par 
-    OR
-    4/4B: Download the TOD file: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full
-_de_Looze_smoothed_MJy_sr.hdf5 . , 
-    and put it in namap/fits_and_hdf5/
-
-    To run: python namap_main.py params_namap.par
-
-    Left to be done:
-        Implement respons correction
-        Test parallactic angle 
-        Implement noise detectors
-        add buffer frames
-    '''
 
     tracemalloc.start()
     start = time.time()
-    ## bookend mathilde code 
-    #------------------------------------------------------------------------------------------
-
-    def load_par_file(filepath):
-        """Loads .par file as a dictionary with literal-evaluated values."""
-        params = {}
-        with open(filepath, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, val = line.split("=", 1)
-                    key = key.strip()
-                    val = val.strip()
-                    try:
-                        val = ast.literal_eval(val)
-                    except Exception:
-                        pass  # fallback: treat as string
-                    params[key] = val
-        return params
-
-    # ----------------- ARGPARSE SETUP -----------------
-    parser = argparse.ArgumentParser(description='NAMAP Parameters')
-
-    cli = parser.add_argument_group('Command Line Inputs')
-    cli.add_argument('--params-file', required = False,  help='.par file containing parameters')
-
-    # command line parameter possibilities:
-
-    cli.add_argument('--output', type=str, default='output.fits', help='Output file name')
-    cli.add_argument('--hdf5_file', type=str, help='Path for TOD data (HDF5 format)')
-    cli.add_argument('--detector_table', type=str, help='Path to detector table (TSV format)')
-    cli.add_argument('--detectors_to_use', type=str, default = None,help='Path to detector to use table (TSV format)')
-    cli.add_argument('--frequencies', type=float, default=None, nargs=2, help='Frequency band in GHz, e.g. 715.0 719.0 to make map from')
-    cli.add_argument('--num_frames', type=int, help='Integration time in seconds to be loaded')
-    cli.add_argument('--first_frame', type=int, help='Starting frame index (in seconds)')
-    cli.add_argument('--time_offset', type=int, help='Time offset between detector data and coordinates')
-    cli.add_argument('--correction', action='store_true', help='Enable pointing offset correction')
-    cli.add_argument('--telemetry', action='store_true', help='Specify if data is from telemetry (e.g. Mole)')
-    cli.add_argument('--telescope_coordinate', action='store_true', help='Use telescope coordinates for mapmaking')
-    cli.add_argument('--xystage', action='store_true', help='Use XY stage coordinates')
-    cli.add_argument('--xsc_offset', type=float, help='Offset w.r.t. star cameras in xEL and EL')
-    cli.add_argument('--det_offset', type=float, help='Offset w.r.t. central detector in xEL and EL')
-    cli.add_argument('--ctype', type=str, help='Coordinate system to draw the map (e.g. "RA and DEC")')
-    cli.add_argument('--input_ctype', type=str, help='Coordinate system for the maps coming in (e.g. "RA and DEC")')
-    cli.add_argument('--lat', action='store_true', help='Use latitude flag (currently always True)')
-    cli.add_argument('--lst', action='store_true', help='Use LST flag (currently always True)')
-    cli.add_argument('--crpix', type=float, nargs=2, help='Reference pixel position (2 floats)')
-    cli.add_argument('--cdelt', type=float, nargs=2, help='Pixel resolution along each axis in degrees (2 floats)')
-    cli.add_argument('--crval', type=float, nargs=2, help='Sky coordinates at reference pixel (2 floats)')
-    cli.add_argument('--pixnum', type=float, nargs=2, help='Number of pixels along each axis (2 floats)')
-    cli.add_argument('--highpassfreq', type=float, default = 0.1, help='High-pass filter cutoff frequency (Hz)')
-    cli.add_argument('--polynomialorder', type=int, default = 5,help='Polynomial order used to detrend TODs')
-    cli.add_argument('--despike', action='store_true', help='Flag to enable despiking of TODs')
-    cli.add_argument('--sigma', type=float, help='Sigma threshold for despike detection')
-    cli.add_argument('--prominence', type=float, help='Prominence threshold (in sigma units) for despiking')
-    cli.add_argument('--coadd', action='store_true', help='Coadd detectors (True) or map each individually')
-    cli.add_argument('--gaussian_convolution', action='store_true', help='Apply Gaussian convolution to map')
-    cli.add_argument('--std', type=float, help='STD of Gaussian kernel in arcseconds')
-
-
-    # Step 1: First parse only --params-file
-    args_partial, remaining_argv = parser.parse_known_args()
-
-    # Step 2: Load .par values if requested
-    defaults = {}
-    if args_partial.params_file:
-        defaults = load_par_file(args_partial.params_file)
-
-    # Step 3: Set parser defaults from .par
-    parser.set_defaults(**defaults)
-
-    # Step 4: Parse full args
-    args = parser.parse_args(remaining_argv)
-
-    # Step 5: Convert Namespace to dictionary
-    P = vars(args)
 
     #------------------------------------------------------------------------------------------
     #### start mathilde code 
@@ -258,3 +173,96 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     timing = end - start
     print(f'Run Namap in {np.round(timing,2)} sec! ')
     #------------------------------------------------------
+
+
+if __name__ == "__main__":
+
+    '''
+    If you want to modify this code, please create your own branch. 
+
+    Instructions: 
+
+    1/4: git clone from TIM_analysis/namap
+
+    (Optional, needed for 4/4A) 2/4: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
+    and put it in namap/fits_and_hdf5/
+    
+    3/4: generate the KIDs file: python gen_det_names.py params_strategy.par
+
+    4/4A: generate the TOD file: python strategy.py params_strategy.par 
+    OR
+    4/4B: Download the TOD file: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full
+_de_Looze_smoothed_MJy_sr.hdf5 . , 
+    and put it in namap/fits_and_hdf5/
+
+    To run: python namap_main.py params_namap.par
+
+    Left to be done:
+        Implement respons correction
+        Test parallactic angle 
+        Implement noise detectors
+        add buffer frames
+    '''
+
+    ## bookend mathilde code 
+    #------------------------------------------------------------------------------------------
+
+    # ----------------- ARGPARSE SETUP -----------------
+    parser = argparse.ArgumentParser(description='NAMAP Parameters')
+
+    cli = parser.add_argument_group('Command Line Inputs')
+    cli.add_argument('--params-file', required = False,  help='.par file containing parameters')
+
+    # command line parameter possibilities:
+
+    cli.add_argument('--output', type=str, default='output.fits', help='Output file name')
+    cli.add_argument('--hdf5_file', type=str, help='Path for TOD data (HDF5 format)')
+    cli.add_argument('--detector_table', type=str, help='Path to detector table (TSV format)')
+    cli.add_argument('--detectors_to_use', type=str, default = None,help='Path to detector to use table (TSV format)')
+    cli.add_argument('--frequencies', type=float, default=None, nargs=2, help='Frequency band in GHz, e.g. 715.0 719.0 to make map from')
+    cli.add_argument('--num_frames', type=int, help='Integration time in seconds to be loaded')
+    cli.add_argument('--first_frame', type=int, help='Starting frame index (in seconds)')
+    cli.add_argument('--time_offset', type=int, help='Time offset between detector data and coordinates')
+    cli.add_argument('--correction', action='store_true', help='Enable pointing offset correction')
+    cli.add_argument('--telemetry', action='store_true', help='Specify if data is from telemetry (e.g. Mole)')
+    cli.add_argument('--telescope_coordinate', action='store_true', help='Use telescope coordinates for mapmaking')
+    cli.add_argument('--xystage', action='store_true', help='Use XY stage coordinates')
+    cli.add_argument('--xsc_offset', type=float, help='Offset w.r.t. star cameras in xEL and EL')
+    cli.add_argument('--det_offset', type=float, help='Offset w.r.t. central detector in xEL and EL')
+    cli.add_argument('--ctype', type=str, help='Coordinate system to draw the map (e.g. "RA and DEC")')
+    cli.add_argument('--input_ctype', type=str, help='Coordinate system for the maps coming in (e.g. "RA and DEC")')
+    cli.add_argument('--lat', action='store_true', help='Use latitude flag (currently always True)')
+    cli.add_argument('--lst', action='store_true', help='Use LST flag (currently always True)')
+    cli.add_argument('--crpix', type=float, nargs=2, help='Reference pixel position (2 floats)')
+    cli.add_argument('--cdelt', type=float, nargs=2, help='Pixel resolution along each axis in degrees (2 floats)')
+    cli.add_argument('--crval', type=float, nargs=2, help='Sky coordinates at reference pixel (2 floats)')
+    cli.add_argument('--pixnum', type=float, nargs=2, help='Number of pixels along each axis (2 floats)')
+    cli.add_argument('--highpassfreq', type=float, default = 0.1, help='High-pass filter cutoff frequency (Hz)')
+    cli.add_argument('--polynomialorder', type=int, default = 5,help='Polynomial order used to detrend TODs')
+    cli.add_argument('--despike', action='store_true', help='Flag to enable despiking of TODs')
+    cli.add_argument('--sigma', type=float, help='Sigma threshold for despike detection')
+    cli.add_argument('--prominence', type=float, help='Prominence threshold (in sigma units) for despiking')
+    cli.add_argument('--coadd', action='store_true', help='Coadd detectors (True) or map each individually')
+    cli.add_argument('--gaussian_convolution', action='store_true', help='Apply Gaussian convolution to map')
+    cli.add_argument('--std', type=float, help='STD of Gaussian kernel in arcseconds')
+
+
+    # Step 1: First parse only --params-file
+    args_partial, remaining_argv = parser.parse_known_args()
+
+    # Step 2: Load .par values if requested
+    defaults = {}
+    if args_partial.params_file:
+        defaults = load_par_file(args_partial.params_file)
+
+    # Step 3: Set parser defaults from .par
+    parser.set_defaults(**defaults)
+
+    # Step 4: Parse full args
+    args = parser.parse_args(remaining_argv)
+
+    # Step 5: Convert Namespace to dictionary
+    P = vars(args)
+
+    main(P)
+
