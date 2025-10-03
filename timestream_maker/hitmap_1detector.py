@@ -63,6 +63,7 @@ if __name__ == "__main__":
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(acquisition_frequency).astype(int)
 
+
     #local sideral time
     
     #LST = []
@@ -90,7 +91,7 @@ if __name__ == "__main__":
     #LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
-    scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, ra, azel=True) 
+    scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, azel=True) 
     #----------------------------------------
 
     #----------------------------------------
@@ -127,7 +128,7 @@ if __name__ == "__main__":
     patchs = []
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
-    plt.close()
+    plt.show()
     #----------------------------------------
 
     #latitude  timestream
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
 
     scan_path_prime, scan_flag = genScanPath(T_prime, alt, az, flag)
-    scan_path_sky_prime, azel = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, ra, azel=True) 
+    scan_path_sky_prime, azel = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
     
     #spf_prime = spf
@@ -235,7 +236,7 @@ if __name__ == "__main__":
         I = 3
         pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
         pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
-        pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, ra, offsets) for offsets in pixel_offsets]
+        pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, offsets) for offsets in pixel_offsets]
 
         det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
         # Extract the Name column as a list
