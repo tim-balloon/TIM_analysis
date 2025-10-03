@@ -14,7 +14,7 @@ import sys
 #for debugging purpose only
 from IPython import embed
 
-#for profilling only
+#for profilling purpose only
 import tracemalloc
 import time
 
@@ -39,7 +39,6 @@ def load_par_file(filepath):
     return params
 
 def main(P):
-
 
     tracemalloc.start()
     start = time.time()
@@ -101,32 +100,38 @@ def main(P):
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
-    
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
-
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
     #-------------------------------
-    
-    zoomsyncdata = ld.frame_zoom_sync(filepath, det_data, acqfreq_data, spf_data,  coord1_data, 
+
+    #---------------------------------
+    #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
+    det_tod = tod.data_cleaned(det_data, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
+    cleaned_data = det_tod.data_clean()
+
+    #Apply detector's response
+    cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
+    #---------------------------------
+                
+    #---------------------------------
+    zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
                                         coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
                                         lst_data, lat_data, acqfreq_lstlat, lat_spf, offset=0)
 
-    timemap, detslice, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
     
+    timemap, cleaned_data, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
+    #---------------------------------
 
-
-    #detslice, coord1slice, coord2slice, lstslice, latslice = det_data, coord1_data, coord2_data, lst_data, lat_data, 
     #---------------------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
-    #---------------------------------
 
-    #---------------------------------
     corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
     #---------------------------------
+
 
     #--------------------
     #Need to be implemented ! So far, set parallactic angle to 0.
@@ -139,17 +144,7 @@ def main(P):
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
             parallactic.append( np.zeros_like(c1) )
     #---------------------------------
-            
-    #---------------------------------
-    #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
-    det_tod = tod.data_cleaned(detslice, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
-    cleaned_data = det_tod.data_clean()
-    #---------------------------------
 
-    #---------------------------------
-    #Apply detector's response
-    cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
-    #---------------------------------
     #--------------------
     #Create the maps
     maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), cleaned_data, coord1slice, coord2slice, convolution, std, 
@@ -158,7 +153,7 @@ def main(P):
     maps.wcs_proj()
     map_values = maps.map2d()
     #--------------------
-    print(P)
+
     #--------------------------------------------------
     #Plot the maps
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
@@ -174,6 +169,7 @@ def main(P):
     print(f'Run Namap in {np.round(timing,2)} sec! ')
     #------------------------------------------------------
 
+    return timing, current / 1e6, peak / 1e6  # convert to MB
 
 if __name__ == "__main__":
 
@@ -245,7 +241,6 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     cli.add_argument('--coadd', action='store_true', help='Coadd detectors (True) or map each individually')
     cli.add_argument('--gaussian_convolution', action='store_true', help='Apply Gaussian convolution to map')
     cli.add_argument('--std', type=float, help='STD of Gaussian kernel in arcseconds')
-
 
     # Step 1: First parse only --params-file
     args_partial, remaining_argv = parser.parse_known_args()
