@@ -85,7 +85,7 @@ if __name__ == "__main__":
     pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
 
     #Generate the pointing on the sky of each pixel. 
-    pointing_paths = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
+    pointing_paths = [genPointingPath(T, scan_path, LST, lat, dec, offsets) for offsets in pixel_offsets]
 
     #Generate the hitmap, using all the detectors. 
     xedges,yedges,hit_map = binMap(pointing_paths,res=res,dec=dec,ra=ra) 
