@@ -152,7 +152,7 @@ if __name__ == "__main__":
         #-------------------------------
         #Generate the pointing paths on the sky for each pixel
         pixel_offsets = pixels_rotations(el, xel, P['theta'])
-        pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, ra, offsets) for offsets in pixel_offsets]
+        pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, offsets) for offsets in pixel_offsets]
         xedges,yedges,hit_map = binMap(pointing_paths_to_save,res=res,dec=dec,ra=ra,shape=cube.shape[1:]) 
 
         #---
