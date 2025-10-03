@@ -343,7 +343,8 @@ def pixels_rotations(pixel_offset, pixel_shift, theta):
         rotated_pixel.append(pixel_w_time) 
     return np.asarray(rotated_pixel)
 
-def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=False):
+
+def genPointingPath(T, scan_path, HA, lat, dec, offsets = np.zeros(2), azel=False):
 
     """
     Function that takes local paths and generates the pointing on sky vs time.
@@ -359,7 +360,8 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=F
         the coordinates timestream of the pointing of each pixel, in degrees
     """     
 
-    alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1]) 
+    #-------------------------------------------------------------------
+    alt = elevationAngle(dec,lat,HA)+np.radians(scan_path[:,1]) #Check
     azi = azimuthAngle(dec,lat,HA)+np.radians(scan_path[:,0])   
 
     x_el = azi * np.cos(alt) - np.radians(offsets[0])
@@ -369,12 +371,14 @@ def genPointingPath(T, scan_path, HA, lat, dec,ra, offsets = np.zeros(2), azel=F
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
 
+    
+
     ra = (HA*np.pi/12-ha_point)
-    ra_unwrapped = ( ra + np.pi) % (2 * np.pi) - np.pi
+    ra_unwrapped = np.unwrap(ra) #( ra + np.pi) % (2 * np.pi) - np.pi
 
     path = np.vstack((np.degrees(ra_unwrapped),np.degrees(dec_point))).T
     azel_path = np.vstack((np.degrees(azi),np.degrees(alt))).T
-
+    #-------------------------------------------------------------------
     if(azel): return path, azel_path
     else: return path
 
@@ -661,3 +665,10 @@ def load_TIM_noise(observed_frequencies = None, HF_noise = 'TIM_SW_loading.tsv',
 
         return resampled_spec.spectral_axis,resampled_spec.flux
     #------------------------------------------------------------------------------------------
+
+
+
+
+
+
+

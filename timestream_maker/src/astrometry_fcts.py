@@ -116,8 +116,7 @@ def declinationAngle(azi, alt, lat):
     Dec: float
         source declination angle (rad)
     """ 
-  
-    sinDec = np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
+    sinDec =  np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
     return np.arcsin(sinDec)
 
 def hourAngle(azi, alt, lat):
@@ -138,9 +137,18 @@ def hourAngle(azi, alt, lat):
     ha: float
         source hour angle (rad)
     """ 
-    tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(lat)) - np.cos(np.radians(azi))*np.sin(np.radians(lat)))
-    HA = np.arctan(tanHA)
+    #tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(lat)) - np.cos(np.radians(azi))*np.sin(np.radians(lat)))
+    #HA = np.arctan(tanHA)
+
+    sin_dec = np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
+    dec = np.arcsin(sin_dec)
+    
+    sin_HA = -np.sin(np.radians(azi))*np.cos(np.radians(alt)) / np.cos(dec)
+    cos_HA = (np.sin(np.radians(alt)) - np.sin(dec)*np.sin(np.radians(lat))) / (np.cos(dec)*np.cos(np.radians(lat)))
+    HA = np.arctan2(sin_HA, cos_HA)
+
     return HA
+
 
 if __name__ == "__main__":
 
