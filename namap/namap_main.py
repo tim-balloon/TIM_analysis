@@ -38,10 +38,8 @@ def load_par_file(filepath):
                 params[key] = val
     return params
 
-def main(P):
+def main(P, nbdets=None):
 
-    tracemalloc.start()
-    start = time.time()
 
     #------------------------------------------------------------------------------------------
     #### start mathilde code 
@@ -82,6 +80,7 @@ def main(P):
     #option in the par file to good kids list
    
     kid_num = filtered['Name']
+    if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
     print(len(kid_num))
 
     #load the table
@@ -159,17 +158,7 @@ def main(P):
     maps.map_plot(data_maps = map_values, kid_num=kid_num)
     #--------------------------------------------------
 
-    #------------------------------------------------------
-    current, peak = tracemalloc.get_traced_memory()
-    print(f"Current memory usage: {current / 10**6:.2f} MB")
-    print(f"Peak memory usage: {peak / 10**6:.2f} MB")
-    tracemalloc.stop()
-    end = time.time()
-    timing = end - start
-    print(f'Run Namap in {np.round(timing,2)} sec! ')
-    #------------------------------------------------------
-
-    return timing, current / 1e6, peak / 1e6  # convert to MB
+    return 0
 
 if __name__ == "__main__":
 
