@@ -6,7 +6,7 @@ from src.hdf5_fcts import *
 from astropy.io import fits 
 import os
 from astropy.wcs import WCS
-from timestream_generator import gen_tod
+from gen_timestreams import gen_tod
 
 if __name__ == "__main__":
     '''
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     patchs = []
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #latitude  timestream
