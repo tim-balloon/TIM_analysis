@@ -149,7 +149,6 @@ class data_value():
         data: array
             values stores in field, from first_frame*spf to (first_frame+num_frames)*spf. 
         """    
-
         if os.path.isfile(file): H = h5py.File(file, "a")
         else: print('no file')
         f = H[field]
