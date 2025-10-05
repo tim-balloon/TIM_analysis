@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     Step 1/3: Generate your observation scan path with python hitmap_1detector.py.py PAR_files/params_strategy.par
     Step 2/3: Generate your detector array with python gen_detectors_arrays.py PAR_files/params_strategy.par
-    Step 3/3: Sample the TODs for your detector array following your observation scan path from a simulation with python timestream_generator.py PAR_files/params_strategy.par
+    Step 3/3: Sample the TODs for your detector array following your observation scan path from a simulation with python gen_timestreams.py PAR_files/params_strategy.par
     '''
     #------------------------------------------------------------------------------------------
     #load the .par file parameters
