@@ -7,6 +7,7 @@ from astropy.io import fits
 import os
 from astropy.wcs import WCS
 from gen_timestreams import gen_tod
+import shutil
 
 if __name__ == "__main__":
     '''
@@ -191,14 +192,14 @@ if __name__ == "__main__":
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
 
     scan_path_prime, scan_flag = genScanPath(T_prime, alt, az, flag)
-    scan_path_sky_prime, azel = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, azel=True) 
+    scan_path_sky_prime, azelprime = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
     
     #spf_prime = spf
     #acquisition_frequency_prime = acquisition_frequency
 
     save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
-    save_scan_path(tod_file, azel, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
+    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
     save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
     save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
     save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
@@ -209,7 +210,7 @@ if __name__ == "__main__":
 
     #Extra piece of code to measure the TOD file size with data in MB.
     #-------------------------------------------------------
-    if(False):
+    if(True):
         #-------------------------------
         #Load the sky simulation from which to generate the TODs from
         simu_sky_path = P['path']+P['file'] #os.getcwd()
@@ -233,29 +234,43 @@ if __name__ == "__main__":
         cube -= cubemean[:, None, None]
         cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
         #-----------------------------
-        I = 3
-        pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
-        pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
-        pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, offsets) for offsets in pixel_offsets]
 
-        det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-        # Extract the Name column as a list
-        names = det_names_dict["Name"].tolist()
-        # Split into chunks of 10
-        chunks = [names[i:i+I] for i in range(0, len(names), I+1)]
-        # Example: print them
-        print('')
-        for idx, group in enumerate(chunks):
+        for I in (1,3,5,10,20,25,30,):
 
-            if(idx>10): continue
-            print(idx, group)
-            Map = cube[idx,:,:]
-            #----------------------------------------
-            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=T)
-            #----------------------------------------
-            save_tod_in_hdf5(tod_file, group, samples, pixel_offset_EL, pixel_offset_xEL, P['detectors_name_file'], (freqs[idx].value,), spf, acquisition_frequency)
-    #-------------------------------------------------------
+            pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
+            pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
+            pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, offsets) for offsets in pixel_offsets]
 
+            det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+            # Extract the Name column as a list
+            names = det_names_dict["Name"].tolist()
+            # Split into chunks of 10
+            chunks = [names[i:i+I] for i in range(0, len(names), I+1)]
+            # Example: print them
+            
+            H = h5py.File(tod_file, "a")
+            print(len(H.keys()))
+            H.close()
+            for nbgrp in (0,1,2):
+                
+                filename = F'fits_and_hdf5/tod_file_{I*(nbgrp+1)}detectors.hdf5'
+                shutil.copy(tod_file, filename)
+
+                for idx, group in enumerate(chunks):
+
+
+                    if(idx>nbgrp): continue
+                    #print(idx, group)
+
+                    Map = cube[idx,:,:]
+                    #----------------------------------------
+                    hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=T)
+                    #----------------------------------------
+
+                    save_tod_in_hdf5(filename, group, samples, pixel_offset_EL, pixel_offset_xEL, P['detectors_name_file'], freqs[idx].value, spf, acquisition_frequency)
+
+            with h5py.File(filename, 'a') as H: print("After:", len(list(H.keys())))
+                    #-------------------------------------------------------
 
 
     
