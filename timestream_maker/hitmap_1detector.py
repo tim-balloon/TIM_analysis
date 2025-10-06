@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
     #Extra piece of code to measure the TOD file size with data in MB.
     #-------------------------------------------------------
-    if(True):
+    if(False):
         #-------------------------------
         #Load the sky simulation from which to generate the TODs from
         simu_sky_path = P['path']+P['file'] #os.getcwd()
