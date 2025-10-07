@@ -65,17 +65,16 @@ if __name__ == "__main__":
     spf = np.round(acquisition_frequency).astype(int)
 
 
+    #---
     #local sideral time
-    
     #LST = []
     #times = np.arange(-T_duration/2,T_duration/2,6/60)
     #for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
     LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
-    
-    #---
     T = LST*3600 #s
     pps = np.floor(T).astype(int)
     subsecond_ps = T-pps
+    #---
 
     tod_file=P['output_path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
     #------------------------------------------------------------------------------------------
@@ -85,20 +84,23 @@ if __name__ == "__main__":
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
+    if(P['scan']=='gittering'): az, alt, flag = genLocalPath_gittering(az_size=P['az_size'], vertical_steps=P['vertical_steps'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3), N=P['N_scans'])
 
-    scan_path, scan_flag = genScanPath(T, alt, az, flag)
+    scan_path, scan_flag = genScanPath_v2(T,dt, alt, az, flag)
     #scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
     #T = T[scan_flag==1]
     #LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
     scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, azel=True) 
+
     #----------------------------------------
 
     #----------------------------------------
     #Plot a scan route
     BS = 10; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
     fig, axs = plt.subplots(2,2,figsize=(7,7), dpi=160,)# sharey=True, sharex=True)
+
     axradec, ax, axr, axc = axs[0,0], axs[1,1], axs[0,1], axs[1,0]
     #---
     axc.scatter(scan_path_sky[:,0], scan_path_sky[:,1], s=0.1,c='r')
@@ -126,10 +128,17 @@ if __name__ == "__main__":
     axr.set_xlabel('Az [deg]')
     axr.set_ylabel('El [deg]')
     #-----
+    if(False): 
+        coords = SkyCoord(alt=np.degrees(az_unwrapped)*u.deg, az=azel[:,1]*u.deg, frame='altaz')
+        separations = coords[:-1].separation(coords[1:])
+        total_length = np.sum(separations)
+        title = f'{total_length:.1f} scanned.'
+    else: title = ''
+    fig.suptitle(title)
     patchs = []
     fig.tight_layout()
-    plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
-    plt.close()
+    #plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(P['T_duration'])}.png")
+    plt.show()
     #----------------------------------------
 
     #latitude  timestream
