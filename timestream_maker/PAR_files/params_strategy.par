@@ -25,7 +25,7 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_integration = 0+5/60+0/3600 #hour , duration of the scan
-T_duration = 10
+T_duration = 4
 acquisition_frequency = 100
 acquisition_frequency_coords = 100
 #---------------------------
@@ -47,13 +47,15 @@ f_range = 1 #deg
 #Use old=False to get a map compatible with Namap. 
 old=False
 #Choose the scan to use: 
-scan='raster' #'loop', 'raster', 'crisscross'
+scan='gittering' #'loop', 'raster', 'crisscross', 'gittering'
 #Loop scan parameters
 az_size=1
-alt_size= 0.1
-alt_step= 0.1
+alt_size= 40/3600*1/3
+alt_step= 40/3600*1/3
 acc=0.05
 scan_v=0.1
+vertical_steps = 2
+N_scans = 10
 #---------------------------
 
 #----- Noise ---------------
