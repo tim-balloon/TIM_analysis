@@ -86,10 +86,12 @@ if __name__ == "__main__":
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='gittering'): az, alt, flag = genLocalPath_gittering(az_size=P['az_size'], vertical_steps=P['vertical_steps'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3), N=P['N_scans'])
 
-    scan_path, scan_flag = genScanPath_v2(T,dt, alt, az, flag)
-    #scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
-    #T = T[scan_flag==1]
-    #LST = LST[scan_flag==1]
+    scan_path, scan_flag = genScanPath(T,dt, alt, az, flag)
+
+    if(P['cut_turnarounds']):
+        scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
+        T = T[scan_flag==1]
+        LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
     scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, azel=True) 
