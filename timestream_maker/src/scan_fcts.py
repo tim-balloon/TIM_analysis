@@ -365,40 +365,6 @@ def genScanPath_v2(T, dt, alt, az, flag ):
 
     return coor, flag_full
 
-def genScanPath(T, alt, az, flag, plot=False):
-    """    
-    Function that generates the pointing coordinates vs time.
-
-    Parameters
-    ----------
-    T: array
-        time stream
-    az: array
-        azimuth scan path coordinates, in degrees
-    alt: array
-        altitude scan path coordinates, in degrees
-    flag: array
-        constant scan speed part. 
-    Returns
-    -------
-    coor: 2d array
-        coordinates in degrees
-    flag: array
-        constant scan speed part. 
-    """ 
-    coor = np.zeros((len(T),2))
-
-    idx = np.int_(np.fmod(T,len(alt)/100)*100)
-    
-    coor[:,0] = az[idx]-np.mean(az)
-    coor[:,1] = alt[idx]-np.mean(alt)
-    #v_list = np.zeros((len(T),2))
-    #v_list[:,0] = v[idx,0]
-    #v_list[:,1] = v[idx,1]
-    flag = flag[idx]
-    
-    return coor , flag #,v_list,flag
-
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
     Function that  gernerates the pixel offset vs pointing center
@@ -470,7 +436,6 @@ def genPointingPath(T, scan_path, HA, lat, dec, offsets = np.zeros(2), azel=Fals
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
 
-    
 
     ra = (HA*np.pi/12-ha_point)
     ra_unwrapped = np.unwrap(ra) #( ra + np.pi) % (2 * np.pi) - np.pi
