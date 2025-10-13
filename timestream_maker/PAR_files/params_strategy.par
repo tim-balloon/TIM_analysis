@@ -47,7 +47,8 @@ f_range = 1 #deg
 #Use old=False to get a map compatible with Namap. 
 old=False
 #Choose the scan to use: 
-scan='gittering' #'loop', 'raster', 'crisscross', 'gittering'
+scan='raster' #'loop', 'raster', 'crisscross', 'gittering'
+cut_turnarounds = False #Bool to save the turnarounds
 #Loop scan parameters
 az_size=1
 alt_size= 40/3600*1/3
