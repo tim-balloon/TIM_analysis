@@ -335,7 +335,7 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.
 
     return az,alt,flag  
 
-def genScanPath_v2(T, dt, alt, az, flag ):
+def genScanPath(T, dt, alt, az, flag ):
 
     N_total = len(T)
     # Number of points in one pattern
