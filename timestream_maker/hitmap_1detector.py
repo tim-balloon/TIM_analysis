@@ -59,7 +59,6 @@ if __name__ == "__main__":
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
-    T_integration= P['T_integration']
     acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(acquisition_frequency).astype(int)
