@@ -130,7 +130,7 @@ if __name__ == "__main__":
     axr.set_xlabel('Az [deg]')
     axr.set_ylabel('El [deg]')
     #-----
-    if(False): 
+    if(True): 
         coords = SkyCoord(alt=np.degrees(az_unwrapped)*u.deg, az=azel[:,1]*u.deg, frame='altaz')
         separations = coords[:-1].separation(coords[1:])
         total_length = np.sum(separations)
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
 
-    scan_path_prime, scan_flag = genScanPath(T_prime, alt, az, flag)
+    scan_path_prime, scan_flag = genScanPath(T_prime, dt, alt, az, flag)
     scan_path_sky_prime, azelprime = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, azel=True) 
     lat = np.ones(len(LST_prime)) * lat
     
