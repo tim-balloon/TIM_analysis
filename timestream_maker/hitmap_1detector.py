@@ -139,7 +139,7 @@ if __name__ == "__main__":
     patchs = []
     fig.tight_layout()
     #plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(P['T_duration'])}.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #latitude  timestream
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
     #Extra piece of code to measure the TOD file size with data in MB.
     #-------------------------------------------------------
-    if(False):
+    if(True):
         #-------------------------------
         #Load the sky simulation from which to generate the TODs from
         simu_sky_path = P['path']+P['file'] #os.getcwd()
