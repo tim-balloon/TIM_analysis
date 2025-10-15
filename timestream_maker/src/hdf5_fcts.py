@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 
-def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="32bit"):
+def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="16bit"):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -38,7 +38,7 @@ def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="3
         grp.create_dataset('acquisition frequency', data=acquisition_frequency)
     H.close() 
 
-def save_timestamps(tod_file, T, spf, acquisition_frequency, key, save="32bit"):
+def save_timestamps(tod_file, T, spf, acquisition_frequency, key, save="16bit"):
     '''
     Save the time tod in the .hdf5 format. 
 
@@ -72,7 +72,7 @@ def save_timestamps(tod_file, T, spf, acquisition_frequency, key, save="32bit"):
 
     H.close()
 
-def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, save="32bit"):
+def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, save="16bit"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
 
