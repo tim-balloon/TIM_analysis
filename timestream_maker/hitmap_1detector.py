@@ -7,28 +7,9 @@ from astropy.io import fits
 import os
 from astropy.wcs import WCS
 from gen_timestreams import gen_tod
-import shutil
 
-if __name__ == "__main__":
-    '''
-    '''
-    #------------------------------------------------------------------------------------------
-    #load the .par file parameters
-    parser = argparse.ArgumentParser(description="strategy parameters",
-                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    #options
-    parser.add_argument('params', help=".par file with params", default = None)
-    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
-
-    args = parser.parse_args()
-
-    if(args.non_iteractive): 
-        import matplotlib
-        matplotlib.use("Agg")
-
-    P = load_params(args.params)
-    #------------------------------------------------------------------------------------------
-
+def main_1det(P):
+    
     #Initiate the parameters
 
     #The coordinates of the field
@@ -75,7 +56,7 @@ if __name__ == "__main__":
     subsecond_ps = T-pps
     #---
 
-    tod_file=P['output_path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_path']+P['output_name']
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------    
@@ -173,14 +154,14 @@ if __name__ == "__main__":
     #Save timestreams in a .hdf5 file 
     #save_PA(tod_file, np.degrees(pa), spf)
     #save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'))
-    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'))
-    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'))
-    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'))
-    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time')
-    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps')  
-    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps')  
-    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags')
+    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'), save=P['format'])
+    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'), save=P['format'])
+    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'), save=P['format'])
+    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'), save=P['format'])
+    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time', save=P['format'])
+    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps',save=P['format'])
+    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps',save=P['format'])
+    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags', save=P['format'])
     #-------------------------------------------
 
     #----------------------------------------
@@ -208,79 +189,34 @@ if __name__ == "__main__":
     #spf_prime = spf
     #acquisition_frequency_prime = acquisition_frequency
 
-    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'))
-    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'))
-    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'))
-    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'))
-    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time')
-    save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps')  
-    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps')  
-    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'))
+    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'])
+    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'])
+    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'])
+    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'])
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'])
+    save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'])
+    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'])
+    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'])
 
 
-    #Extra piece of code to measure the TOD file size with data in MB.
-    #-------------------------------------------------------
-    if(False):
-        #-------------------------------
-        #Load the sky simulation from which to generate the TODs from
-        simu_sky_path = P['path']+P['file'] #os.getcwd()
-        hdr  = fits.getheader(simu_sky_path)
-        pix_size = ((hdr['CDELT1']*u.Unit(hdr['CUNIT1']))**2).to(u.sr).value
-        hdr['CRVAL1'] = ra 
-        hdr['CRVAL2'] = dec
-        hdr['CRPIX1'] = hdr['NAXIS1']//2
-        hdr['CRPIX2'] = hdr['NAXIS2']//2
-        wcs = WCS(hdr, naxis=2) 
-        #Create the list of frequency channels of the simulated cube. 
-        freqs =( np.arange(hdr['CRVAL3'], hdr['CRVAL3']+hdr['NAXIS3']*hdr['CDELT3'], hdr['CDELT3'])*u.Unit(hdr['CUNIT3']) ).to(u.GHz)
-        #Create the binning of the map in pixel coordinates. 
-        xbins = np.arange(-0.5, hdr['NAXIS1']+0.5, 1)
-        ybins = np.arange(-0.5, hdr['NAXIS2']+0.5, 1)
-        #load the angular spectral cube. 
-        
-        cube = fits.getdata(simu_sky_path)
-        #Remove the mean in each map, to wich we are not sensitive. 
-        cubemean = np.mean(cube, axis=(1,2)) 
-        cube -= cubemean[:, None, None]
-        cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
-        #-----------------------------
+if __name__ == "__main__":
+    '''
+    '''
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="strategy parameters",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    #options
+    parser.add_argument('params', help=".par file with params", default = None)
+    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
 
-        for I in (1,3,5,10,20,25,30,):
+    args = parser.parse_args()
 
-            pixel_offset_EL, pixel_offset_xEL= pixelOffset(I, 0.0145 ,0)
-            pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])
-            pointing_paths = [genPointingPath(T, scan_path, LST, lat[0], dec, offsets) for offsets in pixel_offsets]
+    if(args.non_iteractive): 
+        import matplotlib
+        matplotlib.use("Agg")
 
-            det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-            # Extract the Name column as a list
-            names = det_names_dict["Name"].tolist()
-            # Split into chunks of 10
-            chunks = [names[i:i+I] for i in range(0, len(names), I+1)]
-            # Example: print them
-            
-            H = h5py.File(tod_file, "a")
-            print(len(H.keys()))
-            H.close()
-            for nbgrp in (0,1,2):
-                
-                filename = F'fits_and_hdf5/tod_file_{I*(nbgrp+1)}detectors.hdf5'
-                shutil.copy(tod_file, filename)
+    P = load_params(args.params)
+    #------------------------------------------------------------------------------------------
 
-                for idx, group in enumerate(chunks):
-
-
-                    if(idx>nbgrp): continue
-                    #print(idx, group)
-
-                    Map = cube[idx,:,:]
-                    #----------------------------------------
-                    hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=T)
-                    #----------------------------------------
-
-                    save_tod_in_hdf5(filename, group, samples, pixel_offset_EL, pixel_offset_xEL, P['detectors_name_file'], freqs[idx].value, spf, acquisition_frequency)
-
-            with h5py.File(filename, 'a') as H: print("After:", len(list(H.keys())))
-                    #-------------------------------------------------------
-
-
-    
+    main_1det(P)

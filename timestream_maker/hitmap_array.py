@@ -14,27 +14,7 @@ import time
 import astropy.table as tb
 from progress.bar import Bar
 
-if __name__ == "__main__":
-    '''
-    Description
-    '''
-    #------------------------------------------------------------------------------------------
-    #load the .par file parameters
-    parser = argparse.ArgumentParser(description="strategy parameters",
-                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    #options
-    parser.add_argument('params', help=".par file with params", default = None)
-    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
-    
-    args = parser.parse_args()
-
-    if(args.non_iteractive): 
-        import matplotlib
-        matplotlib.use("Agg")
-
-    P = load_params(args.params)
-    print(f'running arrays detector {args.params}')
-    #------------------------------------------------------------------------------------------
+def main_arrays(P):
 
     #-----------------------------
     #Initiate the parameters
@@ -63,7 +43,7 @@ if __name__ == "__main__":
     dt = 1/aquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(aquisition_frequency).astype(int)
 
-    tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_path']+P['output_name']
     H = h5py.File(tod_file, "a")
     T = H['data_time']['data'][()]
     LST = H['data_lst']['data'][()]
@@ -126,7 +106,7 @@ if __name__ == "__main__":
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.show()
+    plt.close()
     #----------------------------------------
 
     #-------------------------------
@@ -167,3 +147,28 @@ if __name__ == "__main__":
         print('')
         print(f"Saved the detector pointing paths in {np.round((time.time() - start),2)}"+'s')
     #-------------------------------
+
+if __name__ == "__main__":
+
+    '''
+    Description
+    '''
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="strategy parameters",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    #options
+    parser.add_argument('params', help=".par file with params", default = None)
+    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
+    
+    args = parser.parse_args()
+
+    if(args.non_iteractive): 
+        import matplotlib
+        matplotlib.use("Agg")
+
+    P = load_params(args.params)
+    print(f'running arrays detector {args.params}')
+    #------------------------------------------------------------------------------------------
+
+    main_arrays(P)
