@@ -2,10 +2,10 @@
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = 'fits_and_hdf5/TOD_1h0min0sec.hdf5' 
+hdf5_file = '/home/mvancuyck/Desktop/TOD_0h3min0sec.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = 'config/TIM_kid_table.tsv' 
+detector_table = '/home/mvancuyck/Desktop/TIM_kid_table.tsv' 
 
 #if you want to use preselected good detectors list
 detectors_to_use = 'config/TIM_good_kids_table.tsv' 
