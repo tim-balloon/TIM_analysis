@@ -16,12 +16,12 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, fs, cutoff, detlist, polynomialorder, despike, sigma, prominence):
+    def __init__(self, data, fs,  detlist, cutoff, polynomialorder, despike, sigma, prominence):
 
         self.data = data                #detector TOD
         self.fs = float(fs)             #frequency sampling of the detector
-        self.cutoff = float(cutoff)     #cutoff frequency of the highpass filter
         self.detlist = detlist          #detector name list
+        self.cutoff = float(cutoff)     #cutoff frequency of the highpass filter    
         self.polynomialorder = polynomialorder #polynomial order for fitting
         self.sigma = sigma                  #height in std value to look for spikes
         self.prominence = prominence        #prominence in std value to look for spikes
@@ -40,6 +40,7 @@ class data_cleaned():
         '''
         
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
+        
         for i, data in enumerate(self.data):
             det_data = detector_trend(data)
             if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
