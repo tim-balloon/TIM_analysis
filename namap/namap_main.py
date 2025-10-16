@@ -40,7 +40,6 @@ def load_par_file(filepath):
 
 def main(P, nbdets=None):
 
-
     #------------------------------------------------------------------------------------------
     #### start mathilde code 
     #---------------------------------
@@ -81,7 +80,7 @@ def main(P, nbdets=None):
    
     kid_num = filtered['Name']
     if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
-    print(len(kid_num))
+    print('Nb dets: ', len(kid_num))
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
@@ -104,12 +103,9 @@ def main(P, nbdets=None):
     #-------------------------------
 
     #---------------------------------
-    #Clean the TOD by removing smooth polynomial component, replace peaks, and apply a high pass filter
-    det_tod = tod.data_cleaned(det_data, spf_data, highpassfreq, kid_num, polynomialorder, despike_bool, sigma, prominence)
+    #First remove noise peaks
+    det_tod = tod.data_cleaned(det_data, spf_data, kid_num, 0, 0, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
-
-    #Apply detector's response
-    cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
                 
     #---------------------------------
@@ -122,14 +118,25 @@ def main(P, nbdets=None):
     #---------------------------------
 
     #---------------------------------
+    #Clean the TOD by removing smooth polynomial component and apply a high pass filter
+    det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0)
+    cleaned_data = det_tod.data_clean()
+
+    #Apply detector's response
+    cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
+    #---------------------------------
+
+    #---------------------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
 
+
     corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
     #---------------------------------
+
 
 
     #--------------------
@@ -146,7 +153,8 @@ def main(P, nbdets=None):
 
     #--------------------
     #Create the maps
-    maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), cleaned_data, coord1slice, coord2slice, convolution, std, 
+    maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+                   cleaned_data, coord1slice, coord2slice, convolution, std, 
                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
     
     maps.wcs_proj()
