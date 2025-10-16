@@ -129,32 +129,7 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
 
     return hist, norm, samples, positions_x, positions_y
 
-if __name__ == "__main__":
-
-    '''
-    PAR_files/params_strategy.par is a file containing all the modifiable parameters. 
-    To generate your TODs: 
-
-    Step 1/3: Generate your observation scan path with python hitmap_1detector.py.py PAR_files/params_strategy.par
-    Step 2/3: Generate your detector array with python gen_detectors_arrays.py PAR_files/params_strategy.par
-    Step 3/3: Sample the TODs for your detector array following your observation scan path from a simulation with python gen_timestreams.py PAR_files/params_strategy.par
-    '''
-    #------------------------------------------------------------------------------------------
-    #load the .par file parameters
-    parser = argparse.ArgumentParser(description="strategy parameters",
-                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    #options
-    parser.add_argument('params', help=".par file with params", default = None)
-    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
-
-    args = parser.parse_args()
-
-    if(args.non_iteractive): 
-        import matplotlib
-        matplotlib.use("Agg")
-
-    P = load_params(args.params)
-    #------------------------------------------------------------------------------------------
+def main_tod(P):
 
     #-----------------------------
     #Initiate the parameters
@@ -180,7 +155,7 @@ if __name__ == "__main__":
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(acquisition_frequency).astype(int)
 
-    tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_path']+P['output_name']
     H = h5py.File(tod_file, "a")
     T = H['data_time']['data'][()]
     LST = H['data_lst']['data'][()]
@@ -292,12 +267,38 @@ if __name__ == "__main__":
             plt.close()
             #----------------------------------------
 
-            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency)
+            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, save=P['format'])
             
             bar.next()
         #------------------------------------------------------------------
         bar.finish
         print('')
         
-            
-    
+if __name__ == "__main__":
+
+    '''
+    PAR_files/params_strategy.par is a file containing all the modifiable parameters. 
+    To generate your TODs: 
+
+    Step 1/3: Generate your observation scan path with python hitmap_1detector.py.py PAR_files/params_strategy.par
+    Step 2/3: Generate your detector array with python gen_detectors_arrays.py PAR_files/params_strategy.par
+    Step 3/3: Sample the TODs for your detector array following your observation scan path from a simulation with python gen_timestreams.py PAR_files/params_strategy.par
+    '''
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="strategy parameters",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    #options
+    parser.add_argument('params', help=".par file with params", default = None)
+    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
+
+    args = parser.parse_args()
+
+    if(args.non_iteractive): 
+        import matplotlib
+        matplotlib.use("Agg")
+
+    P = load_params(args.params)
+    #------------------------------------------------------------------------------------------
+
+    main_tod(P)
