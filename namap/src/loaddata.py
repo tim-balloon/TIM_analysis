@@ -412,66 +412,6 @@ class frame_zoom_sync():
         lat_data: array
             latitude TOD.
         '''
-       
-        #---------------------------------------------------------------
-        # Load the timestamps associated with the coordinates, latitude and lst. 
-        pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
-        pps -= pps.min()
-        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps', self.numframes, self.startframe) 
-        ctime  = pps+subsec 
-        turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
-        spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
-        # Load the pulse per second (pps). It indicates when, more precisely at which second, an element has been recorded. 
-        #---------------------------------------------------------------
-
-        #---------------------------------------------------------------
-        #Because the acquisition frequency is not an integer, some frames have more or fewer samples than others. 
-        #First, we cut the edge frames that dont have all their samples
-        #---------------------
-        bn = np.bincount(pps)
-        pps_bins = bn[bn>0]
-        if pps_bins[0] < 110:
-            pps = pps[pps_bins[0]:]
-            ctime = ctime[pps_bins[0]:]
-            self.coord1_data = self.coord1_data[pps_bins[0]:]
-            self.coord2_data = self.coord2_data[pps_bins[0]:]
-            self.lat_data = self.lat_data[pps_bins[0]:]
-            self.lst_data = self.lst_data[pps_bins[0]:]
-            turnaround_flags = turnaround_flags[pps_bins[0]:]
-        if pps_bins[-1] < 110:
-            pps = pps[:-pps_bins[-1]]
-            ctime = ctime[:-pps_bins[-1]]
-            self.coord1_data = self.coord1_data[:-pps_bins[-1]]
-            self.coord2_data = self.coord2_data[:-pps_bins[-1]]
-            self.lat_data = self.lat_data[:-pps_bins[-1]] 
-            self.lst_data = self.lst_data[:-pps_bins[-1]]
-            turnaround_flags = turnaround_flags[:-pps_bins[-1]]
-        #---------------------
-
-        #---------------------
-        #2nd, we put the right number of samples in the frames.  
-        bn = np.bincount(pps)
-        pps_bins = bn[bn>0]
-        
-        kidutils = det.kidsutils()
-        ctime = kidutils.interpolation_roach(ctime, pps_bins, self.coord_fs) 
-        self.coord1_data = kidutils.interpolation_roach(self.coord1_data, pps_bins, self.coord_fs)
-        self.coord2_data = kidutils.interpolation_roach(self.coord2_data, pps_bins, self.coord_fs)
-        self.lat_data = kidutils.interpolation_roach(self.lat_data, pps_bins, self.coord_fs)
-        self.lst_data = kidutils.interpolation_roach(self.lst_data, pps_bins, self.coord_fs)
-        turnaround_flags = np.round(kidutils.interpolation_roach(turnaround_flags, pps_bins, self.coord_fs)).astype(int)
-        #---------------------
-        #---------------------------------------------------------------
-
-        #--------------------------------------------------------------
-        # Resample the coordinates and their timestamps from their acquisition frequency to the freq_target.
-        ctime= self.resampling(ctime, spf_ctime, freq_target)
-        self.coord1_data = self.resampling(self.coord1_data, spf_ctime, freq_target)
-        self.coord2_data = self.resampling(self.coord2_data, spf_ctime, freq_target)
-        self.lst_data = self.resampling(self.lst_data, spf_ctime, freq_target)
-        self.lat_data = self.resampling(self.lat_data, spf_ctime, freq_target)
-        turnaround_flags = np.round(self.resampling(turnaround_flags, spf_ctime, freq_target)).astype(int)
-        #---------------------------------------------------------------
 
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
@@ -513,6 +453,66 @@ class frame_zoom_sync():
         dettime = self.resampling(dettime, spf_time, freq_target)
         #---------------------------------------------------------------
 
+       
+        #---------------------------------------------------------------
+        # Load the timestamps associated with the coordinates, latitude and lst. 
+        pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
+        pps -= pps.min()
+        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps', self.numframes, self.startframe) 
+        ctime  = pps+subsec 
+        turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
+        spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
+        # Load the pulse per second (pps). It indicates when, more precisely at which second, an element has been recorded. 
+        #---------------------------------------------------------------
+
+        #---------------------------------------------------------------
+        #Because the acquisition frequency is not an integer, some frames have more or fewer samples than others. 
+        #First, we cut the edge frames that dont have all their samples
+        #---------------------
+        bn = np.bincount(pps)
+        pps_bins = bn[bn>0]
+        if pps_bins[0] < self.coord_sample_frame:
+            pps = pps[pps_bins[0]:]
+            ctime = ctime[pps_bins[0]:]
+            self.coord1_data = self.coord1_data[pps_bins[0]:]
+            self.coord2_data = self.coord2_data[pps_bins[0]:]
+            self.lat_data = self.lat_data[pps_bins[0]:]
+            self.lst_data = self.lst_data[pps_bins[0]:]
+            turnaround_flags = turnaround_flags[pps_bins[0]:]
+        if pps_bins[-1] < self.coord_sample_frame:
+            pps = pps[:-pps_bins[-1]]
+            ctime = ctime[:-pps_bins[-1]]
+            self.coord1_data = self.coord1_data[:-pps_bins[-1]]
+            self.coord2_data = self.coord2_data[:-pps_bins[-1]]
+            self.lat_data = self.lat_data[:-pps_bins[-1]] 
+            self.lst_data = self.lst_data[:-pps_bins[-1]]
+            turnaround_flags = turnaround_flags[:-pps_bins[-1]]
+        #---------------------
+
+        #---------------------
+        #2nd, we put the right number of samples in the frames.  
+        bn = np.bincount(pps)
+        pps_bins = bn[bn>0]
+        
+        kidutils = det.kidsutils()
+        ctime = kidutils.interpolation_roach(ctime, pps_bins, self.coord_fs) 
+        self.coord1_data = kidutils.interpolation_roach(self.coord1_data, pps_bins, self.coord_fs)
+        self.coord2_data = kidutils.interpolation_roach(self.coord2_data, pps_bins, self.coord_fs)
+        self.lat_data = kidutils.interpolation_roach(self.lat_data, pps_bins, self.coord_fs)
+        self.lst_data = kidutils.interpolation_roach(self.lst_data, pps_bins, self.coord_fs)
+        turnaround_flags = np.round(kidutils.interpolation_roach(turnaround_flags, pps_bins, self.coord_fs)).astype(int)
+        #---------------------------------------------------------------
+
+        #--------------------------------------------------------------
+        # Resample the coordinates and their timestamps from their acquisition frequency to the freq_target.
+        ctime= self.resampling(ctime, spf_ctime, freq_target)
+        self.coord1_data = self.resampling(self.coord1_data, spf_ctime, freq_target)
+        self.coord2_data = self.resampling(self.coord2_data, spf_ctime, freq_target)
+        self.lst_data = self.resampling(self.lst_data, spf_ctime, freq_target)
+        self.lat_data = self.resampling(self.lat_data, spf_ctime, freq_target)
+        turnaround_flags = np.round(self.resampling(turnaround_flags, spf_ctime, freq_target)).astype(int)
+        #---------------------------------------------------------------
+
         #---------------------------------------------------------------
         #Get the data samples whose timestamps are shared with the coordinates timestamps
         ctime_start = ctime[0]
@@ -526,6 +526,7 @@ class frame_zoom_sync():
         for i in range(len(self.det_data)):
             self.det_data[i] = self.det_data[i][idx_roach_start[0]:idx_roach_end[0]]
         dettime = dettime[idx_roach_start[0]:idx_roach_end[0]]
+        #---------------------------------------------------------------
 
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
