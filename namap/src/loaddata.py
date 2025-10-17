@@ -155,7 +155,7 @@ class data_value():
         if(('spf' in f.keys()) and (num_frames is not None) and (first_frame is not None)):
             spf = f['spf'][()]
             #if(not 'roach' in field): data = f['data'][first_frame*spf:(first_frame+num_frames)*spf]
-            data = f['data'][first_frame*spf:(first_frame+num_frames)*spf]
+            data = f['data'][int(first_frame*spf):int((first_frame+num_frames)*spf)]
         else: 
             data = f['data'][()]
         H.close()
@@ -312,7 +312,7 @@ class frame_zoom_sync():
     def __init__(self, det_path, det_data,det_fs, det_sample_frame,\
                  coord1_data, coord2_data, coord_fs, coord_sample_frame, \
                  startframe, numframes, lst_data, lat_data, lstlat_fs, lstlat_sample_frame, \
-                 offset = None, roach_number= None, roach_pps_path= None, \
+                 DT, IT, offset = None, roach_number= None, roach_pps_path= None, \
                  hwp_sample_frame=None, xystage=False):
 
         self.det_path = det_path                                 #Path of the detector dirfile
@@ -329,6 +329,8 @@ class frame_zoom_sync():
         self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
         self.lstlatfreq = lstlat_fs                              #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
         self.lstlat_sample_frame = lstlat_sample_frame           #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
+        self.DT = DT
+        self.IT = IT
         if roach_number is not None:
             self.roach_number = int(float(roach_number))         #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
         else:
@@ -417,8 +419,12 @@ class frame_zoom_sync():
         #Load the timestamps and pulse per second of the data. 
         spf_time = data_value.loadspf(self.det_path, f'data_time')
         pps = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
+        pps = pps.astype(self.IT)
         pps -= pps.min()
+
+
         subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps', self.numframes, self.startframe) 
+        subsec = subsec.astype(self.DT)
         dettime = pps+subsec
         dettime -= dettime.min()
         #--------------------------------------------------------------
@@ -453,12 +459,13 @@ class frame_zoom_sync():
         dettime = self.resampling(dettime, spf_time, freq_target)
         #---------------------------------------------------------------
 
-       
         #---------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst. 
         pps = data_value.loaddata(self.det_path, f'coords_pps', self.numframes, self.startframe) 
+        pps = pps.astype(self.IT)
         pps -= pps.min()
         subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps', self.numframes, self.startframe) 
+        subsec = subsec.astype(self.DT)
         ctime  = pps+subsec 
         turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.numframes, self.startframe) 
         spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
