@@ -17,7 +17,7 @@ if(True):
     for res in results['profiling vs resolution']["resolution ['']"]:
 
         par = load_par_file(f'params_namap.par')
-        par['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec.hdf5' 
+        par['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
         par['cdelt'] = res/3600, res/3600
         par['frequencies'] = (715.0,) #GHz
 
