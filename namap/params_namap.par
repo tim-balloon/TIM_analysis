@@ -1,8 +1,10 @@
 #NAMAP parameters 
 
+precision = 'float64'
+
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec.hdf5' 
+hdf5_file = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = '/home/mvancuyck/Desktop/TODs_profiling/TIM_kid_table.tsv' 

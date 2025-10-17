@@ -40,6 +40,29 @@ def load_par_file(filepath):
 
 def main(P, nbdets=None):
 
+    #-----------------------------------------------------------------------------------------
+
+    _prec = str(P['precision'].lower())
+    dtype_map = {
+        '16': np.float16, 'float16': np.float16, 'half': np.float16,
+        '32': np.float32, 'float32': np.float32, 'single': np.float32,
+        '64': np.float64, 'float64': np.float64, 'double': np.float64
+    }
+
+    int_map = {
+        '16': np.int16, 'float16': np.int16, 'half': np.int16,
+        '32': np.int32, 'float32': np.int32, 'single': np.int32,
+        '64': np.int64, 'float64': np.int64, 'double': np.int64
+    }
+
+
+    try:
+        DT = dtype_map[_prec]
+        IT = int_map[_prec]
+    except KeyError:
+        raise ValueError(f"Unsupported precision '{_prec}'. Choose float16/32/64 or 16/32/64.")
+    print(f"Using numeric dtype: {DT}")
+    #-----------------------------------------------------------------------------------------
     #------------------------------------------------------------------------------------------
     #### start mathilde code 
     #---------------------------------
@@ -100,6 +123,17 @@ def main(P, nbdets=None):
     #Load the data
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
+
+
+    # cast arrays to chosen dtype where appropriate (only numeric arrays that participate in math)
+    # keep coordinates maybe float64 if you prefer higher-precision for astrometry, but it's up to you.
+    det_data = [arr.astype(DT, copy=False) for arr in det_data]
+    # If spf_data, acqfreq_data, etc. should be float type:
+    # if coord arrays used for indexing/geometry you might prefer float64:
+    coord1_data = np.asarray(coord1_data).astype(DT, copy=False)   
+    coord2_data = np.asarray(coord2_data).astype(DT, copy=False)
+    lst_data = np.asarray(lst_data).astype(DT, copy=False)
+    lat_data = np.asarray(lat_data).astype(DT, copy=False)
     #-------------------------------
 
     #---------------------------------
@@ -111,17 +145,25 @@ def main(P, nbdets=None):
     #---------------------------------
     zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
                                         coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                        lst_data, lat_data, acqfreq_lstlat, lat_spf, offset=0)
+                                        lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
 
-    
     timemap, cleaned_data, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
+
+    cleaned_data = [arr.astype(DT, copy=False) for arr in cleaned_data]
+    # If spf_data, acqfreq_data, etc. should be float type:
+    # if coord arrays used for indexing/geometry you might prefer float64:
+    timemap = np.asarray(timemap).astype(DT, copy=False)   
+    coord1slice = np.asarray(coord1slice).astype(DT, copy=False)   
+    coord2slice = np.asarray(coord2slice).astype(DT, copy=False)
+    lstslice = np.asarray(lstslice).astype(DT, copy=False)
+    latslice = np.asarray(latslice).astype(DT, copy=False)  
     #---------------------------------
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
     det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0)
     cleaned_data = det_tod.data_clean()
-
+    
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
@@ -132,9 +174,11 @@ def main(P, nbdets=None):
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
 
-
     corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
+
+    coord1slice = np.asarray(coord1slice).astype(DT, copy=False)   
+    coord2slice = np.asarray(coord2slice).astype(DT, copy=False)
     #---------------------------------
 
 
@@ -148,7 +192,8 @@ def main(P, nbdets=None):
             parallactic.append( tel.parallactic_angle() )
     else:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            parallactic.append( np.zeros_like(c1) )
+            parallactic.append(np.zeros_like(c1, dtype=DT))
+    
     #---------------------------------
 
     #--------------------
@@ -205,6 +250,8 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
 
     cli = parser.add_argument_group('Command Line Inputs')
     cli.add_argument('--params-file', required = False,  help='.par file containing parameters')
+    cli.add_argument('--precision', type=str, default='float64',
+                    help='Numeric precision: float16, float32, float64 (or 16/32/64)')
 
     # command line parameter possibilities:
 

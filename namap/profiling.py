@@ -6,7 +6,7 @@ from namap_main import *
 
 results = {}
 
-if(False): 
+if(True): 
         
     results['profiling vs resolution'] = {}
     results['profiling vs resolution']["resolution ['']"] = (10, 20, 30, 40, 50, 60)
