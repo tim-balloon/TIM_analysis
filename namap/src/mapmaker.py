@@ -5,6 +5,7 @@ from IPython import embed
 import os
 from astropy.io import fits
 import datetime
+import json
 
 class maps():
 
@@ -140,7 +141,7 @@ class maps():
             plt.savefig(path, transparent=True)
             #plt.show()
             '''
-            
+            #if(len(kid_num)  == 1280): embed()
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
             hdu = fits.HDUList([f])
             hdr = hdu[0].header
@@ -149,7 +150,7 @@ class maps():
             hdr["BITPIX"] = ("64", "array data type")
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-            hdr["INFO"] = self.params
+            hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
             hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+f'coadd.fits', overwrite=True)
             hdu.close()
 
