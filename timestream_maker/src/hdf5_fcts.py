@@ -2,8 +2,9 @@ import h5py
 import pandas as pd
 import os
 import numpy as np
+from IPython import embed
 
-def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="64bit"):
+def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="64bit", compression='gzip'):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -33,12 +34,13 @@ def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="6
         if(save=="32bit"): coord = (coord).astype(np.float32)
         elif(save=="16bit"): coord = (coord).astype(np.float16)
 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        if(compression is not None): grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        else: grp.create_dataset('data', data=coord, compression=compression)
         grp.create_dataset('spf', data=spf)
         grp.create_dataset('acquisition frequency', data=acquisition_frequency)
     H.close() 
 
-def save_timestamps(tod_file, T, spf, acquisition_frequency, key, save="64bit"):
+def save_timestamps(tod_file, T, spf, acquisition_frequency, key, compression='gzip',save="64bit"):
     '''
     Save the time tod in the .hdf5 format. 
 
@@ -66,13 +68,14 @@ def save_timestamps(tod_file, T, spf, acquisition_frequency, key, save="64bit"):
     if(save=="32bit"): T = (T).astype(np.float32)
     elif(save=="16bit"): T = (T).astype(np.float16)
     
-    grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
+    if(compression is not None): grp.create_dataset('data', data=T, compression=compression, compression_opts=9)
+    else: grp.create_dataset('data', data=T, compression=compression)
     grp.create_dataset('spf', data=spf)
     grp.create_dataset('acquisition frequency', data=acquisition_frequency)
 
     H.close()
 
-def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, save="64bit"):
+def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, compression='gzip',save="64bit"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
 
@@ -117,21 +120,27 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         if('acquisition frequency' in grp): del grp['acquisition frequency'] 
         if(save=="32bit"):
             sample = (samples[detector,:]).astype(np.float32)
-            grp.create_dataset('data', data=sample, compression='gzip', compression_opts=9)
+            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+            else: grp.create_dataset('data', data=sample, compression=compression)
+            
             grp.create_dataset('spf',   data=np.float32(spf))                  
             grp.create_dataset('pixel_offset_y', data=np.float32(offset))
             grp.create_dataset('pixel_offset_x', data=np.float32(shift))
             grp.create_dataset('acquisition frequency', data=np.float32(acquisition_frequency))
         elif(save=="16bit"):
             sample = (samples[detector,:]).astype(np.float16)
-            grp.create_dataset('data', data=sample, compression='gzip', compression_opts=9)
+            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+            else: grp.create_dataset('data', data=sample, compression=compression)
+
             grp.create_dataset('spf', data=np.float16(spf))
             grp.create_dataset('pixel_offset_y', data=np.float16(offset))
             grp.create_dataset('pixel_offset_x', data=np.float16(shift))
             grp.create_dataset('acquisition frequency', data=np.float16(acquisition_frequency))
         else: 
             sample = samples[detector,:]
-            grp.create_dataset('data', data=sample, compression='gzip', compression_opts=9)
+            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+            else: grp.create_dataset('data', data=sample, compression=compression)
+
             grp.create_dataset('spf', data=spf)
             grp.create_dataset('pixel_offset_y', data=offset)
             grp.create_dataset('pixel_offset_x', data=shift)
