@@ -240,7 +240,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, det_offset = np.array([0.,0.]),\
+    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.array([0.,0.]),\
                  lst = None, lat = None):
         
         """
@@ -274,6 +274,8 @@ class apply_offset(object):
         self.det_offset = det_offset            #Offset with respect to the central detector in xEL and EL
         self.lst = lst                          #Local Sideral Time array
         self.lat = lat                          #Latitude array
+        self.DT = DT
+        self.IT = IT
 
     def correction(self):
         """
@@ -304,7 +306,6 @@ class apply_offset(object):
         """  
         if self.ctype.lower() == 'ra and dec':
 
-    
             if(self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
@@ -314,10 +315,9 @@ class apply_offset(object):
                 el = self.coord2
                 az = np.degrees(np.radians(self.coord1)/np.cos(np.radians(el)))
 
-
             xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
-            ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
-            dec_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az)))
+            ra_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az))).astype(self.DT)
+            dec_corrected = np.zeros((int(np.size(self.det_offset)/2), len(az))).astype(self.DT)
 
             for i in range(int(np.size(self.det_offset)/2)):
                 
@@ -354,8 +354,8 @@ class apply_offset(object):
 
             xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
             cos_el = np.cos(np.radians(el))
-            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
-            az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
+            el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2))).astype(self.DT)
+            az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1))).astype(self.DT)
 
             for i in range(int(np.size(self.det_offset)/2)):
                 
@@ -366,9 +366,6 @@ class apply_offset(object):
 
                 az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
 
-                plt.plot(az_corrected[i, :], el_corrected[i, :])
-
-            plt.plot(self.coord1, self.coord1)
                
             return az_corrected, el_corrected
 

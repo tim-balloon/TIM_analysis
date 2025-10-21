@@ -1,6 +1,6 @@
 #NAMAP parameters 
 
-precision = 'float64'
+precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
@@ -16,7 +16,7 @@ detectors_to_use = None
 frequencies = (715.0, 719.0) #GHz
  
 Chose the data in the time dimension 
-num_frames=3500 #integration time in seconds to be loaded. 
+num_frames=100 #integration time in seconds to be loaded. 
 first_frame=0 #Starting time in second to loaded
 time_offset = 0 #Time offset between detector data and coordinates
 #----------------------------
@@ -45,9 +45,9 @@ pixnum = 100., 100. #Number of pixels along the two axis. The input needs to be 
 
 
 #--- Parameters for the pre-processing of the TODs ---
-highpassfreq = 0 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
-polynomialorder = 0 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
-despike = False #Despike flag. If called, two possible parameters can be explicited. 
+highpassfreq = 0.1 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
+polynomialorder = 5 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
+despike = True #Despike flag. If called, two possible parameters can be explicited. 
 sigma=5        #The first is the height in sigma unit for the peak, 
 prominence=5   #and the second is the prominence in sigma unit for the peak
 #-----------------------------------------------
@@ -57,6 +57,7 @@ prominence=5   #and the second is the prominence in sigma unit for the peak
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
 coadd = True
+output_map = 'coadd.fits' 
 
 #convolution by the beam
 gaussian_convolution = False #

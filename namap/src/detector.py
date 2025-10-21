@@ -521,7 +521,7 @@ class kidsutils():
 
         return np.sqrt(I**2+Q**2 )
 
-    def interpolation_roach(self, data, bins, sampling):
+    def interpolation_roach(self, data, bins, sampling, DT, IT):
 
         '''
         data: values that need to be interpolated
@@ -532,14 +532,38 @@ class kidsutils():
         Returns
         -------
         '''
-
+        """
         start = np.append(0, np.cumsum(bins[:-1]))
         end = np.cumsum(bins)
         ln = np.linspace(start, end-1, int(sampling))
         idx = np.reshape(np.transpose(ln), np.size(ln))
         idx_plus = np.append(idx[:-1]+1, idx[-1])
-        
         return (data[idx_plus.astype(int)]-data[idx.astype(int)])*(idx-idx.astype(int))+data[idx.astype(int)]
+        """
+        # Ensure bins are in DT
+        bins = np.array(bins, dtype=DT)
+        
+        # Start and end positions
+        start = np.append(DT(0), np.cumsum(bins[:-1], dtype=DT))
+        end = np.cumsum(bins, dtype=DT)
+        
+        # Linear spacing within each bin
+        ln = np.linspace(start, end - DT(1), int(sampling), dtype=DT)
+        
+        # Flatten index array
+        idx = np.reshape(np.transpose(ln), np.size(ln)).astype(DT)
+        
+        # idx_plus as integer indices for data access
+        idx_plus = np.append(idx[:-1] + DT(1), idx[-1]).astype(DT)
+        
+        # Integer indices for data
+        idx_int = idx.astype(DT)
+        
+        # Interpolation in chosen DT
+        
+        result = (data[idx_plus.astype(IT)] - data[idx_int.astype(IT)]) * (idx - idx_int) + data[idx_int.astype(IT)]
+
+        return result.astype(DT)
      
     def det_time(self, path, roach_number, frames, ctime_start, ctime_end, sampling):
         '''

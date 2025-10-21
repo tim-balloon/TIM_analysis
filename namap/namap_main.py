@@ -121,19 +121,8 @@ def main(P, nbdets=None):
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
-    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames, telemetry)
+    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT,telemetry)
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
-
-
-    # cast arrays to chosen dtype where appropriate (only numeric arrays that participate in math)
-    # keep coordinates maybe float64 if you prefer higher-precision for astrometry, but it's up to you.
-    det_data = [arr.astype(DT, copy=False) for arr in det_data]
-    # If spf_data, acqfreq_data, etc. should be float type:
-    # if coord arrays used for indexing/geometry you might prefer float64:
-    coord1_data = np.asarray(coord1_data).astype(DT, copy=False)   
-    coord2_data = np.asarray(coord2_data).astype(DT, copy=False)
-    lst_data = np.asarray(lst_data).astype(DT, copy=False)
-    lat_data = np.asarray(lat_data).astype(DT, copy=False)
     #-------------------------------
 
     #---------------------------------
@@ -149,20 +138,13 @@ def main(P, nbdets=None):
 
     timemap, cleaned_data, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
 
-    cleaned_data = [arr.astype(DT, copy=False) for arr in cleaned_data]
-    # If spf_data, acqfreq_data, etc. should be float type:
-    # if coord arrays used for indexing/geometry you might prefer float64:
-    timemap = np.asarray(timemap).astype(DT, copy=False)   
-    coord1slice = np.asarray(coord1slice).astype(DT, copy=False)   
-    coord2slice = np.asarray(coord2slice).astype(DT, copy=False)
-    lstslice = np.asarray(lstslice).astype(DT, copy=False)
-    latslice = np.asarray(latslice).astype(DT, copy=False)  
     #---------------------------------
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
     det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0)
     cleaned_data = det_tod.data_clean()
+
     
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
@@ -173,15 +155,10 @@ def main(P, nbdets=None):
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
-
-    corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, det_offset = det_off, lst = lstslice, lat = latslice, )
+    
+    corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lstslice, lat = latslice, )
     coord1slice, coord2slice = corr.correction()
-
-    coord1slice = np.asarray(coord1slice).astype(DT, copy=False)   
-    coord2slice = np.asarray(coord2slice).astype(DT, copy=False)
     #---------------------------------
-
-
 
     #--------------------
     #Need to be implemented ! So far, set parallactic angle to 0.
@@ -199,7 +176,7 @@ def main(P, nbdets=None):
     #--------------------
     #Create the maps
     maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
-                   cleaned_data, coord1slice, coord2slice, convolution, std, 
+                   cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
     
     maps.wcs_proj()

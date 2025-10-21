@@ -17,7 +17,7 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, coadd=False, noise=1., telcoord=False, parang=None, params=None):
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, noise=1., telcoord=False, parang=None, params=None):
         '''
         Create an instance of maps
         Parameters
@@ -42,6 +42,9 @@ class maps():
         self.noise = noise             #white level noise of detector(s)
         self.telcoord = telcoord       #If True the map is drawn in telescope coordinates. That means that the projected plane is rotated
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
+        self.output_file = output_file #Name under which to save the coadd map.
+        self.DT = DT
+        self.IT = IT
         if parang is not None:
             self.parang = [np.radians(p) for p in parang ] #Parallactic Angle. This is used to compute the pixel indices in telescopes coordinates
         else:
@@ -56,7 +59,7 @@ class maps():
         Returns
         -------
         '''
-        wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.telcoord)
+        wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.DT, self.IT,self.telcoord, )
         proj, w = wcsworld.world(self.coord1,self.coord2, self.parang)
         self.proj = proj
         self.w = w
@@ -70,7 +73,7 @@ class maps():
         Returns
         -------
         '''
-        mapmaker = mapmaking(self.data, self.noise, len(self.data), self.proj, self.coadd)
+        mapmaker = mapmaking(self.data, self.noise, len(self.data), self.proj, self.coadd, self.DT, self.IT)
         Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
 
         if not self.convolution: return Pow_map
@@ -141,7 +144,6 @@ class maps():
             plt.savefig(path, transparent=True)
             #plt.show()
             '''
-            #if(len(kid_num)  == 1280): embed()
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
             hdu = fits.HDUList([f])
             hdr = hdu[0].header
@@ -151,7 +153,7 @@ class maps():
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
             hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
-            hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+f'coadd.fits', overwrite=True)
+            hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
             hdu.close()
 
         else: 
@@ -186,7 +188,7 @@ class maps():
                 hdr["BITPIX"] = ("64", "array data type")
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+f'map_{name}.fits', overwrite=True)
+                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
                 hdu.close()
 
 class wcs_world():
@@ -199,13 +201,15 @@ class wcs_world():
     Returns
     -------
     '''
-    def __init__(self, ctype, crpix, cdelt, crval, telcoord=False):
+    def __init__(self, ctype, crpix, cdelt, crval, DT, IT, telcoord=False):
 
         self.ctype = ctype    #ctype of the map, which projection is used to convert coordinates to pixel numbers
         self.cdelt = cdelt  #cdelt of the map, distance in deg between two close pixels
         self.crpix = crpix    #crpix of the map, central pixel of the map in pixel coordinates
         self.crval = crval    #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
         self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
+        self.DT = DT
+        self.IT = IT
 
     def world(self, coord1, coord2, parang): 
         
@@ -237,12 +241,18 @@ class wcs_world():
         if self.ctype == 'RA and DEC':  w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
         elif self.ctype == 'AZ and EL': w.wcs.ctype = ["TLON-ARC", "TLAT-ARC"]
         elif self.ctype == 'CROSS-EL and EL': w.wcs.ctype = ["TLON-CAR", "TLAT-CAR"]
-
         world = []
+
         for c1,c2 in zip(coord1, coord2):
-            world.append( w.world_to_pixel_values(c1,c2) )
-        # w.world_to_pixel_values(pointing_paths[detector][:,0]+hdr['CRVAL1'], pointing_paths[detector][:,1])    
-        
+            #world.append( w.world_to_pixel_values(c1,c2) )
+
+            x_pix, y_pix = w.world_to_pixel_values(c1, c2)
+            
+            # Convert both arrays to DT
+            x_pix = np.array(x_pix, dtype=self.DT)
+            y_pix = np.array(y_pix, dtype=self.DT)
+            
+            world.append((x_pix, y_pix))        
         return world, w
 
 class mapmaking(object):
@@ -256,13 +266,16 @@ class mapmaking(object):
     
     '''
 
-    def __init__(self, data, weight, number, pixelmap, coadd):
+    def __init__(self, data, weight, number, pixelmap, coadd, DT, IT):
 
         self.data = data               #detector TOD
         self.weight = weight           #weights associated with the detector values
         self.number = number           #Number of detectors to be mapped
         self.pixelmap = pixelmap       #Coordinates of each point in the TOD in pixel coordinates
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
+        self.DT = DT
+        self.IT = IT
+
 
     def map_Ionly(self, coadd=False, value=None, noise=None, pixelmap = None):
         
@@ -281,7 +294,6 @@ class mapmaking(object):
         Returns
         -------
         '''
-
         if value is None: value = self.data.copy()
 
         if pixelmap is None: pixelmap = self.pixelmap.copy()
@@ -293,6 +305,7 @@ class mapmaking(object):
         Xmax = -np.inf
         Ymin = np.inf
         Ymax = -np.inf
+
 
         for i in range(self.number):
             idxpixel = self.pixelmap[i]
@@ -306,10 +319,10 @@ class mapmaking(object):
             Xmax = max(Xmax, xmax)
             Ymin = min(Ymin, ymin)
             Ymax = max(Ymax, ymax)
-            
+        
         edges = np.round((Xmin, Xmax, Ymin, Ymax))
-        X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1)        
-        Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1)        
+        X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
+        Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT)        
 
         samples = []
         coord1samples = []
@@ -329,6 +342,7 @@ class mapmaking(object):
             w = np.where(hits>0)
             flux[w] /= hits[w]
             individual_maps.append(flux.T)
+
 
         if not coadd: return individual_maps
         else: 
