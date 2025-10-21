@@ -154,14 +154,14 @@ def main_1det(P):
     #Save timestreams in a .hdf5 file 
     #save_PA(tod_file, np.degrees(pa), spf)
     #save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'), save=P['format'])
-    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'), save=P['format'])
-    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'), save=P['format'])
-    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'), save=P['format'])
-    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time', save=P['format'])
-    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps',save=P['format'])
-    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps',save=P['format'])
-    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags', save=P['format'])
+    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'), save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time', save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps',save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps',save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags', save=P['format'], compression=P['compression'])
     #-------------------------------------------
 
     #----------------------------------------
@@ -189,14 +189,14 @@ def main_1det(P):
     #spf_prime = spf
     #acquisition_frequency_prime = acquisition_frequency
 
-    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'])
-    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'])
-    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'])
-    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'])
-    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'])
-    save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'])
-    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'])
-    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'])
+    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'],compression=P['compression'])
 
 
 if __name__ == "__main__":
