@@ -11,7 +11,7 @@ import pstats
 import matplotlib.pyplot as plt
 import sysconfig, site, os
 
-path = '/home/mvancuyck/Desktop/TODs_profiling/namap_perf_profiling.p'
+path = 'TODs_profiling/namap_perf_profiling.p'
 
 if os.path.exists(path):
     with open(path, 'rb') as f:
@@ -36,7 +36,7 @@ if(True):
         for res in results['profiling vs resolution']["resolution ['']"]:
 
             par = load_par_file(f'params_namap.par')
-            par['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+            par['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
             par['cdelt'] = res/3600, res/3600
             par['frequencies'] = (715.0,) #GHz
             par['precision'] = precision
@@ -81,7 +81,7 @@ if(True):
         for nb in results['profiling vs nb of detectors']["nb detectors"]:
 
             par = load_par_file(f'params_namap.par')
-            par['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+            par['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
             par['cdelt'] = 40/3600, 40/3600
             par['frequencies'] = (715.0,) #GHz
             par['precision'] = precision
@@ -127,7 +127,7 @@ if(True):
             freq_list = 715.0 + 4.0 * np.arange(nb)
 
             par = load_par_file(f'params_namap.par')
-            par['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+            par['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
             par['cdelt'] = 40/3600, 40/3600
             par['frequencies'] = freq_list
             par['precision'] = precision
@@ -170,7 +170,7 @@ if(True):
         for t in results[key]["t_int"]:
 
             par = load_par_file(f'params_namap.par')
-            par['hdf5_file'] = f'/home/mvancuyck/Desktop/TODs_profiling/TOD_0h{t}min0sec_64bits_488Hz.hdf5' 
+            par['hdf5_file'] = f'TODs_profiling/TOD_0h{t}min0sec_64bits_488Hz.hdf5' 
             par['cdelt'] = 40/3600, 40/3600
             par['frequencies'] = (715.0,) #GHz        
             par['precision'] = precision
@@ -197,7 +197,7 @@ if(True):
             results[key][precision]['time [s]'].append(timing)
             results[key][precision]['output size [MB]'].append(file_size_mb)
 
-if(False): 
+if(True): 
 
     key = 'profiling fcts'
     results.setdefault(key, {})
@@ -207,7 +207,7 @@ if(False):
         results[key][precision] = {}
 
         P = load_par_file(f'params_namap.par')
-        P['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+        P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
         P['cdelt'] = 40/3600, 40/3600
         freq_list = 715.0 + 4.0 * np.arange(63)
         P['frequencies'] = freq_list
@@ -537,7 +537,7 @@ if(False):
 if(False):
 
     P = load_par_file(f'params_namap.par')
-    P['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+    P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
     P['cdelt'] = 40/3600, 40/3600
     freq_list = 715.0 + 4.0 * np.arange(63)
     P['frequencies'] = freq_list
@@ -558,7 +558,7 @@ if(False):
     profiler.dump_stats("main_profile.prof")
     
 
-    MYCODE_PATH = "/home/mvancuyck/Desktop/TIM_analysis/namap/"  # <-- change this to your code path
+    MYCODE_PATH = "TIM_analysis/namap/"  # <-- change this to your code path
 
     # ---- Filter only your code (exclude stdlib & site-packages) ----
     stdlib_dir = sysconfig.get_path('stdlib')
@@ -598,7 +598,7 @@ if(False):
     import tracemalloc
 
     P = load_par_file(f'params_namap.par')
-    P['hdf5_file'] = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+    P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
     P['cdelt'] = 40/3600, 40/3600
     freq_list = 715.0 + 4.0 * np.arange(63)
     #P['frequencies'] = freq_list
