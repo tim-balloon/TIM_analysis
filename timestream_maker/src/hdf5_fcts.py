@@ -120,17 +120,26 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         if('acquisition frequency' in grp): del grp['acquisition frequency'] 
         if(save=="32bit"):
             sample = (samples[detector,:]).astype(np.float32)
-            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
-            else: grp.create_dataset('data', data=sample, compression=compression)
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression, compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
             
             grp.create_dataset('spf',   data=np.float32(spf))                  
             grp.create_dataset('pixel_offset_y', data=np.float32(offset))
             grp.create_dataset('pixel_offset_x', data=np.float32(shift))
             grp.create_dataset('acquisition frequency', data=np.float32(acquisition_frequency))
         elif(save=="16bit"):
+
             sample = (samples[detector,:]).astype(np.float16)
-            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
-            else: grp.create_dataset('data', data=sample, compression=compression)
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression,compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
 
             grp.create_dataset('spf', data=np.float16(spf))
             grp.create_dataset('pixel_offset_y', data=np.float16(offset))
@@ -138,8 +147,13 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
             grp.create_dataset('acquisition frequency', data=np.float16(acquisition_frequency))
         else: 
             sample = samples[detector,:]
-            if(compression is not None): grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
-            else: grp.create_dataset('data', data=sample, compression=compression)
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression,compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
+
 
             grp.create_dataset('spf', data=spf)
             grp.create_dataset('pixel_offset_y', data=offset)

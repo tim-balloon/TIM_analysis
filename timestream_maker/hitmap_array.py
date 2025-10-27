@@ -106,7 +106,7 @@ def main_arrays(P):
     axpix.set_ylabel('Dec [deg]')
     fig.tight_layout()
     plt.savefig(os.getcwd()+'/plot/'+f"scan_route_{P['scan']}_{format_duration(P['T_duration'])}_for_array.png")
-    plt.close()
+    plt.show()
     #----------------------------------------
 
     #-------------------------------
