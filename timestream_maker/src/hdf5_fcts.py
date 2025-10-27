@@ -118,6 +118,7 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         if('pixel_offset_x' in grp): del grp['pixel_offset_x'] 
         if('frequency' in grp): del grp['frequency'] 
         if('acquisition frequency' in grp): del grp['acquisition frequency'] 
+
         if(save=="32bit"):
             sample = (samples[detector,:]).astype(np.float32)
             if(compression is not None): 
