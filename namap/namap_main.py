@@ -132,12 +132,12 @@ def main(P, nbdets=None):
     #---------------------------------
                 
     #---------------------------------
-    zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
-                                        coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                        lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
+    if(len(cleaned_data[0]) != len(coord1_data)):
+        zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
+                                            coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
+                                            lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
 
-    timemap, cleaned_data, coord1slice, coord2slice, lstslice, latslice = zoomsyncdata.sync_data()  
-
+        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data = zoomsyncdata.sync_data()  
     #---------------------------------
 
     #---------------------------------
@@ -156,7 +156,7 @@ def main(P, nbdets=None):
     #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
     #xsc_offset = xsc_file.read_file()
     
-    corr = pt.apply_offset(P['input_ctype'], coord1slice, coord2slice, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lstslice, lat = latslice, )
+    corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
     coord1slice, coord2slice = corr.correction()
     #---------------------------------
 

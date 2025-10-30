@@ -16,9 +16,8 @@ detectors_to_use = None
 frequencies = (715.0, 719.0) #GHz
  
 Chose the data in the time dimension 
-num_frames=100 #integration time in seconds to be loaded. 
+num_frames=180 #integration time in seconds to be loaded. 
 first_frame=0 #Starting time in second to loaded
-time_offset = 0 #Time offset between detector data and coordinates
 #----------------------------
 
 #--- Astrometry Parameters ---
