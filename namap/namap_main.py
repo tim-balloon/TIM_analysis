@@ -130,7 +130,7 @@ def main(P, nbdets=None):
     det_tod = tod.data_cleaned(det_data, spf_data, kid_num, 0, 0, despike_bool, sigma, prominence)
     cleaned_data = det_tod.data_clean()
     #---------------------------------
-                
+
     #---------------------------------
     if(len(cleaned_data[0]) != len(coord1_data)):
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
