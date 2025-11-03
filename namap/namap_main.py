@@ -132,7 +132,8 @@ def main(P, nbdets=None):
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data)):
+    if(len(cleaned_data[0]) != len(coord1_data) or not P['bypass_synch']):
+        
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
                                             coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
                                             lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
@@ -165,7 +166,7 @@ def main(P, nbdets=None):
     parallactic=[]
     if P['telescope_coordinate']:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            tel = pt.utils(c1, c2, lstslice, latslice)
+            tel = pt.utils(c1, c2, lst_data, lat_data)
             parallactic.append( tel.parallactic_angle() )
     else:
         for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
