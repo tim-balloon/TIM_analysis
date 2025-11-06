@@ -212,7 +212,6 @@ if __name__ == "__main__":
     hdul = fits.HDUList(hdus)
     hdul.writeto(f'fits_and_hdf5/noisy_cubes_{P["file"][:-5]}.fits', overwrite=True)
     hdul.close()
-    print('save '+f'fits_and_hdf5/noisy_cubes_{P["file"][:-5]}.fits')
     #-----------------------------------------
 
     #To open all the extensions with ds9:

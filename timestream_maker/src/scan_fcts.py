@@ -184,6 +184,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
     #acc_alt = np.concatenate((acc_alt, -1 * acc_alt))  # Repeat for downward scan
     acc_alt = np.concatenate((acc_alt, np.zeros_like(acc_alt)))  # No altitude change on the leftward scan
     acc_alt = np.tile(acc_alt, vertical_steps)
+    acc_alt[:int(turn_time/dt)] = 0 #np.concatenate((flat_alt_block, acc_alt))
 
     #Compute Azimuth (az) and Altitude (alt) Coordinates:
     #Computed by integrating acceleration to get velocity, then integrating velocity to get position.
@@ -365,6 +366,40 @@ def genScanPath(T, dt, alt, az, flag ):
 
     return coor, flag_full
 
+
+def genScanPath_original(T, alt, az, flag, plot=False):
+    """    
+    Function that generates the pointing coordinates vs time.
+
+    Parameters
+    ----------
+    T: array
+        time stream
+    az: array
+        azimuth scan path coordinates, in degrees
+    alt: array
+        altitude scan path coordinates, in degrees
+    flag: array
+        constant scan speed part. 
+    Returns
+    -------
+    coor: 2d array
+        coordinates in degrees
+    flag: array
+        constant scan speed part. 
+    """ 
+
+    coor = np.zeros((len(T),2))
+
+    idx = np.int_(np.fmod(T,len(alt)/100)*100)
+    
+    coor[:,0] = az[idx]-np.mean(az)
+    coor[:,1] = alt[idx]-np.mean(alt)
+    flag      = flag[idx]
+    
+    return coor,flag
+
+
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
     Function that  gernerates the pixel offset vs pointing center
@@ -431,11 +466,11 @@ def genPointingPath(T, scan_path, HA, lat, dec, offsets = np.zeros(2), azel=Fals
 
     x_el = azi * np.cos(alt) - np.radians(offsets[0])
     azi = x_el / np.cos(alt)
-    alt += +np.radians(offsets[1])
+    
+    alt += np.radians(offsets[1])
 
     dec_point = declinationAngle(np.degrees(azi), np.degrees(alt), lat)
     ha_point  = hourAngle(       np.degrees(azi), np.degrees(alt), lat)
-
 
     ra = (HA*np.pi/12-ha_point)
     ra_unwrapped = np.unwrap(ra) #( ra + np.pi) % (2 * np.pi) - np.pi
