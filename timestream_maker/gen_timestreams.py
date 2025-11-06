@@ -13,7 +13,7 @@ import matplotlib.patches as mpatches
 from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
 from astropy.wcs import WCS
-
+import datetime
 from IPython import embed
 
 def add_polynome_to_timestream(timestream, time, order=1, percent_scale=30, random_coeffs=True):
@@ -197,6 +197,10 @@ def main_tod(P):
 
     for array_name, array, freqs_array in zip( ('SW', 'LW'), (SW, LW),
                                    (freqs[:P['nb_channels_per_array']], freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ])):
+        
+        cube_simu= []
+        cube_obs = []
+        cube_hits = []
 
         #------------------------------------------------------------------
         # Group by (XEL, EL), keeping both the group keys and names
@@ -243,10 +247,13 @@ def main_tod(P):
             F = f
             if(array_name=='LW'): F += P['nb_channels_per_array'] 
             Map = cube[F,:,:]
+            cube_simu.append(Map)
             #----------------------------------------
 
             #----------------------------------------
-            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save, T=T)
+            hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save, T=None)
+            cube_obs.append(hist)
+            cube_hits.append(norm)
             #----------------------------------------
 
             #----------------------------------------
@@ -265,12 +272,32 @@ def main_tod(P):
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
             plt.close()
-            #----------------------------------------
 
+            #----------------------------------------
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, save=P['format'], compression=P['compression'])
-            
             bar.next()
         #------------------------------------------------------------------
+
+
+        # ------------------ Save FITS --------------------
+        hdr_out = hdr
+        hdr_out["DATE"]  = str(datetime.datetime.now())
+        hdr_out["COMMENT"] = f'dt={dt:.3f}s'
+
+        hdr_norm = hdr_out.copy()
+        hdr_norm["BUNIT"] = "counts"
+
+        hdus = [
+            fits.PrimaryHDU(cube_simu, header=hdr_out),
+            fits.ImageHDU(cube_obs, header=hdr_out,   name="SCANNED"),
+            fits.ImageHDU(cube_hits, header=hdr_norm, name="HITMAP")
+        ]
+        
+        hdul = fits.HDUList(hdus)
+        savepath = f'fits_and_hdf5/scanned_map_{P["output_name"][:-5]}_{array_name}.fits'
+        hdul.writeto(savepath, overwrite=True)
+        print("saved ", savepath)
+
         bar.finish
         print('')
         
