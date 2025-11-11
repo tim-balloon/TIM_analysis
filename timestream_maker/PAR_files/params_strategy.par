@@ -25,8 +25,8 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_duration = 1
-acquisition_frequency = 100
-acquisition_frequency_coords = 100
+acquisition_frequency = 488.3
+acquisition_frequency_coords = 110
 #---------------------------
 
 #----- Sky simulation -----
@@ -34,8 +34,8 @@ acquisition_frequency_coords = 100
 path = 'fits_and_hdf5/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
 output_path = './'
-output_name = 'TOD1.hdf5' 
-format = '64bit' #64,32,16
+output_name = 'TODref_64bytes.hdf5' 
+format = '64bytes' #64,32,16
 compression='gzip' #None, 'gzip'
 
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation

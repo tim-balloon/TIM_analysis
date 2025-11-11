@@ -65,7 +65,7 @@ def main_1det(P):
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='gittering'): az, alt, flag = genLocalPath_gittering(az_size=P['az_size'], vertical_steps=P['vertical_steps'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3), N=P['N_scans'])
-
+    
     scan_path, scan_flag = genScanPath(T,dt, alt, az, flag)
 
     if(P['cut_turnarounds']):
