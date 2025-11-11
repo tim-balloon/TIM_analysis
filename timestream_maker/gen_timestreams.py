@@ -273,6 +273,7 @@ def main_tod(P):
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
             plt.close()
 
+
             #----------------------------------------
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, save=P['format'], compression=P['compression'])
             bar.next()
