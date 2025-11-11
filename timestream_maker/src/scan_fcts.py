@@ -151,6 +151,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
     #----
     #Compute Number of Vertical Steps 
     vertical_steps = int(alt_size//alt_step) 
+    print(vertical_steps)
 
     #Compute Time for Scan and Turns
     scan_time = az_size/scan_v #Time required to cover the full azimuth range at scan_v
@@ -164,8 +165,7 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
     az_acc = np.tile(az_acc,vertical_steps)
 
     #Compute the Altitude Acceleration
-    if(vertical_steps >1): acc_alt_value =  alt_step/(turn_time/2)**2   
-    else: acc_alt_value = 0
+    acc_alt_value =  alt_step/(turn_time/2)**2   
 
     #Generate Altitude Acceleration Pattern (acc_alt)
     #The altitude changes slightly during turns, using a small acceleration.
@@ -175,9 +175,6 @@ def genLocalPath_cst_el_scan(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.0
             np.ones(int(turn_time / dt / 2)) * -acc_alt_value
         ]), 1
     )
-
-    #0.01
-
 
     # Ensure no extra oscillation at the ends of azimuth scan
     acc_alt = np.concatenate((oscillation, np.zeros(int(scan_time / dt))))
@@ -256,6 +253,7 @@ def genLocalPath_gittering(az_size = 1, vertical_steps=2, alt_step=0.02, acc = 0
 
     az_acc = np.tile(az_acc,vertical_steps)
     acc_alt = np.tile(acc_alt, vertical_steps)
+    acc_alt[:int(turn_time/dt)] = 0 #np.concatenate((flat_alt_block, acc_alt))
 
     #------------------------------------------------------------
 
