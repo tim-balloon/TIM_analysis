@@ -487,7 +487,6 @@ class frame_zoom_sync():
             latitude TOD.
         '''
 
-        print('IN SYNC')
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
         spf_time = data_value.loadspf(self.det_path, f'data_time', self.DT)
