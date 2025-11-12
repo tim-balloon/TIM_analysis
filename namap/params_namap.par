@@ -4,7 +4,7 @@ precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = '/home/mvancuyck/Desktop/TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
+hdf5_file = 'TODref_64B.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = '/home/mvancuyck/Desktop/TODs_profiling/TIM_kid_table.tsv' 
@@ -55,8 +55,8 @@ prominence=5   #and the second is the prominence in sigma unit for the peak
 #--- Parameters for the post-processing of the TODs and the map ---
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
-coadd = True
-output_map = 'coadd.fits' 
+coadd = False
+output_map = 'individual.fits' 
 
 #convolution by the beam
 gaussian_convolution = False #

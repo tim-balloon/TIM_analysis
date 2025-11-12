@@ -157,6 +157,10 @@ class maps():
             hdu.close()
 
         else: 
+            filename = self.output_file
+            name_before_fits = filename.rsplit('.fits', 1)[0]
+            fits_and_after = filename[filename.find('.fits'):]  
+
             for m, name in zip(data_maps, kid_num): 
 
                 '''
@@ -178,7 +182,6 @@ class maps():
                 #else: plt.close()
                 plt.show()
                 '''
-
                 f = fits.PrimaryHDU(m, header=self.w.to_header())
                 hdu = fits.HDUList([f])
                 hdr = hdu[0].header
@@ -188,7 +191,8 @@ class maps():
                 hdr["BITPIX"] = ("64", "array data type")
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
+
+                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
                 hdu.close()
 
 class wcs_world():
