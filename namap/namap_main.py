@@ -176,7 +176,11 @@ def main(P, nbdets=None):
 
     #--------------------
     #Create the maps
-    maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+    maps = mp.maps(P['ctype'], 
+                   np.asarray([P['crpix'][0],P['crpix'][1]]), 
+                   np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
+                   np.asarray([P['crval'][0], P['crval'][1]]), 
+                   np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                    cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
     
