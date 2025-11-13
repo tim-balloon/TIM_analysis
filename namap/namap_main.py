@@ -145,12 +145,18 @@ def main(P, nbdets=None):
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
     det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0)
     cleaned_data = det_tod.data_clean()
-
     
     #Apply detector's response
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
 
+    if(P['save_down_sampled_TODS']):
+
+        tods_compressor = ld.compress_tods(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
+                                            coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
+                                            lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
+        
+        tods_compressor.save_tods()
     #---------------------------------
     #Offset with respect to star cameras in xEL and EL
     xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
