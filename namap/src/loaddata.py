@@ -11,6 +11,9 @@ from scipy.interpolate import PchipInterpolator
 from scipy.signal import resample_poly
 from fractions import Fraction
 from scipy.signal import resample
+import h5py
+import os
+import shutil
 
 def load_params(path):
     """
@@ -306,6 +309,77 @@ class det_table():
 
 
         return det_off, noise, resp
+
+class compress_tods():
+
+    '''
+    '''
+
+    def __init__(self, tods_path, det_data,det_fs, det_sample_frame,\
+                 coord1_data, coord2_data, coord_fs, coord_sample_frame, \
+                 startframe, numframes, lst_data, lat_data, lstlat_fs, lstlat_sample_frame, \
+                 DT, IT, offset = None, roach_number= None, roach_pps_path= None, \
+                 hwp_sample_frame=None, xystage=False):
+
+        self.tods_path = tods_path                                 #Path of the detector dirfile
+        self.det_data = det_data                             #Detector data timestream
+        self.det_fs = float(det_fs)                              #Detector frequency sampling
+        self.det_sample_frame = int(float(det_sample_frame))     #Detector samples in each frame of the timestream
+        self.coord1_data = coord1_data                           #Coordinate 1 data timestream
+        self.coord_fs = float(coord_fs)                          #Coordinates frequency sampling
+        self.coord_sample_frame = int(float(coord_sample_frame)) #Coordinates samples in each frame of the time stream
+        self.coord2_data = coord2_data                           #Coordinate 2 data timestream
+        self.startframe = int(float(startframe))                 #Start frame
+        self.numframes = int(float(numframes))                   #Number of frames
+        self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
+        self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
+        self.lstlatfreq = lstlat_fs                              #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
+        self.lstlat_sample_frame = lstlat_sample_frame           #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
+        self.DT = DT
+        self.IT = IT
+        if roach_number is not None:
+            self.roach_number = int(float(roach_number))         #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
+        else:
+            self.roach_number = roach_number
+        self.roach_pps_path = roach_pps_path                     #Pulse per second of the roach used to sync the data
+        self.offset = offset                                     #Time offset between detector data and coordinates
+        self.DT=DT #Float precision required 
+        self.IT=IT #Int precision required 
+
+    def save_tods(self):
+
+        return 0
+    
+    def save_scan_path(self):
+
+        temp_filename = self.tods_path + ".tmp"
+
+        try:
+            # Step 1 — Copy the existing file to a temporary one
+            shutil.copy2(self.tods_path, temp_filename)
+
+            # Step 2 — Open the temporary file in append mode and modify it
+            with h5py.File(temp_filename, "a") as f:
+                f.create_dataset("new_data", data=[1, 2, 3])  # example element
+
+            # Step 3 — Replace the original only after successful write
+            os.replace(temp_filename, self.tods_path)
+
+        except Exception as e:
+            print("Error occurred:", e)
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+
+        return 0
+    
+    def save_data_tods():
+
+        return 0
+
+    def save_timestamps():
+
+        return 0
+
 
 class frame_zoom_sync():
 

@@ -187,7 +187,7 @@ class maps():
                 hdr = hdu[0].header
                 hdr.set("map")
                 hdr.set("Datas")
-                hdr["INFO"] = self.params
+                hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
                 hdr["BITPIX"] = ("64", "array data type")
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
