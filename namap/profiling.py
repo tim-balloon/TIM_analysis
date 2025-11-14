@@ -64,7 +64,16 @@ def simulate_celeron_system():
     mem_mock = mock.patch("psutil.virtual_memory", return_value=fake_mem)
     return cpu_mock, mem_mock
 
-def profiling_functions():
+
+def test_IV():
+
+    path = 'fits_and_hdf5/namap_perf_profiling_fcts.p'
+
+    if os.path.exists(path):
+        with open(path, 'rb') as f:
+            results = pickle.load(f)
+    else:
+        results = {}
 
     key = 'profiling fcts'
     results.setdefault(key, {})
@@ -74,12 +83,11 @@ def profiling_functions():
         results[key][precision] = {}
 
         P = load_par_file(f'params_namap.par')
-        P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
         P['cdelt'] = 40/3600, 40/3600
-        freq_list = 715.0 + 4.0 * np.arange(63)
+        freq_list = 715.0 + 4.0 * np.arange(16)
         P['frequencies'] = freq_list
-        #P['frequencies'] = (715.0,) #GHz
         P['precision'] = precision
+        P['num_frames'] = 5*60
 
         #---------------- Precision -----------------------#
         _prec = str(P['precision'].lower())
@@ -153,6 +161,7 @@ def profiling_functions():
 
         #-------------------------------------------------------------------------------------------------------------------------
         results[key][precision]['loaddata'] = {}
+
         start = time.time()
         for i in range(10):
             #Load the data
@@ -227,91 +236,6 @@ def profiling_functions():
 
     
         #---------------------------------
-        results[key][precision]['zoom_sync_v2'] = {}
-        start = time.time()
-        for i in range(10):
-            
-            cl = copy.deepcopy(DATA)
-            zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-
-            _, _, _, _, _, _ = zoomsyncdata.sync_data_v2()  
-            
-        end = time.time()
-        timing = end - start
-        results[key][precision]['zoom_sync_v2']['time [s]'] = timing / 10-time_deepcopy
-        
-        cl = copy.deepcopy(DATA)
-        tracemalloc.start()
-        zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-        _, _, _, _, _, _ = zoomsyncdata.sync_data_v2()  
-        current, peak = tracemalloc.get_traced_memory()
-        results[key][precision]['zoom_sync_v2']['peak memory [MB]'] = peak/1e6
-        tracemalloc.stop()        
-        #---------------------------------
-
-
-        #---------------------------------
-        results[key][precision]['zoom_sync_v3'] = {}
-        start = time.time()
-        for i in range(10):
-            
-            cl = copy.deepcopy(DATA)
-            zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-
-            _, _, _, _, _, _ = zoomsyncdata.sync_data_v3()  
-            
-        end = time.time()
-        timing = end - start
-        results[key][precision]['zoom_sync_v3']['time [s]'] = timing / 10-time_deepcopy
-        
-        cl = copy.deepcopy(DATA)
-        tracemalloc.start()
-        zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-        _, _, _, _, _, _ = zoomsyncdata.sync_data_v3()  
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        results[key][precision]['zoom_sync_v3']['peak memory [MB]'] = peak/1e6
-        
-        #---------------------------------
-
-
-        #---------------------------------
-        results[key][precision]['zoom_sync_v4'] = {}
-        start = time.time()
-        for i in range(10):
-            
-            cl = copy.deepcopy(DATA)
-            zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-
-            _, _, _, _, _, _ = zoomsyncdata.sync_data_v4()  
-            
-        end = time.time()
-        timing = end - start
-        results[key][precision]['zoom_sync_v4']['time [s]'] = timing / 10-time_deepcopy
-        
-        cl = copy.deepcopy(DATA)
-        tracemalloc.start()
-        zoomsyncdata = ld.frame_zoom_sync(filepath, cl, acqfreq_data, spf_data,  coord1_data, 
-                                                coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                                lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-        _, _, _, _, _, _ = zoomsyncdata.sync_data_v4()  
-        current, peak = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        results[key][precision]['zoom_sync_v4']['peak memory [MB]'] = peak/1e6
-        #--------------------------------
-
-
-        #---------------------------------
         results[key][precision]['polynome_fft_filter'] = {}
         
         start = time.time()
@@ -373,12 +297,12 @@ def profiling_functions():
 
         #--------------------
                 
-        results[key][precision]['map_making'] = {}
+        results[key][precision]['map_making_coadd'] = {}
         start = time.time()
         for i in range(10):
             maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                         cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                        coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+                        coadd=True, noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
             
             maps.wcs_proj()
             map_values = maps.map2d()
@@ -386,102 +310,54 @@ def profiling_functions():
 
         end = time.time()
         timing = end - start
-        results[key][precision]['map_making']['time [s]'] = timing / 10
+        results[key][precision]['map_making_coadd']['time [s]'] = timing / 10
 
         tracemalloc.start()
         #Clean the TOD by removing smooth polynomial component and apply a high pass filter
         #Create the maps
         maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                     cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+                    coadd=True, noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
         maps.wcs_proj()
         map_values = maps.map2d()
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        results[key][precision]['map_making']['peak memory [MB]'] = peak/1e6
+        results[key][precision]['map_making_coadd']['peak memory [MB]'] = peak/1e6
 
-    if(False):
+        #---------------------------------
 
-        P = load_par_file(f'params_namap.par')
-        P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
-        P['cdelt'] = 40/3600, 40/3600
-        freq_list = 715.0 + 4.0 * np.arange(63)
-        P['frequencies'] = freq_list
-        P['frequencies'] = (715.0,) #GHz
-        P['precision'] = 'float32'
+        #--------------------
+                
+        results[key][precision]['map_making_indiv'] = {}
+        start = time.time()
+        for i in range(10):
+            maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+                        cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
+                        coadd=False, noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+            
+            maps.wcs_proj()
+            map_values = maps.map2d()
+            maps.map_plot(data_maps = map_values, kid_num=kid_num)
 
-        # Run main() under cProfile
-        profiler = cProfile.Profile()
-        profiler.enable()
-        main(P)
-        profiler.disable()
+        end = time.time()
+        timing = end - start
+        results[key][precision]['map_making_indiv']['time [s]'] = timing / 10
 
-        # Print the stats
-        stats = pstats.Stats(profiler)
-        stats.strip_dirs()       # remove extraneous path info
-        stats.sort_stats('cumulative')  # sort by cumulative time
-        stats.print_stats(50)    # print top 50 functions
-        profiler.dump_stats("main_profile.prof")
-        
+        tracemalloc.start()
+        #Clean the TOD by removing smooth polynomial component and apply a high pass filter
+        #Create the maps
+        maps = mp.maps(P['ctype'], np.asarray([P['crpix'][0],P['crpix'][1]]), np.asarray([P['cdelt'][0],P['cdelt'][1]]), np.asarray([P['crval'][0], P['crval'][1]]), np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+                    cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
+                    coadd=False, noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+        maps.wcs_proj()
+        map_values = maps.map2d()
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        results[key][precision]['map_making_indiv']['peak memory [MB]'] = peak/1e6
 
-        MYCODE_PATH = "TIM_analysis/namap/"  # <-- change this to your code path
-
-        # ---- Filter only your code (exclude stdlib & site-packages) ----
-        stdlib_dir = sysconfig.get_path('stdlib')
-        site_dir = site.getsitepackages()[0]
-
-        func_names = []
-        cum_times = []
-
-        for func, (cc, nc, tt, ct, callers) in stats.stats.items():
-            filename, line, funcname = func
-            if('main' in funcname ): continue
-            if not (filename.startswith(stdlib_dir) or filename.startswith(site_dir)):
-
-                func_names.append(f"{os.path.basename(filename)}:{funcname}")
-                print(f"{os.path.basename(filename)}:{funcname}")
-                cum_times.append(ct)
-
-        # ---- Sort by cumulative time (descending) ----
-        sorted_pairs = sorted(zip(cum_times, func_names), reverse=True)
-        cum_times, func_names = zip(*sorted_pairs)
-
-        # ---- Plot ----
-        plt.figure(figsize=(10, 6))
-        plt.barh(func_names[:20], cum_times[:20])  # top 20
-        plt.gca().invert_yaxis()  # most time-consuming at top
-        plt.xlabel("Cumulative time (s)")
-        plt.ylabel("Function")
-        plt.title("Top Functions by Cumulative Execution Time")
-        plt.tight_layout()
-        plt.show()
-        #Profile specific sub-functions individually by wrapping them in cProfile.Profile().
-        #pip install snakeviz
-        #snakeviz main_profile.prof
-
-if(False): 
-
-    import tracemalloc
-
-    P = load_par_file(f'params_namap.par')
-    P['hdf5_file'] = 'TODs_profiling/TOD_0h3min0sec_64bits_488Hz.hdf5' 
-    P['cdelt'] = 40/3600, 40/3600
-    freq_list = 715.0 + 4.0 * np.arange(63)
-    #P['frequencies'] = freq_list
-    P['frequencies'] = (715.0,) #GHz
-    P['precision'] = 'float32'
-
-    tracemalloc.start()
-    main(P)
-    snapshot = tracemalloc.take_snapshot()
-
-    top_stats = snapshot.statistics('lineno')
-    for stat in top_stats[:10]:  # top 10 memory consumers
-        print(stat)
-
-    with open(path, 'wb') as f: pickle.dump(results, f)
-
+        with open(path, 'wb') as f: pickle.dump(results, f)
     
 def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, profiling_vs_nb_bands=True):
 
@@ -520,6 +396,7 @@ def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, prof
                         par['num_frames'] = t * 60 #seconds 
                         par['output_map'] = map_compression
                         par['coadd'] = True
+                        par['save_downsampled_TODS'] = False
 
                         #------------------------------------------------------
                         tracemalloc.start()
@@ -566,6 +443,7 @@ def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, prof
                     par['precision'] = precision
                     par['num_frames'] = 5 * 60 #seconds 
                     par['coadd'] = True
+                    par['save_downsampled_TODS'] = False
 
                     #------------------------------------------------------
                     tracemalloc.start()
@@ -613,6 +491,7 @@ def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, prof
                     par['precision'] = precision
                     par['num_frames'] = 5 * 60 #seconds 
                     par['coadd'] = True
+                    par['save_downsampled_TODS'] = False
 
                     #------------------------------------------------------
                     tracemalloc.start()
@@ -720,6 +599,7 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
                     par['num_frames'] = t * 60 #seconds 
                     par['output_map'] = map_compression
                     par['coadd'] = False
+                    par['save_downsampled_TODS'] = False
 
                     #------------------------------------------------------
                     tracemalloc.start()
@@ -782,6 +662,7 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
                 par['num_frames'] = 5 * 60 #seconds 
                 par['output_map'] = 'individual.fits.gz'
                 par['coadd'] = False
+                par['save_downsampled_TODS'] = False
 
                 #------------------------------------------------------
                 tracemalloc.start()
@@ -822,6 +703,133 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
 
     with open(path, 'wb') as f: pickle.dump(results, f)
 
+def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
+
+    path = 'fits_and_hdf5/namap_perf_profiling_tods.p'
+
+    if os.path.exists(path):
+        with open(path, 'rb') as f:
+            results = pickle.load(f)
+    else:
+        results = {}
+
+    if(profiling_vs_tod_time):
+
+        key = 'profiling vs tod time'
+        results.setdefault(key, {})
+
+        results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 30)
+
+        for precision in ('float64','float32', 'int8'): 
+
+            results[key][precision] = {}
+            results[key][precision]['tods.hdf5'] = {}
+            results[key][precision]['tods.hdf5']['peak memory [MB]'] = []
+            results[key][precision]['tods.hdf5']['time [s]'] = []
+            results[key][precision]['tods.hdf5']['output size [MB]'] = []
+
+
+
+            for t in results[key]["t_int"]:
+
+                par = load_par_file(f'params_namap.par')
+                par['cdelt'] = 40/3600, 40/3600
+                par['frequencies'] = (715.0,) #GHz    
+                if('float' in precision):   par['precision'] = precision
+                else: par['precision'] = 'float32'
+                par['num_frames'] = t * 60 #seconds 
+                par['coadd'] = True
+                par['save_downsampled_TODS'] = True
+                par['output_hdf5'] = f'fits_and_hdf5/tods_{precision}.hdf5'
+                if('float' in precision): int8 = False
+                else: int8 = True
+
+                #------------------------------------------------------
+                tracemalloc.start()
+                start = time.time()
+                main(par)
+                current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                end = time.time()
+                timing = end - start
+                #------------------------------------------------------
+
+                # Store results
+                output_file = par['output_hdf5']
+                if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                results[key][precision]['tods.hdf5']['output size [MB]'].append(file_size_mb)
+                results[key][precision]['tods.hdf5']['peak memory [MB]'].append(peak / 1e6)
+                results[key][precision]['tods.hdf5']['time [s]'].append(timing)
+
+
+                try:
+                    os.remove(output_file)
+                except OSError as e:
+                    print(f"Error deleting {output_file}: {e}")
+
+    if(profiling_vs_nb_bands):
+
+        key = 'profiling vs nb bands'
+        results.setdefault(key, {})
+        results[key]["nb bands"] = (1,5, 10, 16, 20, 30, 40, 50, 64)
+
+        for precision in ( 'float64','int8','float32'): 
+
+            results[key][precision] = {}
+            results[key][precision]['peak memory [MB]'] = []
+            results[key][precision]['time [s]'] = []
+            results[key][precision]['output size [MB]'] = []
+
+
+            for nb in results[key]["nb bands"]:
+
+                freq_list = 715.0 + 4.0 * np.arange(nb)
+
+                par = load_par_file(f'params_namap.par')
+                par['cdelt'] = 40/3600, 40/3600
+                par['frequencies'] = freq_list
+                if('float' in precision):   par['precision'] = precision
+                else: par['precision'] = 'float32'
+                par['num_frames'] = 5 * 60 #seconds 
+                par['coadd'] = True
+                par['save_downsampled_TODS'] = True
+                par['output_hdf5'] = f'fits_and_hdf5/tods_{precision}.hdf5'
+                if('float' in precision): int8 = False
+                else: int8 = True
+
+                #------------------------------------------------------
+                tracemalloc.start()
+                start = time.time()
+                main(par)
+                current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                end = time.time()
+                timing = end - start
+                #------------------------------------------------------
+
+                # Measure output file size (adapt this path!)
+                output_file = par['output_hdf5']
+                if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                print(f"Nb bands {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+
+                # Store results
+                results[key][precision]['peak memory [MB]'].append(peak / 1e6)
+                results[key][precision]['time [s]'].append(timing)
+                results[key][precision]['output size [MB]'].append(file_size_mb)
+
+
+                try:
+                    os.remove(output_file)
+                except OSError as e:
+                    print(f"Error deleting {output_file}: {e}")
+
+
+    with open(path, 'wb') as f: pickle.dump(results, f)
+
 if __name__ == "__main__":
 
     # --- Toggle simulation mode ---
@@ -830,9 +838,11 @@ if __name__ == "__main__":
     #I: coadded maps
     I_coadded_maps = False
     #II: individual maps
-    II_individual_maps = True
+    II_individual_maps = False
     #III TODs 
+    III_tods = False
     #IV profile functions
+    IV_fcts = True
     
     if USE_FAKE_SYSTEM:
         print("⚙️  Simulating Intel Celeron 4305UE environment...")
@@ -852,6 +862,8 @@ if __name__ == "__main__":
             # Place your performance or profiling code here
             if(I_coadded_maps): test_I()
             if(II_individual_maps): test_II()
+            if(III_tods): test_III()
+            if(IV_fcts): test_IV()
     else:
         print("💻 Using your real system:")
         print("Real CPU count:", os.cpu_count())

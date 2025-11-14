@@ -44,6 +44,7 @@ pixnum = 100., 100. #Number of pixels along the two axis. The input needs to be 
 
 
 #--- Parameters for the pre-processing of the TODs ---
+downsample_frequency = 100 #Hz
 highpassfreq = 0.1 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
 polynomialorder = 5 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
 despike = True #Despike flag. If called, two possible parameters can be explicited. 
@@ -57,8 +58,9 @@ Coadd the detectors
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
 coadd = False
 output_map = 'individual.fits' 
-save_down_sampled_TODS = False
-output_hdf5 = 'tods.hdf5'
+save_downsampled_TODS = True
+output_hdf5 = 'fits_and_hdf5/tods.hdf5'
+int8 = False #For testing purpose only 
 
 #convolution by the beam
 gaussian_convolution = False #
