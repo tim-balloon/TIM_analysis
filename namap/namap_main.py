@@ -10,6 +10,7 @@ import h5py
 import argparse
 import ast
 import sys
+from astropy.table import Table
 
 #for debugging purpose only
 from IPython import embed
@@ -78,7 +79,6 @@ def main(P, nbdets=None):
         '64': np.int64, 'float64': np.int64, 'double': np.int64
     }
 
-
     try:
         DT = dtype_map[_prec]
         IT = int_map[_prec]
@@ -113,20 +113,32 @@ def main(P, nbdets=None):
         coord2 = str('Y')
         xystage = True
 
+    #----------------------------------------------------------------
     filepath = P['hdf5_file']
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
     if P['frequencies'] is not None:
         filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
+    
     if P['detectors_to_use'] is not None:
         good_kid_table = tb.Table.read(P['detectors_to_use'], format='ascii.tab')
         filtered = btable[np.isin(btable['Name'], good_kid_table['Name'])]
     if P['frequencies'] is None and P['detectors_to_use'] is None:
         filtered = btable
     #option in the par file to good kids list
-   
-    kid_num = filtered['Name']
-    if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
+
+    result_rows = []
+    # Loop over unique frequencies
+    for freq in np.unique(filtered['Frequency']):
+        sub = filtered[filtered['Frequency'] == freq]
+        # take first N rows for this frequency
+        result_rows.append(sub[:nbdets])
+
+    # Concatenate back into a single table
+    kid_num = Table(np.hstack(result_rows))
+
+    #if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
     print('Nb dets: ', len(kid_num))
+    #----------------------------------------------------------------
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
@@ -142,7 +154,7 @@ def main(P, nbdets=None):
     convolution, std = P['gaussian_convolution'], P['std'] 
     #---------------------------------
 
-    #-------------------------------------------------------------------------------------------------------------------------
+    #----------------------------------
     #Load the data
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT)
     det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
@@ -179,7 +191,7 @@ def main(P, nbdets=None):
     cleaned_data = det_tod.data_clean()
     
     #Apply detector's response
-    cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
+    #cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
 
     if(P['save_downsampled_TODS']):
