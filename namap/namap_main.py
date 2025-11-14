@@ -132,13 +132,23 @@ def main(P, nbdets=None):
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data) or not P['bypass_synch']):
+    if(len(cleaned_data[0]) != len(coord1_data) or not P['bypass_synch']): #<-- for testing purpose only
         
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
                                             coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                            lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
+                                            lst_data, lat_data, acqfreq_lstlat, lat_spf,  DT, IT, freq_target=P['downsample_frequency'], offset=0)
+        
 
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data = zoomsyncdata.sync_data()  
+    
+    #--------------------------------
+    #for testing purpose only
+    else:                                                                            
+        H = h5py.File(filepath, "a")                                                 
+        f = H['data_time']                                                              
+        spf = f['spf'][()]
+        timemap = f['data'][int(first_frame*spf):int((first_frame+num_frames)*spf)]
+        H.close()
     #---------------------------------
 
     #---------------------------------
@@ -150,54 +160,57 @@ def main(P, nbdets=None):
     cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
 
-    if(P['save_down_sampled_TODS']):
+    if(P['save_downsampled_TODS']):
 
-        tods_compressor = ld.compress_tods(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
-                                            coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                            lst_data, lat_data, acqfreq_lstlat, lat_spf, DT, IT, offset=0)
-        
+        tods_compressor = ld.compress_tods(P['output_hdf5'], kid_num, cleaned_data, P['downsample_frequency'], timemap, 
+                                           coord1, coord2, coord1_data, coord2_data, 
+                                           first_frame, num_frames, lst_data, lat_data,P,
+                                            DT, IT, int8=P['int8'])
+
         tods_compressor.save_tods()
-    #---------------------------------
-    #Offset with respect to star cameras in xEL and EL
-    xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
-    #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-    #xsc_offset = xsc_file.read_file()
-    
-    corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-    coord1slice, coord2slice = corr.correction()
-    #---------------------------------
 
-    #--------------------
-    #Need to be implemented ! So far, set parallactic angle to 0.
-    parallactic=[]
-    if P['telescope_coordinate']:
-        for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            tel = pt.utils(c1, c2, lst_data, lat_data)
-            parallactic.append( tel.parallactic_angle() )
     else:
-        for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            parallactic.append(np.zeros_like(c1, dtype=DT))
-    
-    #---------------------------------
+        #---------------------------------
+        #Offset with respect to star cameras in xEL and EL
+        xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
+        #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+        #xsc_offset = xsc_file.read_file()
+        
+        corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
+        coord1slice, coord2slice = corr.correction()
+        #---------------------------------
 
-    #--------------------
-    #Create the maps
-    maps = mp.maps(P['ctype'], 
-                   np.asarray([P['crpix'][0],P['crpix'][1]]), 
-                   np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
-                   np.asarray([P['crval'][0], P['crval'][1]]), 
-                   np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
-                   cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                   coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
-    
-    maps.wcs_proj()
-    map_values = maps.map2d()
-    #--------------------
+        #--------------------
+        #Need to be implemented ! So far, set parallactic angle to 0.
+        parallactic=[]
+        if P['telescope_coordinate']:
+            for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
+                tel = pt.utils(c1, c2, lst_data, lat_data)
+                parallactic.append( tel.parallactic_angle() )
+        else:
+            for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
+                parallactic.append(np.zeros_like(c1, dtype=DT))
+        
+        #---------------------------------
 
-    #--------------------------------------------------
-    #Plot the maps
-    maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    #--------------------------------------------------
+        #--------------------
+        #Create the maps
+        maps = mp.maps(P['ctype'], 
+                    np.asarray([P['crpix'][0],P['crpix'][1]]), 
+                    np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
+                    np.asarray([P['crval'][0], P['crval'][1]]), 
+                    np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+                    cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
+                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+        
+        maps.wcs_proj()
+        map_values = maps.map2d()
+        #--------------------
+
+        #--------------------------------------------------
+        #Plot the maps
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        #--------------------------------------------------
 
     return 0
 
