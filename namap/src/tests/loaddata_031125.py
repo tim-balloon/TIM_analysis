@@ -12,6 +12,58 @@ from scipy.signal import resample_poly
 from fractions import Fraction
 from scipy.signal import resample
 
+    def downsizing(self, X, pps, spf_end, DT, IT): 
+        
+        # prepare output lists
+        downsampled_data = []
+        downsampled_pps = []
+
+        # loop over each second (unique PPS value)
+        for sec in np.unique(pps):
+            # select data for this second
+            mask = (pps == sec)
+            data_sec = X[mask]
+
+            # select evenly spaced indices
+            indices = np.linspace(0, len(data_sec) - 1, spf_end, dtype=int)
+            
+            # keep only those samples
+            downsampled_data.append(data_sec[indices])
+
+        # concatenate back into single arrays
+        downsampled_data = np.concatenate(downsampled_data)
+
+        return downsampled_data
+    
+    def downsizing_scipy(self, X, pps, spf_end, DT, IT): 
+        
+        # Find unique seconds
+        unique_seconds = np.unique(pps)
+
+        # Number of different seconds
+        num_seconds = len(unique_seconds)
+
+
+        downsampled_data = resample(X, num=spf_end*num_seconds) 
+
+        return downsampled_data
+    
+    def downsizing_scipy_poly(self, X, spf_start, spf_end, DT, IT): 
+
+        # get integer up/down ratio using Fraction
+        frac = Fraction(spf_end, int(spf_start)).limit_denominator()
+        up, down = frac.numerator, frac.denominator
+
+        # polyphase resample
+        downsampled_data = resample_poly(X, up, down)
+
+        return downsampled_data
+
+
+
+
+
+
 def load_params(path):
     """
     Return as a dictionary the parameters stores in a .par file

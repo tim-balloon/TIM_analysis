@@ -47,7 +47,7 @@ def load_params(path):
 class data_value():
     
     '''
-    Class for reading the values of the TODs (detectors and coordinates) from a DIRFILE
+    Class for reading the values of the TODs (detectors and coordinates) from a .hdf5 
     Parameters
     ----------
     Returns
@@ -55,25 +55,28 @@ class data_value():
     '''
 
     def __init__(self, det_path, det_name, coord1_name, \
-                 coord2_name, startframe, numframes, DT, IT, telemetry=False):
+                 coord2_name, startframe, numframes, DT, IT):
 
         """
-        Class to load the data from a .hdf5 
+        Init a instance of the class to load the data from a .hdf5 
         Parameters
         ----------
         det_path: string
             Path of the .hdf5
-        det_name: string
-            Detector names to be analyzed
+        det_name: list
+            list of detector names to be analyzed
         coord1_name: string
             Coordinates 1 name, e.g. RA or AZ
         coord2_name: string
             Coordinates 2 name
-        startframe:
+        startframe: int
             Starting frame to be analyzed
-        numframes:
-            Ending frame to be analyzed
-
+        numframes: int
+            Number of frames to be analyzed
+        DT: type
+            Float precision required
+        IT: type
+            Integer precision required
         Returns
         -------
         self: class
@@ -93,9 +96,7 @@ class data_value():
         else:
             self.bufferframe = int(100)
 
-        self.telemetry = telemetry
- 
-    def loadspf(file, field, DT):
+    def loadspf(file, field, IT):
         """
         Load the sample per frame of a field from a .hdf5 
         Parameters
@@ -104,6 +105,8 @@ class data_value():
             the name of the .hdf5 file
         field: string
             the field for which to get the spf
+        IT: type
+            Integer precision required
         Returns
         -------
         spf: int
@@ -114,7 +117,7 @@ class data_value():
         if('spf' in f.keys()): spf = f['spf'][()]
         else: spf = None
         H.close()
-        return DT(spf)
+        return IT(spf)
     
     def load_acquisition_frequency(file, field):
         """
@@ -147,11 +150,13 @@ class data_value():
             the name of the .hdf5 file
         field: string
             the field to be loaded
+        DT: type
+            Float precision required
         num_frame: int
-            the number of frames to load, with N=spf samples in each frame.
+            the number of frames to load, with N=spf samples in each frame. 
+            If number of frames or the first frame is not specified, load the whole timestream. 
         first_frame: int
             the first frame to load. 
-
         Returns
         -------
         data: array
@@ -171,7 +176,7 @@ class data_value():
 
     def values(self):
         """      
-        Load the RA, Dec, and amplitudes timestreams for a given list of detectors
+        Load the coordinates and amplitudes timestreams for a given list of detectors
         Parameters
         ----------
         Returns
@@ -192,7 +197,6 @@ class data_value():
             the number of sample per frame of the coordinates timestreams
         lst_lat_spf: int
             the number of sample per frame of lat and lst. 
-
         """    
         num = self.numframes+self.bufferframe*2
         first_frame = self.startframe+self.bufferframe
@@ -205,7 +209,7 @@ class data_value():
             # Assume all the data have the same spf       
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
-        acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
+        #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
 
         coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) 
@@ -215,15 +219,15 @@ class data_value():
         else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) 
 
         spf_coord = data_value.loadspf(self.det_path, self.coord2_name, self.DT)
-        acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
+        #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
 
         #---------------------------------------------------------------------------------
         lat = data_value.loaddata(self.det_path, 'lat',self.DT, num, first_frame)
         lst = data_value.loaddata(self.det_path, 'lst',self.DT, num, first_frame)
         lst_lat_spf = data_value.loadspf(self.det_path, 'lst',self.DT)
-        acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
+        #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """
@@ -234,6 +238,19 @@ class xsc_offset():
     -------
     """    
     def __init__(self, xsc, frame1, frame2):
+        """
+        function to create an instance of the class to read star camera offset files
+        Parameters
+        xcs: int
+            #Star Camera number
+        frame1: int
+            Starting frame
+        frame2: int
+            End frame
+        ----------
+        Returns
+        -------
+        """  
 
         self.xsc = xsc #Star Camera number
         self.frame1 = frame1 #Starting frame
@@ -273,6 +290,18 @@ class det_table():
 
     def __init__(self, dets, pathtable):
 
+        '''
+        function to create an instance of the class to read detector tables.
+        Parameters
+        ----------
+        dets: list
+            list of detector names for which to load the boresight offset
+        pathtable: str
+            path to the file storing the boresight-offset table.
+        Returns
+        -------
+        '''
+
         self.name = dets
         self.pathtable = pathtable
 
@@ -311,34 +340,88 @@ class det_table():
         return det_off, noise, resp
 
 class compress_tods():
-
+    
     '''
+    Class to compress timestreams and save them into an .hdf5 file. 
+    Parameters
+    ----------
+    Returns
+    -------
     '''
 
     def __init__(self, tods_path,kid_num, det_data, det_sample_frame, det_timestamps,\
                  coord1, coord2, coord1_data, coord2_data, startframe, numframes, lst_data, lat_data, P,
                  DT, IT, int8=False):
+        
+        '''
+        Class to compress timestreams and save them into an .hdf5 file. 
+        Parameters
+        tods_path: str
+            path and name of the .hdf5 file in which to save the timestreams. 
+        kid_num: list
+            list of detector names
+        det_data: list
+            list of cleaned data timestreams, ordered by detectors like in kid_num 
+        det_sample_frame: float
+            sample frequency of the cleaned data
+        det_timestamps: 1d array
+            timestamps associated with the cleaned data
+        coord1: str
+            Coordinate 1 type (RA, AZ...)
+        coord2: str
+            Coordinate 2 type (DEC, EL...)
+        coord1_data: 1d array
+            Coordinate 1 timestream
+        coord2_data: 1d array    
+            Coordinate 2 timestream
+        startframe: int
+            the first loaded frame
+        numframes: int
+            the number of loaded frames
+        lst_data: 1d array
+            Local Sideral Time timestream
+        lat_data: 1d array    
+            Latitude timestream    
+        P: dictionary
+            The parameters dictionary that will be saved in the metadata. 
+        DT: type
+            Float precision required
+        IT: type
+            Integer precision required
+        int8: bool
+            If to save data in 1 byte
+        ----------
+        Returns
+        -------
+        '''
 
-        self.tods_path = tods_path                                 #Path of the detector dirfile
-        self.kid_num = kid_num
-        self.det_data = det_data                             #Detector data timestream
+        self.tods_path = tods_path                               #Path of the timestreams hdf5
+        self.kid_num = kid_num                                   #Dectector name list
+        self.det_data = det_data                                 #Detector data timestream
         self.det_sample_frame = int(float(det_sample_frame))     #Detector samples in each frame of the timestream
-        self.det_timestamps = det_timestamps
-        self.coord1 = coord1                           
-        self.coord2 = coord2   
+        self.det_timestamps = det_timestamps                     #Detector timestamps
+        self.coord1 = coord1                                     #Coordinate 1 name  
+        self.coord2 = coord2                                     #Coordinate 2 name
         self.coord1_data = coord1_data                           #Coordinate 1 data timestream                        
         self.coord2_data = coord2_data                           #Coordinate 2 data timestream
         self.startframe = int(float(startframe))                 #Start frame
         self.numframes = int(float(numframes))                   #Number of frames
         self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
         self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
-
-        self.P = P
-        self.DT=DT #Float precision required 
-        self.IT=IT #Int precision required 
-        self.int8 = int8
+        self.P = P                                               #Parameter dictionary
+        self.DT=DT                                               #Float precision required 
+        self.IT=IT                                               #Int precision required 
+        self.int8 = int8                                         #If to save data in 1 byte
 
     def save_tods(self):
+
+        '''
+        Save the timestreams in an .hdf5 
+        Parameters
+        ----------
+        Returns
+        -------
+        '''
 
         # Create the file if it doesn't exist, otherwise open it
         if not os.path.exists(self.tods_path):
@@ -373,6 +456,27 @@ class compress_tods():
         return 0
     
     def save_array_to_hdf5(self, grp_name, data, list_names, spf=None, min=None, max=None):
+
+            
+        '''
+        Save an array in .hdf5
+        Parameters
+        grp_name: str
+            name of the group in which to save the array
+        data: 2d array
+            array to be saved
+        list_names: list
+            list that describes the rows of the data array
+        spf: int
+            sample per frame of the array if applicable
+        min: float
+            minimum negative value <0  to reconstruct an array saved in 8bits
+        max: float
+            maximum positive to reconstruct an array saved in 8bits
+        ----------
+        Returns
+        -------
+        '''
 
         temp_filename = self.tods_path + ".tmp"
 
@@ -414,7 +518,23 @@ class compress_tods():
     
     def to8bit_intprecision(array): 
 
-        # Assuming the original float range is 0.0-1.0
+        '''
+        function to save an array in 8bits precision. 
+        Parameters
+        array: ndarray
+            array to be downsized
+        ----------
+        Returns
+        -------
+        downsampled_array: ndarray
+            Array in 8bits precision
+        min: float
+            the minimum negative value of the array
+        max: float
+            The maximum value of the array. 
+        '''        
+
+        # Rescale data to float range 0.0-1.0
 
         min = float_array.min()
         if(min<0): float_array -= min
@@ -439,68 +559,70 @@ class frame_zoom_sync():
     '''
     This class is designed to extract the frames of interest from the complete timestream and 
     sync detector and coordinates timestream given a different sampling of the two
+    Parameters
+    ----------
+    Returns
+    -------
     '''
 
-    def __init__(self, det_path, det_data,det_fs, det_sample_frame,\
-                 coord1_data, coord2_data, coord_fs, coord_sample_frame, \
-                 startframe, numframes, lst_data, lat_data, lstlat_fs, lstlat_sample_frame, \
-                 DT, IT, freq_target=100, offset = None, roach_number= None, roach_pps_path= None, \
-                 hwp_sample_frame=None, xystage=False):
+    def __init__(self, det_path, det_data, det_sample_frame,\
+                 coord1_data, coord2_data, coord_sample_frame, \
+                 startframe, numframes, lst_data, lat_data, lstlat_sample_frame, \
+                 DT, IT, freq_target=100):
+        
+        '''
+        Create an instance of the class designed to extract the frames of interest from the complete timestream and 
+        sync detector and coordinates timestream given a different sampling of the two
+        Parameters
+        ----------
+
+        det_path: str
+            Path of the detector dirfile
+        det_data: list
+            Detector data timestream
+        det_sample_frame: int
+            Number of samples in each frame of the data timestreams
+        coord1_data: 1d array
+            Coordinate 1 data timestream
+        coord2_data: 1d array
+            Coordinate 2 data timestream
+        coord_sample_frame: int
+            Number of samples in each frame of the coordinate timestreams
+        startframe1: int
+            Start frame
+        numframes: int
+            Number of frames
+        lst_data: 1d array
+            LST timestream (if correction is required and coordinates are RA-DEC)
+        lat_data: 1d array
+            LAT timestream (if correction is required and coordinates are RA-DEC)
+        lstlat_sample_frame: int
+            LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
+        DT: type
+            Float precision required 
+        IT: type
+            Int precision required 
+        freq_target: float
+            Frequency to downsample the data to. 
+        Returns
+        -------
+        '''
 
         self.det_path = det_path                                 #Path of the detector dirfile
-        self.det_data = det_data                             #Detector data timestream
-        self.det_fs = float(det_fs)                              #Detector frequency sampling
+        self.det_data = det_data                                 #Detector data timestream
         self.det_sample_frame = int(float(det_sample_frame))     #Detector samples in each frame of the timestream
         self.coord1_data = coord1_data                           #Coordinate 1 data timestream
-        self.coord_fs = float(coord_fs)                          #Coordinates frequency sampling
         self.coord_sample_frame = int(float(coord_sample_frame)) #Coordinates samples in each frame of the time stream
         self.coord2_data = coord2_data                           #Coordinate 2 data timestream
         self.startframe = int(float(startframe))                 #Start frame
         self.numframes = int(float(numframes))                   #Number of frames
         self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
         self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
-        self.lstlatfreq = lstlat_fs                              #LST-LAT sampling frequency (if correction is required and coordinates are RA-DEC)
         self.lstlat_sample_frame = lstlat_sample_frame           #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
-        self.DT = DT
-        self.IT = IT
-        self.freq_target = freq_target
-        if roach_number is not None:
-            self.roach_number = int(float(roach_number))         #If BLAST-TNG is the experiment, this gives the number of the roach used to read the detector
-        else:
-            self.roach_number = roach_number
-        self.roach_pps_path = roach_pps_path                     #Pulse per second of the roach used to sync the data
-        self.offset = offset                                     #Time offset between detector data and coordinates
-        self.DT=DT #Float precision required 
-        self.IT=IT #Int precision required 
-
-    def coord_int(self, coord1, coord2, time_acs, time_det):
-
-        '''
-        Interpolates the coordinates values to compensate for the smaller frequency sampling
-                Parameters
-        ----------
-        coord1: array
-            Coordinates 1 to be interpolated. 
-        coord2: array
-            Coordinates 2 to be interpolated. 
-        time_acs: array
-            Timesteamps of the coordinates
-        time_det: int
-            Data timestamps to interpolate the coordinates to. 
-
-        Returns
-        -------
-        coord1_int: array
-            the coordinates 1 interpolated.
-        coord2_int: array
-            the coordinates 2 interpolated.
-        '''
-
-        coord1_int = interp1d(time_acs, coord1, kind='linear')
-        coord2_int = interp1d(time_acs, coord2, kind= 'linear')
-
-        return coord1_int(time_det), coord2_int(time_det)
-    
+        self.DT = DT                                             #Float precision required 
+        self.IT = IT                                             #Int precision required 
+        self.freq_target = freq_target                           #Frequency to downsample the data to. 
+  
     def resampling(self, X, spf_start, spf_end, DT):
 
         '''
@@ -513,6 +635,8 @@ class frame_zoom_sync():
             the sample per frame of X
         spf_end: int
             the final sample per frame wanted. 
+        DT: type
+            Float precision required
         Returns
         -------
         x: array
@@ -542,54 +666,35 @@ class frame_zoom_sync():
 
         return x.astype(DT)
 
-    def downsizing(self, X, pps, spf_end, DT, IT): 
-        
-        # prepare output lists
-        downsampled_data = []
-        downsampled_pps = []
+    def coord_int(self, coord1, coord2, time_acs, time_det):
 
-        # loop over each second (unique PPS value)
-        for sec in np.unique(pps):
-            # select data for this second
-            mask = (pps == sec)
-            data_sec = X[mask]
+        '''
+        Interpolates the coordinates values to compensate for the smaller frequency sampling
+                Parameters
+        ----------
+        coord1: array
+            Coordinates 1 to be interpolated. 
+        coord2: array
+            Coordinates 2 to be interpolated. 
+        time_acs: array
+            Timesteamps of the coordinates
+        time_det: int
+            Data timestamps to interpolate the coordinates to. 
 
-            # select evenly spaced indices
-            indices = np.linspace(0, len(data_sec) - 1, spf_end, dtype=int)
-            
-            # keep only those samples
-            downsampled_data.append(data_sec[indices])
+        Returns
+        -------
+        coord1_int: array
+            the coordinates 1 interpolated.
+        coord2_int: array
+            the coordinates 2 interpolated.
+        '''
 
-        # concatenate back into single arrays
-        downsampled_data = np.concatenate(downsampled_data)
+        coord1_int = interp1d(time_acs, coord1, kind='linear')
+        coord2_int = interp1d(time_acs, coord2, kind= 'linear')
 
-        return downsampled_data
-    
-    def downsizing_scipy(self, X, pps, spf_end, DT, IT): 
-        
-        # Find unique seconds
-        unique_seconds = np.unique(pps)
+        return coord1_int(time_det), coord2_int(time_det)
 
-        # Number of different seconds
-        num_seconds = len(unique_seconds)
-
-
-        downsampled_data = resample(X, num=spf_end*num_seconds) 
-
-        return downsampled_data
-    
-    def downsizing_scipy_poly(self, X, spf_start, spf_end, DT, IT): 
-
-        # get integer up/down ratio using Fraction
-        frac = Fraction(spf_end, int(spf_start)).limit_denominator()
-        up, down = frac.numerator, frac.denominator
-
-        # polyphase resample
-        downsampled_data = resample_poly(X, up, down)
-
-        return downsampled_data
-
-    def sync_data(self, telemetry=True):
+    def sync_data(self):
 
         '''
         Wrapper for the previous functions to return the slices of the detector and coordinates TODs,  
@@ -693,8 +798,6 @@ class frame_zoom_sync():
         for i in range(len(self.det_data)):
             self.det_data[i] = self.resampling(self.det_data[i], spf_time, self.freq_target, self.DT)
         dettime = self.resampling(dettime, spf_time, self.freq_target, self.DT)
-        
-            
         #---------------------------------------------------------------
 
         #---------------------------------------------------------------

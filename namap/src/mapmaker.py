@@ -17,7 +17,7 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, noise=1., telcoord=False, parang=None, params=None):
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False,  parang=None, params=None): #noise=1., telcoord=False,
         '''
         Create an instance of maps
         Parameters
@@ -31,24 +31,24 @@ class maps():
         self.cdelt = cdelt             #see wcs_world for explanation of this parameter
         self.crval = crval             #see wcs_world for explanation of this parameter
         self.pixnum = pixnum           #Max number of pixel
+        self.data = data               #cleaned TOD that is used to create a map
         self.coord1 = coord1           #array of the first coordinate
         self.coord2 = coord2           #array of the second coordinate
-        self.data = data               #cleaned TOD that is used to create a map
         self.params = params           #parameters used to create the map
-        self.w = 0.                    #initialization of the coordinates of the map in pixel coordinates
-        self.proj = 0.                 #inizialization of the wcs of the map. see wcs_world for more explanation about projections
         self.convolution = convolution #parameters to check if the convolution is required
         self.std = float(std)          #std of the gaussian is the convolution is required
-        self.noise = noise             #white level noise of detector(s)
-        self.telcoord = telcoord       #If True the map is drawn in telescope coordinates. That means that the projected plane is rotated
-        self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
         self.output_file = output_file #Name under which to save the coadd map.
-        self.DT = DT
-        self.IT = IT
+        #self.telcoord = telcoord       #If True the map is drawn in telescope coordinates. That means that the projected plane is rotated
+        self.DT = DT                    #Float precision required
+        self.IT = IT                    #Integer precision required
+        self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
+        #self.noise = noise             #white level noise of detector(s)
         if parang is not None:
             self.parang = [np.radians(p) for p in parang ] #Parallactic Angle. This is used to compute the pixel indices in telescopes coordinates
         else:
             self.parang = parang
+        self.w = 0.                    #initialization of the coordinates of the map in pixel coordinates
+        self.proj = 0.                 #inizialization of the wcs of the map. see wcs_world for more explanation about projections
 
     def wcs_proj(self):
 
@@ -206,14 +206,34 @@ class wcs_world():
     -------
     '''
     def __init__(self, ctype, crpix, cdelt, crval, DT, IT, telcoord=False):
+        '''
+        create an instance of the class to generate a wcs.
+
+        Parameters
+        ----------
+        ctype: str
+            ctype of the map, which projection is used to convert coordinates to pixel numbers
+        cdelt: str
+            cdelt of the map, distance in deg between two close pixels
+        crpix: str
+            crpix of the map, central pixel of the map in pixel coordinates
+        crval: str
+            crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
+        DT: type
+            Float precision required
+        IT: type
+            Integer precision required
+        Returns
+        -------
+        '''
 
         self.ctype = ctype    #ctype of the map, which projection is used to convert coordinates to pixel numbers
         self.cdelt = cdelt  #cdelt of the map, distance in deg between two close pixels
         self.crpix = crpix    #crpix of the map, central pixel of the map in pixel coordinates
         self.crval = crval    #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
         self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
-        self.DT = DT
-        self.IT = IT
+        self.DT = DT #Float precision required
+        self.IT = IT #Integer precision required
 
     def world(self, coord1, coord2, parang): 
         
@@ -271,6 +291,25 @@ class mapmaking(object):
     '''
 
     def __init__(self, data, weight, number, pixelmap, coadd, DT, IT):
+
+        '''
+        Create an instance of the class to generate the maps. 
+        Parameters
+        ----------
+        data: list    
+            detector TOD
+        weight: array       
+            weights associated with the detector values
+        number: int
+            Number of detectors to be mapped
+        pixelmap: array  
+            Coordinates of each point in the TOD in pixel coordinates
+        coadd: bool
+            If to coadd all the detectors maps or return their individual maps. 
+        Returns
+        -------
+        
+        '''
 
         self.data = data               #detector TOD
         self.weight = weight           #weights associated with the detector values
@@ -363,6 +402,8 @@ class mapmaking(object):
         ----------
         std: float
             std of the gaussian in pixel values
+        map_values: 2d array
+            the map to be convolved
         Returns
         -------
         '''

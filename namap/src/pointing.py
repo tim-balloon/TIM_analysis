@@ -17,6 +17,24 @@ class utils(object):
 
     def __init__(self, coord1, coord2, lst = None, lat = None):
 
+        '''
+        class to handle conversion between different coodinates sytem 
+        Parameters
+        ----------
+        coord1: 1d array
+            array of coord 1 converted in degrees   
+        coord2: 1d array
+            array of coord 2 converted in degrees   
+        lst: 1d array
+            local Sideral Time in hours
+        lat: 1d array
+            latitude converted in degrees
+
+        Returns
+        -------
+        '''
+
+
         self.coord1 = np.radians(coord1)  #Array of coord 1 converted in degrees   
         self.coord2 = coord2  #Array of coord 2 converted in degrees   
         self.lst = lst        #Local Sideral Time in hours
@@ -73,7 +91,7 @@ class utils(object):
 
         Returns
         -------
-        Dec: float
+        Dec: array
             source declination angle (rad)
         """ 
 
@@ -124,6 +142,8 @@ class utils(object):
         i.e. lst needs to be in hours, hour angle in needs to be in radians 
         Parameters
         ----------
+        hour_angle: array
+            source hour angle in radians
         Returns
         ----------
         ra: array
@@ -262,7 +282,6 @@ class apply_offset(object):
             Local Sideral Time array
         lat: array
             Latitude array
-        ----------
         Returns
         -------
         """    
@@ -274,35 +293,20 @@ class apply_offset(object):
         self.det_offset = det_offset            #Offset with respect to the central detector in xEL and EL
         self.lst = lst                          #Local Sideral Time array
         self.lat = lat                          #Latitude array
-        self.DT = DT
-        self.IT = IT
+        self.DT = DT                            #Float precision required
+        self.IT = IT                            #Integer precision required
 
     def correction(self):
         """
         Apply offset
         Parameters
         ----------
-        coord1: array
-            Array of coordinate 1
-        coord2: array
-            Array of coordinate 2
-        ctype: array
-            Ctype of the map
-        xsc_offset: tuple
-            Offset with respect to star cameras in xEL and EL
-        det_offset: 2d array
-            Offset with respect to the central detector in xEL and EL
-        lst: array
-            Local Sideral Time array
-        lat: array
-            Latitude array
-        ----------
         Returns
+        -------
         ra_corrected: array
             corrected array of coordinates one
         dec_corrected: array
             corrected array of coordinates two
-        -------
         """  
         if self.ctype.lower() == 'ra and dec':
 

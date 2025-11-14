@@ -17,15 +17,37 @@ class data_cleaned():
     '''
 
     def __init__(self, data, fs,  detlist, cutoff, polynomialorder, despike, sigma, prominence):
+        """
+        create an instance of the class to clean the detector TODs.
+        Parameters
+        ----------
+        data: list
+            detector TODs
+        fs: float
+            frequency sampling of the detectors
+        cutoff: float
+            cutoff frequency of the highpass filter     
+        polynomialorder: int
+            polynomial order for fitting
+        sigma: float
+            height in std value to look for spikes
+        prominence: float
+            prominence in std value to look for spikes
+        despike: bool
+            if True despikes the data 
+        
+        Returns
+        -------
+        """
 
-        self.data = data                #detector TOD
-        self.fs = float(fs)             #frequency sampling of the detector
-        self.detlist = detlist          #detector name list
-        self.cutoff = float(cutoff)     #cutoff frequency of the highpass filter    
+        self.data = data                       #detector TODs
+        self.fs = float(fs)                    #frequency sampling of the detector
+        self.detlist = detlist                 #detector name list
+        self.cutoff = float(cutoff)            #cutoff frequency of the highpass filter     
         self.polynomialorder = polynomialorder #polynomial order for fitting
-        self.sigma = sigma                  #height in std value to look for spikes
-        self.prominence = prominence        #prominence in std value to look for spikes
-        self.despike = despike              #if True despikes the data 
+        self.sigma = sigma                     #height in std value to look for spikes
+        self.prominence = prominence           #prominence in std value to look for spikes
+        self.despike = despike                 #if True despikes the data 
 
     def data_clean(self):
 
@@ -69,6 +91,16 @@ class despike():
     '''
     
     def __init__(self, data):
+
+        '''
+        Create an instance of the class to despike the TOD
+        Parameters
+        ----------
+        data: 1d array
+            the TOD to be despiked
+        Returns
+        -------
+        '''
 
         self.data = data
 
@@ -139,7 +171,8 @@ class despike():
             height in sigma of the peak. 
         pthres: int 
             prominence of the peak in sigma. 
-        
+        window: float
+            how far in samples to look to the left and right of each peak to find the local minimum
         Returns
         -------
         param[0].copy(): list
@@ -269,6 +302,16 @@ class filterdata():
         
         '''
         See data_cleaned for parameters explanantion
+        Parameters
+        ----------
+        data: 1d array
+            the data to be filtered
+        cutoff: float
+            the frequency of the filter
+        fs: the sampling frequency of array
+
+        Returns
+        -------
         '''
 
         self.data = data
@@ -394,6 +437,15 @@ class detector_trend():
     '''
 
     def __init__(self, data):
+        '''
+        create an instance of the class to detrend a TOD
+        Parameters
+        ----------
+        data: 1 array
+            the timestream to remove the trend of. 
+        Returns
+        -------
+        '''
 
         self.data = data
 
@@ -410,7 +462,7 @@ class detector_trend():
         Returns
         y_fin: array
             fitted data
-        index_exclude:
+        index_exclude: array
             index of elements to set to 0. 
         -------
         '''
