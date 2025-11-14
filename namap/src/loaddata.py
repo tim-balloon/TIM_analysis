@@ -667,39 +667,16 @@ class frame_zoom_sync():
 
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
-        spf_time = data_value.loadspf(self.det_path, f'data_time')
-        pps = data_value.loaddata(self.det_path, f'data_pps', self.numframes, self.startframe) 
-        pps -= pps.min() 
-        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps', self.numframes, self.startframe) 
+        spf_time = data_value.loadspf(self.det_path,  f'data_time', self.DT)
+        pps = data_value.loaddata(self.det_path, f'data_pps', self.DT,self.numframes, self.startframe) 
+        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe) 
         dettime = pps+subsec
-        dettime -= dettime.min() 
-        fig, ax = plt.subplots(figsize=(6,4))
-        ax.plot( dettime, self.det_data[0],'k', markersize=1)
-        for i in range(0, len(dettime), spf_time): ax.axvline(x=dettime[i], color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
-        fig.savefig('1.png', transparent=True)
-        ax.set_ylabel('I [Jy]')
-        ax.set_xlabel('Timestamp (s)')
-        
         #--------------------------------------------------------------
 
         #---------------------------------------------------------------
         #Cut the edge frames that dont have all their samples, and put the right number of samples in the other frames
-        bn = np.bincount(pps)
+        _, bn = np.unique(pps, return_counts=True)
         pps_bins = bn[bn>0]
-        # Find the timestamp corresponding roughly to each integer second
-        sec = np.arange(len(bn))    # second indices
-        sec_timestamps = np.interp(sec, pps, dettime[:len(pps)])  # maps seconds → timestamps
-
-        # Only consider seconds that exist
-        seconds_with_data = np.nonzero(bn)[0]
-        # Find the timestamp of the first sample in each second
-        sec_timestamps = np.array([dettime[pps==s][0] for s in seconds_with_data])
-
-        ax2 = ax.twinx()
-        ax2.step(sec_timestamps, bn[seconds_with_data], where='post', color='k', linewidth=1.5)
-        ax2.set_ylabel('Samples per second', color='tab:red')
-        ax2.tick_params(axis='y', labelcolor='tab:red')
-        ax2.set_ylim(460,490)
 
         if pps_bins[0] < spf_time:
             pps = pps[pps_bins[0]:]
@@ -713,41 +690,11 @@ class frame_zoom_sync():
             for i in range(len(self.det_data)):
                 self.det_data[i] = self.det_data[i][:-pps_bins[-1]]
 
-        bn = np.bincount(pps)
-        pps_bins = bn[bn>0]
-
-        ax.plot( dettime, self.det_data[0],'r', markersize=1)
-        fig.savefig('2.png', transparent=True)
-                
-        
-        kidutils = det.kidsutils()
-        dettime = kidutils.interpolation_roach(dettime, pps_bins, self.det_fs)  
         for i in range(len(self.det_data)):
-            self.det_data[i] = kidutils.interpolation_roach(self.det_data[i], pps_bins, self.det_fs)
+            self.det_data[i] = self.resampling(self.det_data[i], spf_time, self.freq_target, self.DT)
+        dettime = self.resampling(dettime, spf_time, self.freq_target, self.DT)
         
-        pps = dettime.astype(int)
-        bn = np.bincount(pps)
-        pps_bins = bn[bn>0]
-
-        # Plot as step histogram
-
-        seconds_with_data = np.nonzero(bn)[0]
-        # Find the timestamp of the first sample in each second
-        sec_timestamps = np.array([dettime[pps==s][0] for s in seconds_with_data])
-
-        ax2.step(sec_timestamps, bn[seconds_with_data], where='post', color='g', linewidth=1.5)
-        ax.step(dettime, self.det_data[0], where='post', color='g', linewidth=1.5, label='Samples per second')
-        
-        fig.savefig('4.png', transparent=True)
-
-        for i in range(len(self.det_data)):
-            self.det_data[i] = self.resampling(self.det_data[i], spf_time, freq_target)
-        dettime = self.resampling(dettime, spf_time, freq_target)
-
-                
-        ax.step(dettime, self.det_data[0], where='post', color='b', linewidth=1.5, label='Samples per second')
-        fig.savefig('6.png', transparent=True)
-        plt.show()
+            
         #---------------------------------------------------------------
 
         #---------------------------------------------------------------
@@ -785,4 +732,3 @@ class frame_zoom_sync():
         #---------------------------------------------------------------
         return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data
     
-   
