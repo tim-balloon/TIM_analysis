@@ -64,7 +64,6 @@ def simulate_celeron_system():
     mem_mock = mock.patch("psutil.virtual_memory", return_value=fake_mem)
     return cpu_mock, mem_mock
 
-
 def test_IV():
 
     path = 'fits_and_hdf5/namap_perf_profiling_fcts.p'
@@ -359,7 +358,7 @@ def test_IV():
 
         with open(path, 'wb') as f: pickle.dump(results, f)
     
-def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, profiling_vs_nb_bands=True):
+def test_I(profiling_vs_tod_time = False, profiling_vs_nb_bands=False):
 
         path = 'fits_and_hdf5/namap_perf_profiling_coadded_maps.p'
 
@@ -420,58 +419,17 @@ def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, prof
                         results[key][precision][map_compression]['time [s]'].append(timing)
                         results[key][precision][map_compression]['output size [MB]'].append(file_size_mb)
 
-        if(profiling_vs_nb_of_detectors):
-
-            key = 'profiling vs nb of detectors'
-            results.setdefault(key, {})
-
-            results[key] = {}
-            results[key]["nb detectors"] = (1,5,10,20, 30, 40, 50, 64)
-
-            for precision in ('float64', 'float32'): 
-
-                results[key][precision] = {}
-                results[key][precision]['peak memory [MB]'] = []
-                results[key][precision]['time [s]'] = []
-                results[key][precision]['output size [MB]'] = []
-
-                for nb in results['profiling vs nb of detectors']["nb detectors"]:
-
-                    par = load_par_file(f'params_namap.par')
-                    par['cdelt'] = 40/3600, 40/3600
-                    par['frequencies'] = (715.0,) #GHz
-                    par['precision'] = precision
-                    par['num_frames'] = 5 * 60 #seconds 
-                    par['coadd'] = True
-                    par['save_downsampled_TODS'] = False
-
-                    #------------------------------------------------------
-                    tracemalloc.start()
-                    start = time.time()
-                    main(par, nb)
-                    current, peak = tracemalloc.get_traced_memory()
-                    tracemalloc.stop()
-                    end = time.time()
-                    timing = end - start
-                    #------------------------------------------------------
-
-                    # Measure output file size (adapt this path!)
-                    output_file = 'fits_and_hdf5/coadd.fits'  # or whatever your naming convention is
-                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
-
-                    print(f"Nb dets {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
-
-                    # Store results
-                    results[key][precision]['peak memory [MB]'].append(peak / 1e6)
-                    results[key][precision]['time [s]'].append(timing)
-                    results[key][precision]['output size [MB]'].append(file_size_mb)
-
         if(profiling_vs_nb_bands):
 
             key = 'profiling vs nb bands'
             results.setdefault(key, {})
-            results[key]["nb bands"] = (1,5, 10, 16, 20, 30, 40, 50, 64)
+
+            nb_pixels = np.arange(50)
+            nb_bands= np.arange(128)
+            
+            for npix in nb_pixels:
+                    
+            results[key]["nb bands"] = np.arange(128)
 
             for precision in ('float64', 'float32'): 
 
@@ -482,6 +440,7 @@ def test_I(profiling_vs_tod_time = True, profiling_vs_nb_of_detectors=True, prof
 
 
                 for nb in results[key]["nb bands"]:
+
 
                     freq_list = 715.0 + 4.0 * np.arange(nb)
 
@@ -870,3 +829,54 @@ if __name__ == "__main__":
         print("Real RAM (GB):", psutil.virtual_memory().total / 1024**3)
         print("Real CPU model:", platform.processor())
         print("OMP threads (default):", os.environ.get("OMP_NUM_THREADS", "not set"))
+
+
+
+"""
+        if(profiling_vs_nb_of_detectors):
+
+            key = 'profiling vs nb of detectors'
+            results.setdefault(key, {})
+
+            results[key] = {}
+            results[key]["nb detectors"] = (1,5,10,20, 30, 40, 50, 64)
+
+            for precision in ('float64', 'float32'): 
+
+                results[key][precision] = {}
+                results[key][precision]['peak memory [MB]'] = []
+                results[key][precision]['time [s]'] = []
+                results[key][precision]['output size [MB]'] = []
+
+                for nb in results['profiling vs nb of detectors']["nb detectors"]:
+
+                    par = load_par_file(f'params_namap.par')
+                    par['cdelt'] = 40/3600, 40/3600
+                    par['frequencies'] = (715.0,) #GHz
+                    par['precision'] = precision
+                    par['num_frames'] = 5 * 60 #seconds 
+                    par['coadd'] = True
+                    par['save_downsampled_TODS'] = False
+
+                    #------------------------------------------------------
+                    tracemalloc.start()
+                    start = time.time()
+                    main(par, nb)
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    end = time.time()
+                    timing = end - start
+                    #------------------------------------------------------
+
+                    # Measure output file size (adapt this path!)
+                    output_file = 'fits_and_hdf5/coadd.fits'  # or whatever your naming convention is
+                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                    print(f"Nb dets {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+
+                    # Store results
+                    results[key][precision]['peak memory [MB]'].append(peak / 1e6)
+                    results[key][precision]['time [s]'].append(timing)
+                    results[key][precision]['output size [MB]'].append(file_size_mb)
+"""
