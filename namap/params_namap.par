@@ -1,5 +1,4 @@
 #NAMAP parameters 
-
 precision = 'float32'
 
 #--- Data Paths Parameters --

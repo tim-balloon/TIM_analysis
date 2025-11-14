@@ -20,7 +20,19 @@ import time
 
 
 def load_par_file(filepath):
-    """Loads .par file as a dictionary with literal-evaluated values."""
+    """
+    Return as a dictionary the parameters stores in a .par file
+    
+    Parameters
+    ----------
+    filepath: str
+        path and name of the parameter file
+    Returns
+    -------
+    params: dictionary
+        dictionary containing the loaded parameters
+    """    
+
     params = {}
     with open(filepath, "r") as f:
         for line in f:
@@ -39,7 +51,18 @@ def load_par_file(filepath):
     return params
 
 def main(P, nbdets=None):
-
+    """
+    Main script to call Namap. 
+    
+    Parameters
+    ----------
+    P: dictionnary
+        dictionnary of parameters
+    nbdets: int
+        Number of detectors max to be loaded. For testing purpose only. 
+    Returns
+    -------
+    """    
     #-----------------------------------------------------------------------------------------
 
     _prec = str(P['precision'].lower())
@@ -121,8 +144,8 @@ def main(P, nbdets=None):
 
     #-------------------------------------------------------------------------------------------------------------------------
     #Load the data
-    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT,telemetry)
-    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, acqfreq_data, acqfreq_coord, acqfreq_lstlat = dataload.values()
+    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT)
+    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #-------------------------------
 
     #---------------------------------
@@ -134,9 +157,8 @@ def main(P, nbdets=None):
     #---------------------------------
     if(len(cleaned_data[0]) != len(coord1_data) or not P['bypass_synch']): #<-- for testing purpose only
         
-        zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, acqfreq_data, spf_data,  coord1_data, 
-                                            coord2_data, acqfreq_coord, spf_coord, first_frame, num_frames, 
-                                            lst_data, lat_data, acqfreq_lstlat, lat_spf,  DT, IT, freq_target=P['downsample_frequency'], offset=0)
+        zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
+                                            lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
 
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data = zoomsyncdata.sync_data()  
