@@ -142,7 +142,7 @@ def main(P, nbdets=None):
 
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
-    det_off, noise_det, resp = dettable.loadtable()
+    det_off, _,_ = dettable.loadtable() #noise_det, resp
     
     
     #Cleaning data parameters
@@ -150,6 +150,8 @@ def main(P, nbdets=None):
     polynomialorder = P['polynomialorder']
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
+    sigma_clipping_bool = ['sigma_clipping']
+    low_thresh, high_thresh = P['low_thresh'], P['high_thresh']
 
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
@@ -162,9 +164,10 @@ def main(P, nbdets=None):
     #-------------------------------
 
     #---------------------------------
-    #First remove noise peaks
-    det_tod = tod.data_cleaned(det_data, spf_data, kid_num, 0, 0, despike_bool, sigma, prominence, DT)
-    cleaned_data = det_tod.data_clean()
+    #First remove noise peaks and discard TODs with large & low variance. 
+    det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
+    cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
+    P['rejected detectors list'] = rejected_detetectors_list
     #---------------------------------
 
     #---------------------------------
@@ -193,8 +196,8 @@ def main(P, nbdets=None):
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
-    det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0, DT)
-    cleaned_data = det_tod.data_clean()
+    det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
+    cleaned_data, _, _, _ = det_tod.data_clean()
     
     #Apply detector's response
     #cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
