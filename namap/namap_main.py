@@ -151,8 +151,7 @@ def main(P, nbdets=None):
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
     sigma_clipping_bool = ['sigma_clipping']
-    low_thresh, high_thresh = P['low_thresh'], P['high_thresh']
-
+    low_thresh, high_thresh = P['low_thresh'], P['high_thresh'] 
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
     #---------------------------------
@@ -326,6 +325,14 @@ _de_Looze_smoothed_MJy_sr.hdf5 . ,
     cli.add_argument('--coadd', action='store_true', help='Coadd detectors (True) or map each individually')
     cli.add_argument('--gaussian_convolution', action='store_true', help='Apply Gaussian convolution to map')
     cli.add_argument('--std', type=float, help='STD of Gaussian kernel in arcseconds')
+
+    cli.add_argument('--precision ',type=str, help='precision required in float64,float32,float16')
+    cli.add_argument('--downsample_frequency ',type=float, help='The frequency to downsample the data to')
+    cli.add_argument('--remove_turnarounds ',action='store_true', help='if True, remove data acquired during turnarounds')
+    cli.add_argument('--save_downsampled_TODS ',action='store_true', help='if True, save the TOD in an .hdf5')
+    cli.add_argument('--output_hdf5',type=str, help='name of the hdf5 file in which to store the TODs.')
+    cli.add_argument('--output_map',type=str, help='name of the fits file to which save the map. Write name.fits.gz to automatically compress the fits file')
+
 
     # Step 1: First parse only --params-file
     args_partial, remaining_argv = parser.parse_known_args()
