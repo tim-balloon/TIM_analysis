@@ -55,9 +55,9 @@ prominence=5   #and the second is the prominence in sigma unit for the peak
 #--- Parameters for the post-processing of the TODs and the map ---
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
-coadd = False
+coadd = True
 output_map = 'individual.fits' 
-save_downsampled_TODS = True
+save_downsampled_TODS = False
 output_hdf5 = 'fits_and_hdf5/tods.hdf5'
 int8 = False #For testing purpose only 
 
