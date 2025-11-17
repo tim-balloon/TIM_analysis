@@ -49,6 +49,9 @@ polynomialorder = 5 #Polynomial orderelevations used to fit the TOD to detrend d
 despike = True #Despike flag. If called, two possible parameters can be explicited. 
 sigma=5        #The first is the height in sigma unit for the peak, 
 prominence=5   #and the second is the prominence in sigma unit for the peak
+sigma_clipping = True
+low_thresh = 1e-5
+high_thresh = 5
 #-----------------------------------------------
 
 

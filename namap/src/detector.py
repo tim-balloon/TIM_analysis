@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.signal as sgn
+from scipy.ndimage import uniform_filter1d
 #import pygetdata as gd
 import src.loaddata as ld
 import h5py
@@ -16,7 +17,7 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, fs,  detlist, cutoff, polynomialorder, despike, sigma, prominence, DT):
+    def __init__(self, data, detlist, det_offsets, fs, cutoff, polynomialorder, despike, sigma, prominence, sigma_clipping, low_thresh, high_thresh, DT):
         """
         create an instance of the class to clean the detector TODs.
         Parameters
@@ -41,13 +42,17 @@ class data_cleaned():
         """
 
         self.data = data                       #detector TODs
-        self.fs = float(fs)                    #frequency sampling of the detector
         self.detlist = detlist                 #detector name list
+        self.det_offsets = det_offsets         #detector boresight offsets list
+        self.fs = float(fs)                    #frequency sampling of the detector
         self.cutoff = float(cutoff)            #cutoff frequency of the highpass filter     
         self.polynomialorder = polynomialorder #polynomial order for fitting
         self.sigma = sigma                     #height in std value to look for spikes
         self.prominence = prominence           #prominence in std value to look for spikes
         self.despike = despike                 #if True despikes the data 
+        self.sigma_clipping = sigma_clipping   #if True disgard TODs based on their variance.
+        self.low_thresh = low_thresh           #Lower variance threshold in sigma on which to disgard a TOD from further analysis.
+        self.high_thresh  = high_thresh        #Higher variance threshold in sigma on which to disgard a TOD from further analysis.
         self.DT = DT                           #Float precision
 
     def data_clean(self):
@@ -63,10 +68,17 @@ class data_cleaned():
         '''
         
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
+        rejected_detetectors_list = []
+        accepted_detectors_list = []
+        accepted_offsets_list = []
 
-        
-        for i, data in enumerate(self.data):
+        if(not self.sigma_clipping): 
+            accepted_detectors_list = self.detlist
+            accepted_offsets_list = self.det_offsets
+
+        for i, (data, det_name, offset) in enumerate(zip(self.data, self.detlist, self.det_offsets)):
             det_data = detector_trend(data)
+
             if self.polynomialorder != 0: 
                 residual_data = det_data.fit_residual(order=self.polynomialorder)
                 residual_data = self.DT(residual_data)
@@ -77,13 +89,26 @@ class data_cleaned():
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
             else: data_despiked = residual_data.copy()
 
+            if self.sigma_clipping:
+            
+                clip = sigma_clipping(data_despiked)
+                reject = clip.clipping(low_thresh = self.low_thresh, high_thresh = self.high_thresh) 
+                if(reject):
+                    rejected_detetectors_list.append(det_name)
+                    continue
+                else: 
+                    accepted_offsets_list.append(offset)
+                    accepted_detectors_list.append(det_name)
+                    data_clipped = data_despiked
+            else: data_clipped = data_despiked.copy()
+            
             if self.cutoff != 0:
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs, self.DT)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
             else: cleaned_data.append( data_despiked )
         
-        return cleaned_data
-        
+        return cleaned_data, accepted_detectors_list, np.asarray(accepted_offsets_list), rejected_detetectors_list
+    
 class despike():
 
     '''
@@ -511,6 +536,33 @@ class detector_trend():
 
         return -fitteddata+zero_data
 
+class sigma_clipping():
+
+    '''
+    '''
+
+    def __init__(self, data):
+
+        self.data = data
+    
+    def clipping(self, low_thresh, high_thresh):
+
+        # mean in sliding window
+        mean = uniform_filter1d(self.data, size=len(self.data), mode='nearest')
+
+        # mean of squared signal
+        mean_sq = uniform_filter1d(self.data**2, size=len(self.data), mode='nearest')
+
+        # variance = E[x^2] - (E[x])^2
+        var = mean_sq - mean**2
+
+        # and standard deviation
+        sigma = np.sqrt(var)
+        #print(f'sigma mean={sigma.mean():.3f}, min={sigma.min():.3f}, max={sigma.max():.3f},, median={np.median(sigma):.3f}')
+        reject = np.any((sigma > high_thresh) | (sigma < low_thresh))
+
+        return reject
+
 class kidsutils():
     '''
     Class containing useful functions for KIDs
@@ -675,4 +727,3 @@ class kidsutils():
 
         return np.asarray(ctime_roach_renormed), np.asarray(bins_list)
     
-
