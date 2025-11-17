@@ -198,7 +198,8 @@ class data_value():
         lst_lat_spf: int
             the number of sample per frame of lat and lst. 
         """    
-        num = self.numframes+self.bufferframe*2
+
+        num = self.numframes#+self.bufferframe
         first_frame = self.startframe+self.bufferframe
         kid_num  = self.det_name
         det_data = []
@@ -622,6 +623,11 @@ class frame_zoom_sync():
         self.DT = DT                                             #Float precision required 
         self.IT = IT                                             #Int precision required 
         self.freq_target = freq_target                           #Frequency to downsample the data to. 
+
+        if self.startframe < 100:
+            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+        else:
+            self.bufferframe = int(100)
   
     def resampling(self, X, spf_start, spf_end, DT):
 
@@ -655,11 +661,10 @@ class frame_zoom_sync():
         ratio = DT(spf_start) / DT(spf_end)
 
         # Create interpolator
-        #if(DT == np.float16): embed()
-        interper = PchipInterpolator(np.arange(0, len(X), dtype=DT), X)
+        interper = PchipInterpolator(np.arange(0, len(X)), X)
 
         # New sample points
-        new_points = np.arange(0, len(X), ratio, dtype=DT)
+        new_points = np.arange(0, len(X), ratio)
 
         # Interpolated values
         x = interper(new_points)
@@ -688,7 +693,6 @@ class frame_zoom_sync():
         coord2_int: array
             the coordinates 2 interpolated.
         '''
-
         coord1_int = interp1d(time_acs, coord1, kind='linear')
         coord2_int = interp1d(time_acs, coord2, kind= 'linear')
 
@@ -720,14 +724,16 @@ class frame_zoom_sync():
             latitude TOD.
         '''
         
+        num = self.numframes+self.bufferframe
+        first_frame = self.startframe+self.bufferframe
         #---------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst. 
         # PPS is the pulse per second (pps). It indicates when, more precisely at which second, an element has been recorded. 
-        pps = data_value.loaddata(self.det_path, f'coords_pps',self.IT, self.numframes, self.startframe) 
+        pps = data_value.loaddata(self.det_path, f'coords_pps',self.IT, num, first_frame) 
         #pps -= pps.min()
-        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps',self.DT, self.numframes, self.startframe) 
+        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps',self.DT, num, first_frame) 
         ctime  = pps.astype(self.DT)+subsec
-        turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe) 
+        turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.DT, num, first_frame) 
         spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time', self.DT)
         #---------------------------------------------------------------
 
@@ -773,8 +779,8 @@ class frame_zoom_sync():
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
         spf_time = data_value.loadspf(self.det_path,  f'data_time', self.DT)
-        pps = data_value.loaddata(self.det_path, f'data_pps', self.DT,self.numframes, self.startframe) 
-        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe) 
+        pps = data_value.loaddata(self.det_path, f'data_pps', self.DT,num, first_frame) 
+        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, num, first_frame) 
         dettime = pps+subsec
         #--------------------------------------------------------------
 
@@ -802,19 +808,30 @@ class frame_zoom_sync():
 
         #---------------------------------------------------------------
         #Get the data samples whose timestamps are shared with the coordinates timestamps
-        ctime_start = ctime[0]
-        ctime_end = ctime[-1]
-        idx_roach_start, = np.where(np.abs(dettime-ctime_start) == np.amin(np.abs(dettime-ctime_start)))
-        idx_roach_end, = np.where(np.abs(dettime-ctime_end) == np.amin(np.abs(dettime-ctime_end)))   
-        #---------------------------------------------------------------
 
-        #---------------------------------------------------------------
+        # Determine common time interval (overlap)
+        start_time = max(ctime[0], dettime[0])   # latest starting time
+        end_time   = min(ctime[-1], dettime[-1]) # earliest ending time
+
+        # Get indices (right for start, right for end)
+        i_c_start = np.searchsorted(ctime, start_time, side='left')
+        i_c_end   = np.searchsorted(ctime, end_time, side='left')
+
+        i_d_start = np.searchsorted(dettime, start_time, side='left')
+        i_d_end   = np.searchsorted(dettime, end_time, side='left')
+
+        # Trim
+        dettime = dettime[i_d_start:i_d_end]
         #Keep only the previous samples
         for i in range(len(self.det_data)):
-            self.det_data[i] = self.det_data[i][idx_roach_start[0]:idx_roach_end[0]]
-        dettime = dettime[idx_roach_start[0]:idx_roach_end[0]]
+            self.det_data[i] = self.det_data[i][i_d_start:i_d_end]
+        ctime   = ctime[i_c_start:i_c_end]
+        self.coord1_data = self.coord1_data[i_c_start:i_c_end]
+        self.coord2_data = self.coord2_data[i_c_start:i_c_end]
+        self.lst_data = self.lst_data[i_c_start:i_c_end]
+        self.lat_data = self.lat_data[i_c_start:i_c_end]
+        turnaround_flags = turnaround_flags[i_c_start:i_c_end]
         #---------------------------------------------------------------
-
 
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.

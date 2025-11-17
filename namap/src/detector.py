@@ -16,7 +16,7 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, fs,  detlist, cutoff, polynomialorder, despike, sigma, prominence):
+    def __init__(self, data, fs,  detlist, cutoff, polynomialorder, despike, sigma, prominence, DT):
         """
         create an instance of the class to clean the detector TODs.
         Parameters
@@ -48,6 +48,7 @@ class data_cleaned():
         self.sigma = sigma                     #height in std value to look for spikes
         self.prominence = prominence           #prominence in std value to look for spikes
         self.despike = despike                 #if True despikes the data 
+        self.DT = DT                           #Float precision
 
     def data_clean(self):
 
@@ -62,10 +63,13 @@ class data_cleaned():
         '''
         
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
+
         
         for i, data in enumerate(self.data):
             det_data = detector_trend(data)
-            if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
+            if self.polynomialorder != 0: 
+                residual_data = det_data.fit_residual(order=self.polynomialorder)
+                residual_data = self.DT(residual_data)
             else: residual_data = data.copy()
 
             if self.despike:
@@ -74,7 +78,7 @@ class data_cleaned():
             else: data_despiked = residual_data.copy()
 
             if self.cutoff != 0:
-                filterdat = filterdata(data_despiked, self.cutoff, self.fs)
+                filterdat = filterdata(data_despiked, self.cutoff, self.fs, self.DT)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
             else: cleaned_data.append( data_despiked )
         
@@ -298,7 +302,7 @@ class filterdata():
     -------
     '''
 
-    def __init__(self, data, cutoff, fs):
+    def __init__(self, data, cutoff, fs, DT):
         
         '''
         See data_cleaned for parameters explanantion
@@ -308,7 +312,10 @@ class filterdata():
             the data to be filtered
         cutoff: float
             the frequency of the filter
-        fs: the sampling frequency of array
+        fs: float
+            the sampling frequency of array
+        DT: type
+            float precision required
 
         Returns
         -------
@@ -317,7 +324,8 @@ class filterdata():
         self.data = data
         self.cutoff = cutoff
         self.fs = fs
-    
+        self.DT = DT
+
     def highpass(self, order):
 
         '''
@@ -391,11 +399,11 @@ class filterdata():
             the filtered timestream. 
         -------
         '''
-        
+
         if window is True:
             window_data = np.hanning(len(self.data))
 
-            fft_data = np.fft.rfft(self.data*window_data)
+            fft_data = np.fft.rfft(self.data*self.DT(window_data))
         else:
             fft_data = np.fft.rfft(self.data)
 
@@ -424,7 +432,7 @@ class filterdata():
 
         ifft_data = np.fft.irfft(self.fft_filter(window=window), len(self.data))
 
-        return ifft_data
+        return self.DT(ifft_data)
 
 class detector_trend():
 
@@ -472,7 +480,7 @@ class detector_trend():
         index_exclude = np.array([], dtype=int)
 
         if np.size(edge) == 1:
-            p = np.polyfit(x, self.data, order)
+            p = np.polyfit(x, np.float32(self.data), order)
             poly = np.poly1d(p)
             y_fin = poly(x)
 

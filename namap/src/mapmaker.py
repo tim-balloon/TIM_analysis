@@ -59,7 +59,7 @@ class maps():
         Returns
         -------
         '''
-        wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.DT, self.IT,self.telcoord, )
+        wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.DT, self.IT,)
         proj, w = wcsworld.world(self.coord1,self.coord2, self.parang)
         self.proj = proj
         self.w = w
@@ -73,7 +73,7 @@ class maps():
         Returns
         -------
         '''
-        mapmaker = mapmaking(self.data, self.noise, len(self.data), self.proj, self.coadd, self.DT, self.IT)
+        mapmaker = mapmaking(self.data, np.ones(len(self.data)), len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
         Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
 
         if not self.convolution: return Pow_map
@@ -102,25 +102,29 @@ class maps():
 
         xform ='d.ddd'
         yform ='d.ddd'
-        if self.telcoord is False or True:
-            if ctype == 'RA and DEC':
-                xlab = 'RA (deg)'
-                ylab = 'Dec (deg)'
+        
+        
+        if ctype == 'RA and DEC':
+            xlab = 'RA (deg)'
+            ylab = 'Dec (deg)'
             
-            elif ctype == 'AZ and EL':
-                xlab = 'AZ (deg)'
-                ylab = 'EL (deg)'
-            
-            elif ctype == 'CROSS-EL and EL':
-                xlab = 'xEL (deg)'
-                ylab = 'EL (deg)'
+        
+        elif ctype == 'AZ and EL':
+            xlab = 'AZ (deg)'
+            ylab = 'EL (deg)'
+        
+        elif ctype == 'CROSS-EL and EL':
+            xlab = 'xEL (deg)'
+            ylab = 'EL (deg)'
 
-            elif ctype == 'XY Stage':
-                xlab = 'X'
-                ylab = 'Y'
-        else:
+        elif ctype == 'XY Stage':
+            xlab = 'X'
+            ylab = 'Y'
+        '''
+        if self.telcoord :
             xlab = 'YAW (deg)'
             ylab = 'PITCH (deg)'
+        '''
 
 
         if(self.coadd):
@@ -205,7 +209,7 @@ class wcs_world():
     Returns
     -------
     '''
-    def __init__(self, ctype, crpix, cdelt, crval, DT, IT, telcoord=False):
+    def __init__(self, ctype, crpix, cdelt, crval, DT, IT):
         '''
         create an instance of the class to generate a wcs.
 
@@ -231,7 +235,7 @@ class wcs_world():
         self.cdelt = cdelt  #cdelt of the map, distance in deg between two close pixels
         self.crpix = crpix    #crpix of the map, central pixel of the map in pixel coordinates
         self.crval = crval    #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
-        self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
+        #self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
         self.DT = DT #Float precision required
         self.IT = IT #Integer precision required
 
@@ -261,7 +265,7 @@ class wcs_world():
         w.wcs.cdelt = self.cdelt
         w.wcs.crval = self.crval
 
-        if self.telcoord is False: w.wcs.ctype = ["TLON-CAR", "TLAT-CAR"]
+        #if self.telcoord is False: w.wcs.ctype = ["TLON-CAR", "TLAT-CAR"]
         if self.ctype == 'RA and DEC':  w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
         elif self.ctype == 'AZ and EL': w.wcs.ctype = ["TLON-ARC", "TLAT-ARC"]
         elif self.ctype == 'CROSS-EL and EL': w.wcs.ctype = ["TLON-CAR", "TLAT-CAR"]

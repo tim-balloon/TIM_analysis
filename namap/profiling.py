@@ -40,6 +40,9 @@ SIM_MEMORY_GB = 8  # realistic config (max supported = 64 GB)
 SIM_MEMORY_BYTES = SIM_MEMORY_GB * 1024**3
 
 
+nb_pixels = (1, 2,3,4,5,6,7,8,9,10,20,30,40,50)
+nb_bands = (1, 2,3,4,11, 21, 41, 64)
+
 def simulate_celeron_system():
     """Return mocks for CPU and memory to simulate Intel Celeron 4305UE."""
     svmem = namedtuple('svmem', [
@@ -358,7 +361,7 @@ def test_IV():
 
         with open(path, 'wb') as f: pickle.dump(results, f)
     
-def test_I(profiling_vs_tod_time = False, profiling_vs_nb_bands=False):
+def test_I(profiling_vs_tod_time =True, profiling_vs_nb_bands=True):
 
         path = 'fits_and_hdf5/namap_perf_profiling_coadded_maps.p'
 
@@ -373,9 +376,9 @@ def test_I(profiling_vs_tod_time = False, profiling_vs_nb_bands=False):
             key = 'profiling vs tod time'
             results.setdefault(key, {})
 
-            results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 30)
+            results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 25)
 
-            for precision in ('float64', 'float32'): 
+            for precision in ('float64', 'float32','float16'): 
 
                 results[key][precision] = {}
 
@@ -424,55 +427,55 @@ def test_I(profiling_vs_tod_time = False, profiling_vs_nb_bands=False):
             key = 'profiling vs nb bands'
             results.setdefault(key, {})
 
-            nb_pixels = np.arange(50)
-            nb_bands= np.arange(128)
-            
-            for npix in nb_pixels:
-                    
-            results[key]["nb bands"] = np.arange(128)
 
-            for precision in ('float64', 'float32'): 
+            for precision in ('float64', 'float32', 'float16'): 
 
                 results[key][precision] = {}
                 results[key][precision]['peak memory [MB]'] = []
                 results[key][precision]['time [s]'] = []
                 results[key][precision]['output size [MB]'] = []
+                results[key]["nb dets"] = []
 
+                for nband in nb_bands:
+                    for npix in nb_pixels:
+                        if(int(nband*npix) not in results[key]["nb dets"]): 
+                            if(not int(nband+npix)>results[key]["nb dets"]).max()): continue
 
-                for nb in results[key]["nb bands"]:
+        
+                            results[key]["nb dets"].append(int(nband*npix))
 
+                            freq_list = 715.0 + 4.0 * np.arange(nband)
 
-                    freq_list = 715.0 + 4.0 * np.arange(nb)
+                            par = load_par_file(f'params_namap.par')
+                            par['cdelt'] = 40/3600, 40/3600
+                            par['frequencies'] = freq_list
+                            par['precision'] = precision
+                            par['num_frames'] = 5 * 60 #seconds 
+                            par['coadd'] = True
+                            par['save_downsampled_TODS'] = False
+                            print('')
+                            #------------------------------------------------------
+                            tracemalloc.start()
+                            start = time.time()
+                            main(par, npix)
+                            current, peak = tracemalloc.get_traced_memory()
+                            tracemalloc.stop()
+                            end = time.time()
+                            timing = end - start
+                            #------------------------------------------------------
 
-                    par = load_par_file(f'params_namap.par')
-                    par['cdelt'] = 40/3600, 40/3600
-                    par['frequencies'] = freq_list
-                    par['precision'] = precision
-                    par['num_frames'] = 5 * 60 #seconds 
-                    par['coadd'] = True
-                    par['save_downsampled_TODS'] = False
+                            # Measure output file size (adapt this path!)
+                            output_file = 'fits_and_hdf5/coadd.fits'  # or whatever your naming convention is
+                            if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                            else: file_size_mb = float('nan')  # file not found → record NaN or 0
 
-                    #------------------------------------------------------
-                    tracemalloc.start()
-                    start = time.time()
-                    main(par)
-                    current, peak = tracemalloc.get_traced_memory()
-                    tracemalloc.stop()
-                    end = time.time()
-                    timing = end - start
-                    #------------------------------------------------------
+                            print(f"Nb bands {nband*npix}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                            print('')
 
-                    # Measure output file size (adapt this path!)
-                    output_file = 'fits_and_hdf5/coadd.fits'  # or whatever your naming convention is
-                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
-
-                    print(f"Nb bands {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
-
-                    # Store results
-                    results[key][precision]['peak memory [MB]'].append(peak / 1e6)
-                    results[key][precision]['time [s]'].append(timing)
-                    results[key][precision]['output size [MB]'].append(file_size_mb)
+                            # Store results
+                            results[key][precision]['peak memory [MB]'].append(peak / 1e6)
+                            results[key][precision]['time [s]'].append(timing)
+                            results[key][precision]['output size [MB]'].append(file_size_mb)
 
         if(False): #XX
 
@@ -536,9 +539,9 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
         key = 'profiling vs tod time'
         results.setdefault(key, {})
 
-        results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 30)
+        results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 25)
 
-        for precision in ('float64', 'float32'): 
+        for precision in ('float64', 'float32', 'float16'): 
 
             results[key][precision] = {}
 
@@ -601,68 +604,73 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
 
         key = 'profiling vs nb bands'
         results.setdefault(key, {})
-        results[key]["nb bands"] = (1,5, 10, 16, 20, 30, 40, 50, 64)
 
-        for precision in ('float64', 'float32'): 
+        for precision in ('float64', 'float32', 'float16'): 
 
             results[key][precision] = {}
             results[key][precision]['peak memory [MB]'] = []
             results[key][precision]['time [s]'] = []
             results[key][precision]['output size [MB]'] = []
+            results[key]["nb dets"] = []
 
-            for nb in results[key]["nb bands"]:
+            for nband in nb_bands:
+                for npix in nb_pixels:
+                    if(int(nband*npix) not in results[key]["nb dets"]):   
+                        if(not int(nband+npix)>results[key]["nb dets"]).max()): continue
+                        
 
-                freq_list = 715.0 + 4.0 * np.arange(nb)
+                        results[key]["nb dets"].append(int(nband*npix))
+                        freq_list = 715.0 + 4.0 * np.arange(nband)
 
-                par = load_par_file(f'params_namap.par')
-                par['cdelt'] = 40/3600, 40/3600
-                par['frequencies'] = freq_list
-                par['precision'] = precision
-                par['num_frames'] = 5 * 60 #seconds 
-                par['output_map'] = 'individual.fits.gz'
-                par['coadd'] = False
-                par['save_downsampled_TODS'] = False
+                        par = load_par_file(f'params_namap.par')
+                        par['cdelt'] = 40/3600, 40/3600
+                        par['frequencies'] = freq_list
+                        par['precision'] = precision
+                        par['num_frames'] = 5 * 60 #seconds 
+                        par['output_map'] = 'individual.fits.gz'
+                        par['coadd'] = False
+                        par['save_downsampled_TODS'] = False
 
-                #------------------------------------------------------
-                tracemalloc.start()
-                start = time.time()
-                main(par)
-                current, peak = tracemalloc.get_traced_memory()
-                tracemalloc.stop()
-                end = time.time()
-                timing = end - start
-                #------------------------------------------------------
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        main(par, npix)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
 
-                # Store results
-                results[key][precision]['peak memory [MB]'].append(peak / 1e6)
-                results[key][precision]['time [s]'].append(timing)
+                        # Store results
+                        results[key][precision]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision]['time [s]'].append(timing)
 
-                # Path to your files (adjust if needed)
-                folder = 'fits_and_hdf5/'  # current directory
-                filename = par['output_map']
-                name_before_fits = filename.rsplit('.fits', 1)[0]
-                fits_and_after = filename[filename.find('.fits'):]  
-                pattern = f'{name_before_fits}_*{fits_and_after}'
+                        # Path to your files (adjust if needed)
+                        folder = 'fits_and_hdf5/'  # current directory
+                        filename = par['output_map']
+                        name_before_fits = filename.rsplit('.fits', 1)[0]
+                        fits_and_after = filename[filename.find('.fits'):]  
+                        pattern = f'{name_before_fits}_*{fits_and_after}'
 
-                # Get all matching files
-                files = glob.glob(os.path.join(folder, pattern))
-                # Sum their sizes in bytes
-                total_size_bytes = sum(os.path.getsize(f) for f in files)
-                # Optionally, convert to MB
-                total_size_mb = total_size_bytes / (1024**2)
-                results[key][precision]['output size [MB]'].append(total_size_mb)
-                print(f"Nb bands {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
+                        # Get all matching files
+                        files = glob.glob(os.path.join(folder, pattern))
+                        # Sum their sizes in bytes
+                        total_size_bytes = sum(os.path.getsize(f) for f in files)
+                        # Optionally, convert to MB
+                        total_size_mb = total_size_bytes / (1024**2)
+                        results[key][precision]['output size [MB]'].append(total_size_mb)
+                        print(f"Nb bands {nband*npix}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
 
-                # Delete them
-                for f in files:
-                    try:
-                        os.remove(f)
-                    except OSError as e:
-                        print(f"Error deleting {f}: {e}")
+                        # Delete them
+                        for f in files:
+                            try:
+                                os.remove(f)
+                            except OSError as e:
+                                print(f"Error deleting {f}: {e}")
 
     with open(path, 'wb') as f: pickle.dump(results, f)
 
-def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
+def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
 
     path = 'fits_and_hdf5/namap_perf_profiling_tods.p'
 
@@ -677,7 +685,7 @@ def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
         key = 'profiling vs tod time'
         results.setdefault(key, {})
 
-        results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 30)
+        results[key]["t_int"] = (1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 25)
 
         for precision in ('float64','float32', 'int8'): 
 
@@ -686,7 +694,6 @@ def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
             results[key][precision]['tods.hdf5']['peak memory [MB]'] = []
             results[key][precision]['tods.hdf5']['time [s]'] = []
             results[key][precision]['tods.hdf5']['output size [MB]'] = []
-
 
 
             for t in results[key]["t_int"]:
@@ -732,7 +739,6 @@ def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
 
         key = 'profiling vs nb bands'
         results.setdefault(key, {})
-        results[key]["nb bands"] = (1,5, 10, 16, 20, 30, 40, 50, 64)
 
         for precision in ( 'float64','int8','float32'): 
 
@@ -740,51 +746,56 @@ def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=False):
             results[key][precision]['peak memory [MB]'] = []
             results[key][precision]['time [s]'] = []
             results[key][precision]['output size [MB]'] = []
+            results[key]["nb dets"] = []
 
 
-            for nb in results[key]["nb bands"]:
+            for nband in nb_bands:
+                for npix in nb_pixels:
+                    if(int(nband*npix) not in results[key]["nb dets"]):   
+                        if(not int(nband+npix)>results[key]["nb dets"]).max()): continue
 
-                freq_list = 715.0 + 4.0 * np.arange(nb)
+                        results[key]["nb dets"].append(int(nband*npix))
+                        freq_list = 715.0 + 4.0 * np.arange(nband)
 
-                par = load_par_file(f'params_namap.par')
-                par['cdelt'] = 40/3600, 40/3600
-                par['frequencies'] = freq_list
-                if('float' in precision):   par['precision'] = precision
-                else: par['precision'] = 'float32'
-                par['num_frames'] = 5 * 60 #seconds 
-                par['coadd'] = True
-                par['save_downsampled_TODS'] = True
-                par['output_hdf5'] = f'fits_and_hdf5/tods_{precision}.hdf5'
-                if('float' in precision): int8 = False
-                else: int8 = True
+                        par = load_par_file(f'params_namap.par')
+                        par['cdelt'] = 40/3600, 40/3600
+                        par['frequencies'] = freq_list
+                        if('float' in precision):   par['precision'] = precision
+                        else: par['precision'] = 'float32'
+                        par['num_frames'] = 5 * 60 #seconds 
+                        par['coadd'] = True
+                        par['save_downsampled_TODS'] = True
+                        par['output_hdf5'] = f'fits_and_hdf5/tods_{precision}.hdf5'
+                        if('float' in precision): int8 = False
+                        else: int8 = True
 
-                #------------------------------------------------------
-                tracemalloc.start()
-                start = time.time()
-                main(par)
-                current, peak = tracemalloc.get_traced_memory()
-                tracemalloc.stop()
-                end = time.time()
-                timing = end - start
-                #------------------------------------------------------
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        main(par, npix)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
 
-                # Measure output file size (adapt this path!)
-                output_file = par['output_hdf5']
-                if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                else: file_size_mb = float('nan')  # file not found → record NaN or 0
+                        # Measure output file size (adapt this path!)
+                        output_file = par['output_hdf5']
+                        if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
 
-                print(f"Nb bands {nb}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print(f"Nb bands {nband*npix}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
 
-                # Store results
-                results[key][precision]['peak memory [MB]'].append(peak / 1e6)
-                results[key][precision]['time [s]'].append(timing)
-                results[key][precision]['output size [MB]'].append(file_size_mb)
+                        # Store results
+                        results[key][precision]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision]['time [s]'].append(timing)
+                        results[key][precision]['output size [MB]'].append(file_size_mb)
 
 
-                try:
-                    os.remove(output_file)
-                except OSError as e:
-                    print(f"Error deleting {output_file}: {e}")
+                        try:
+                            os.remove(output_file)
+                        except OSError as e:
+                            print(f"Error deleting {output_file}: {e}")
 
 
     with open(path, 'wb') as f: pickle.dump(results, f)
@@ -797,9 +808,9 @@ if __name__ == "__main__":
     #I: coadded maps
     I_coadded_maps = False
     #II: individual maps
-    II_individual_maps = False
+    II_individual_maps = True
     #III TODs 
-    III_tods = False
+    III_tods = True
     #IV profile functions
     IV_fcts = True
     
