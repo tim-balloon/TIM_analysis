@@ -177,28 +177,25 @@ def main(P, nbdets=None):
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
 
-        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data = zoomsyncdata.sync_data()  
-    
-    #--------------------------------
-    #for testing purpose only
-    else:    
-        if first_frame < 100:
-            bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
-        else:
-            bufferframe = int(100)  
-                                                                              
-        H = h5py.File(filepath, "a")                                                 
-        f = H['data_time']                                                              
-        spf = f['spf'][()]
-        timemap = f['data'][int((first_frame+bufferframe)*spf):int((first_frame+bufferframe+num_frames)*spf)]
-        H.close()
+        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data()  
     #---------------------------------
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
     det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
     cleaned_data, _, _, _ = det_tod.data_clean()
+
+    #Filter out the turnarounds
+    if(P['remove_turnarounds']):
+        for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
+        if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
+        lst_data = lst_data[turnarounds_flag==1]
+        lat_data = lat_data[turnarounds_flag==1]
+        coord2_data = coord2_data[turnarounds_flag==1]
+        coord1_data = coord1_data[turnarounds_flag==1] 
+    #---------------------------------------------------------------
     
+    #---------------------------------------------------------------
     #Apply detector's response
     #cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
     #---------------------------------
