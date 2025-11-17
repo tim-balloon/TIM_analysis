@@ -841,14 +841,5 @@ class frame_zoom_sync():
         turnaround_flags_interp = np.round(f(dettime)).astype(self.IT)
         #---------------------------------------------------------------
 
-        #---------------------------------------------------------------
-        #Filter out the turnarounds
-        for i in range(len(self.det_data)): self.det_data[i] = self.det_data[i][turnaround_flags_interp==1]
-        dettime = dettime[turnaround_flags_interp==1]
-        self.lst_data = self.lst_data[turnaround_flags_interp==1]
-        self.lat_data = self.lat_data[turnaround_flags_interp==1]
-        self.coord2_data = self.coord2_data[turnaround_flags_interp==1]
-        self.coord1_data = self.coord1_data[turnaround_flags_interp==1] 
-        #---------------------------------------------------------------
-        return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data
+        return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data, turnaround_flags_interp
     
