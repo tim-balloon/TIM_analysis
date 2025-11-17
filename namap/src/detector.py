@@ -543,11 +543,12 @@ class sigma_clipping():
 
     def __init__(self, data):
 
-        self.data = data
+        self.data = np.float32(data)
     
     def clipping(self, low_thresh, high_thresh):
 
         # mean in sliding window
+        
         mean = uniform_filter1d(self.data, size=len(self.data), mode='nearest')
 
         # mean of squared signal

@@ -1,5 +1,5 @@
 #NAMAP parameters 
-precision = 'float32'
+precision = 'float16'
 
 #--- Data Paths Parameters --
 #Path for TOD data
@@ -52,6 +52,7 @@ prominence=5   #and the second is the prominence in sigma unit for the peak
 sigma_clipping = True
 low_thresh = 1e-5
 high_thresh = 5
+remove_turnarounds = True
 #-----------------------------------------------
 
 
