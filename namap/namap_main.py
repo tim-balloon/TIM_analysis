@@ -134,7 +134,7 @@ def main(P, nbdets=None):
         result_rows.append(sub[:nbdets])
 
     # Concatenate back into a single table
-    kid_num = Table(np.hstack(result_rows))
+    kid_num = Table(np.hstack(result_rows))['Name']
 
     #if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
     print('Nb dets: ', len(kid_num))
@@ -143,6 +143,7 @@ def main(P, nbdets=None):
     #load the table
     dettable = ld.det_table(kid_num, P['detector_table']) 
     det_off, noise_det, resp = dettable.loadtable()
+    
     
     #Cleaning data parameters
     highpassfreq = P['highpassfreq']
@@ -162,7 +163,7 @@ def main(P, nbdets=None):
 
     #---------------------------------
     #First remove noise peaks
-    det_tod = tod.data_cleaned(det_data, spf_data, kid_num, 0, 0, despike_bool, sigma, prominence)
+    det_tod = tod.data_cleaned(det_data, spf_data, kid_num, 0, 0, despike_bool, sigma, prominence, DT)
     cleaned_data = det_tod.data_clean()
     #---------------------------------
 
@@ -177,17 +178,22 @@ def main(P, nbdets=None):
     
     #--------------------------------
     #for testing purpose only
-    else:                                                                            
+    else:    
+        if first_frame < 100:
+            bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+        else:
+            bufferframe = int(100)  
+                                                                              
         H = h5py.File(filepath, "a")                                                 
         f = H['data_time']                                                              
         spf = f['spf'][()]
-        timemap = f['data'][int(first_frame*spf):int((first_frame+num_frames)*spf)]
+        timemap = f['data'][int((first_frame+bufferframe)*spf):int((first_frame+bufferframe+num_frames)*spf)]
         H.close()
     #---------------------------------
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
-    det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0)
+    det_tod = tod.data_cleaned(cleaned_data, spf_data, kid_num, highpassfreq, polynomialorder, False, 0, 0, DT)
     cleaned_data = det_tod.data_clean()
     
     #Apply detector's response
@@ -235,7 +241,7 @@ def main(P, nbdets=None):
                     np.asarray([P['crval'][0], P['crval'][1]]), 
                     np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                     cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                    coadd=P['coadd'], noise=noise_det, telcoord = P['telescope_coordinate'], parang=parallactic, params=str(P))
+                    coadd=P['coadd'],   parang=parallactic, params=str(P)) #noise=noise_det,telcoord = P['telescope_coordinate'],
         
         maps.wcs_proj()
         map_values = maps.map2d()
