@@ -33,6 +33,10 @@ def add_polynome_to_timestream(timestream, time, order=1, percent_scale=30, rand
     random_coeffs : bool, default=True
         If True, coefficients are randomized within scale. 
         If False, only the highest order term is used.
+    Returns
+    ----------
+    poly: array
+        the resulting timestream
     """
     assert 1 <= order <= 4, "Order must be between 1 and 4."
 
@@ -72,10 +76,6 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
         coordinates of the sky scan path of each pixel, for pixels seeing the same frequency band
     Returns
     -------
-    wcs: astropy.wcs.wcs.WCS
-        The wcs used to generate the TODs
-    map: 2d array
-        the sky map used to generate the amplitude TODs
     hist: 2d array
         the reconstructed sky map given the pointing paths 
     norm: 2d array
@@ -297,11 +297,12 @@ def main_tod(P):
         hdul = fits.HDUList(hdus)
         savepath = f'fits_and_hdf5/scanned_map_{P["output_name"][:-5]}_{array_name}.fits'
         hdul.writeto(savepath, overwrite=True)
-        print("saved ", savepath)
-
         bar.finish
         print('')
+        print("saved ", savepath)
+        print('')
         
+
 if __name__ == "__main__":
 
     '''

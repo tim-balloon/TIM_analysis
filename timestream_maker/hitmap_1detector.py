@@ -198,7 +198,6 @@ def main_1det(P):
     save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'],compression=P['compression'])
 
-
 if __name__ == "__main__":
     '''
     '''
