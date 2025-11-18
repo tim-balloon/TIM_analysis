@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.signal as sgn
+from scipy.ndimage import uniform_filter1d
 #import pygetdata as gd
 import src.loaddata as ld
 import h5py
@@ -16,16 +17,43 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, fs, cutoff, detlist, polynomialorder, despike, sigma, prominence):
+    def __init__(self, data, detlist, det_offsets, fs, cutoff, polynomialorder, despike, sigma, prominence, sigma_clipping, low_thresh, high_thresh, DT):
+        """
+        create an instance of the class to clean the detector TODs.
+        Parameters
+        ----------
+        data: list
+            detector TODs
+        fs: float
+            frequency sampling of the detectors
+        cutoff: float
+            cutoff frequency of the highpass filter     
+        polynomialorder: int
+            polynomial order for fitting
+        sigma: float
+            height in std value to look for spikes
+        prominence: float
+            prominence in std value to look for spikes
+        despike: bool
+            if True despikes the data 
+        
+        Returns
+        -------
+        """
 
-        self.data = data                #detector TOD
-        self.fs = float(fs)             #frequency sampling of the detector
-        self.cutoff = float(cutoff)     #cutoff frequency of the highpass filter
-        self.detlist = detlist          #detector name list
+        self.data = data                       #detector TODs
+        self.detlist = detlist                 #detector name list
+        self.det_offsets = det_offsets         #detector boresight offsets list
+        self.fs = float(fs)                    #frequency sampling of the detector
+        self.cutoff = float(cutoff)            #cutoff frequency of the highpass filter     
         self.polynomialorder = polynomialorder #polynomial order for fitting
-        self.sigma = sigma                  #height in std value to look for spikes
-        self.prominence = prominence        #prominence in std value to look for spikes
-        self.despike = despike              #if True despikes the data 
+        self.sigma = sigma                     #height in std value to look for spikes
+        self.prominence = prominence           #prominence in std value to look for spikes
+        self.despike = despike                 #if True despikes the data 
+        self.sigma_clipping = sigma_clipping   #if True disgard TODs based on their variance.
+        self.low_thresh = low_thresh           #Lower variance threshold in sigma on which to disgard a TOD from further analysis.
+        self.high_thresh  = high_thresh        #Higher variance threshold in sigma on which to disgard a TOD from further analysis.
+        self.DT = DT                           #Float precision
 
     def data_clean(self):
 
@@ -39,10 +67,22 @@ class data_cleaned():
             list of cleaned data timestreams
         '''
         
+        
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
-        for i, data in enumerate(self.data):
+        rejected_detetectors_list = []
+        accepted_detectors_list = []
+        accepted_offsets_list = []
+
+        if(not self.sigma_clipping): 
+            accepted_detectors_list = self.detlist
+            accepted_offsets_list = self.det_offsets
+
+        for i, (data, det_name, offset) in enumerate(zip(self.data, self.detlist, self.det_offsets)):
             det_data = detector_trend(data)
-            if self.polynomialorder != 0: residual_data = det_data.fit_residual(order=self.polynomialorder)
+
+            if self.polynomialorder != 0: 
+                residual_data = det_data.fit_residual(order=self.polynomialorder)
+                residual_data = self.DT(residual_data)
             else: residual_data = data.copy()
 
             if self.despike:
@@ -50,13 +90,26 @@ class data_cleaned():
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
             else: data_despiked = residual_data.copy()
 
+            if self.sigma_clipping:
+            
+                clip = sigma_clipping(data_despiked)
+                reject = clip.clipping(low_thresh = self.low_thresh, high_thresh = self.high_thresh) 
+                if(reject):
+                    rejected_detetectors_list.append(det_name)
+                    continue
+                else: 
+                    accepted_offsets_list.append(offset)
+                    accepted_detectors_list.append(det_name)
+                    data_clipped = data_despiked
+            else: data_clipped = data_despiked.copy()
+            
             if self.cutoff != 0:
-                filterdat = filterdata(data_despiked, self.cutoff, self.fs)
+                filterdat = filterdata(data_despiked, self.cutoff, self.fs, self.DT)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
             else: cleaned_data.append( data_despiked )
         
-        return cleaned_data
-        
+        return cleaned_data, accepted_detectors_list, np.asarray(accepted_offsets_list), rejected_detetectors_list
+    
 class despike():
 
     '''
@@ -68,6 +121,16 @@ class despike():
     '''
     
     def __init__(self, data):
+
+        '''
+        Create an instance of the class to despike the TOD
+        Parameters
+        ----------
+        data: 1d array
+            the TOD to be despiked
+        Returns
+        -------
+        '''
 
         self.data = data
 
@@ -138,7 +201,8 @@ class despike():
             height in sigma of the peak. 
         pthres: int 
             prominence of the peak in sigma. 
-        
+        window: float
+            how far in samples to look to the left and right of each peak to find the local minimum
         Returns
         -------
         param[0].copy(): list
@@ -264,16 +328,30 @@ class filterdata():
     -------
     '''
 
-    def __init__(self, data, cutoff, fs):
+    def __init__(self, data, cutoff, fs, DT):
         
         '''
         See data_cleaned for parameters explanantion
+        Parameters
+        ----------
+        data: 1d array
+            the data to be filtered
+        cutoff: float
+            the frequency of the filter
+        fs: float
+            the sampling frequency of array
+        DT: type
+            float precision required
+
+        Returns
+        -------
         '''
 
         self.data = data
         self.cutoff = cutoff
         self.fs = fs
-    
+        self.DT = DT
+
     def highpass(self, order):
 
         '''
@@ -347,11 +425,11 @@ class filterdata():
             the filtered timestream. 
         -------
         '''
-        
+
         if window is True:
             window_data = np.hanning(len(self.data))
 
-            fft_data = np.fft.rfft(self.data*window_data)
+            fft_data = np.fft.rfft(self.data*self.DT(window_data))
         else:
             fft_data = np.fft.rfft(self.data)
 
@@ -380,7 +458,7 @@ class filterdata():
 
         ifft_data = np.fft.irfft(self.fft_filter(window=window), len(self.data))
 
-        return ifft_data
+        return self.DT(ifft_data)
 
 class detector_trend():
 
@@ -393,6 +471,15 @@ class detector_trend():
     '''
 
     def __init__(self, data):
+        '''
+        create an instance of the class to detrend a TOD
+        Parameters
+        ----------
+        data: 1 array
+            the timestream to remove the trend of. 
+        Returns
+        -------
+        '''
 
         self.data = data
 
@@ -409,7 +496,7 @@ class detector_trend():
         Returns
         y_fin: array
             fitted data
-        index_exclude:
+        index_exclude: array
             index of elements to set to 0. 
         -------
         '''
@@ -419,7 +506,7 @@ class detector_trend():
         index_exclude = np.array([], dtype=int)
 
         if np.size(edge) == 1:
-            p = np.polyfit(x, self.data, order)
+            p = np.polyfit(x, np.float32(self.data), order)
             poly = np.poly1d(p)
             y_fin = poly(x)
 
@@ -449,6 +536,62 @@ class detector_trend():
         if(len(index)>0): zero_data[index] = 0.
 
         return -fitteddata+zero_data
+
+class sigma_clipping():
+
+    '''
+    Class to measure the variance in a timestream
+    Parameters
+    ----------
+    Returns
+    -------
+    '''
+
+    def __init__(self, data):
+        '''
+        Create an instance of the class to measure the variance in a timestream
+        Parameters
+        ----------
+        data: 1d array
+            the detector timestream
+        Returns
+        -------
+        '''
+
+        self.data = np.float32(data)
+    
+    def clipping(self, low_thresh, high_thresh):
+        '''
+        Measure the variance of a timestream and return True if its variance is within the thresholds.
+        Parameters
+        ----------
+        low_trhesh: float
+            the lower threshold in sigma for the timestream variance
+        
+        high_trhesh: float
+            the higher threshold in sigma for the timestream variance
+        Returns
+        -------
+        reject: bool
+            if the timestream variance is inside the thresholds or not. 
+        '''        
+
+        # mean in sliding window
+        
+        mean = uniform_filter1d(self.data, size=len(self.data), mode='nearest')
+
+        # mean of squared signal
+        mean_sq = uniform_filter1d(self.data**2, size=len(self.data), mode='nearest')
+
+        # variance = E[x^2] - (E[x])^2
+        var = mean_sq - mean**2
+
+        # and standard deviation
+        sigma = np.sqrt(var)
+        #print(f'sigma mean={sigma.mean():.3f}, min={sigma.min():.3f}, max={sigma.max():.3f},, median={np.median(sigma):.3f}')
+        reject = np.any((sigma > high_thresh) | (sigma < low_thresh))
+
+        return reject
 
 class kidsutils():
     '''
@@ -520,7 +663,7 @@ class kidsutils():
 
         return np.sqrt(I**2+Q**2 )
 
-    def interpolation_roach(self, data, bins, sampling):
+    def interpolation_roach(self, data, bins, sampling, DT, IT):
 
         '''
         data: values that need to be interpolated
@@ -531,14 +674,38 @@ class kidsutils():
         Returns
         -------
         '''
-
+        """
         start = np.append(0, np.cumsum(bins[:-1]))
         end = np.cumsum(bins)
         ln = np.linspace(start, end-1, int(sampling))
         idx = np.reshape(np.transpose(ln), np.size(ln))
         idx_plus = np.append(idx[:-1]+1, idx[-1])
-        
         return (data[idx_plus.astype(int)]-data[idx.astype(int)])*(idx-idx.astype(int))+data[idx.astype(int)]
+        """
+        # Ensure bins are in DT
+        bins = np.array(bins, dtype=DT)
+        
+        # Start and end positions
+        start = np.append(DT(0), np.cumsum(bins[:-1], dtype=DT))
+        end = np.cumsum(bins, dtype=DT)
+        
+        # Linear spacing within each bin
+        ln = np.linspace(start, end - DT(1), int(sampling), dtype=DT)
+        
+        # Flatten index array
+        idx = np.reshape(np.transpose(ln), np.size(ln)).astype(DT)
+        
+        # idx_plus as integer indices for data access
+        idx_plus = np.append(idx[:-1] + DT(1), idx[-1]).astype(DT)
+        
+        # Integer indices for data
+        idx_int = idx.astype(DT)
+        
+        # Interpolation in chosen DT
+        
+        result = (data[idx_plus.astype(IT)] - data[idx_int.astype(IT)]) * (idx - idx_int) + data[idx_int.astype(IT)]
+
+        return result.astype(DT)
      
     def det_time(self, path, roach_number, frames, ctime_start, ctime_end, sampling):
         '''
@@ -589,3 +756,4 @@ class kidsutils():
             ctime_roach_renormed.append(ctime_roach)
 
         return np.asarray(ctime_roach_renormed), np.asarray(bins_list)
+    
