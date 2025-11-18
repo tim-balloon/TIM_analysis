@@ -525,7 +525,7 @@ def test_I(profiling_vs_tod_time =True, profiling_vs_nb_bands=True):
 
         with open(path, 'wb') as f: pickle.dump(results, f)
 
-def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
+def test_II(profiling_vs_tod_time = False, profiling_vs_nb_bands=True):
 
     path = 'fits_and_hdf5/namap_perf_profiling_individual_maps.p'
 
@@ -618,14 +618,10 @@ def test_II(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
             for nband in nb_bands:
                 for npix in nb_pixels:
                     val = int(nband * npix)
-                    if val in results[key]["nb dets"]: continue
-                                
+                    if val in results[key]["nb dets"]: continue         
                     # Skip if val is smaller than max so far
                     if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
                     results[key]["nb dets"].append(val)
-                        
-
-                    results[key]["nb dets"].append(int(nband*npix))
                     freq_list = 715.0 + 4.0 * np.arange(nband)
 
                     par = load_par_file(f'params_namap.par')
@@ -764,7 +760,6 @@ def test_III(profiling_vs_tod_time = True, profiling_vs_nb_bands=True):
                     if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
                     results[key]["nb dets"].append(val)
                     
-                    results[key]["nb dets"].append(int(nband*npix))
                     freq_list = 715.0 + 4.0 * np.arange(nband)
 
                     par = load_par_file(f'params_namap.par')
@@ -818,7 +813,7 @@ if __name__ == "__main__":
     #I: coadded maps
     I_coadded_maps = False
     #II: individual maps
-    II_individual_maps = True
+    II_individual_maps = False
     #III TODs 
     III_tods = True
     #IV profile functions
