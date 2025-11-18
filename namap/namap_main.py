@@ -260,26 +260,23 @@ if __name__ == "__main__":
 
     Instructions: 
 
-    1/4: git clone from TIM_analysis/namap
+    1/2: git clone from TIM_analysis/namap
 
-    (Optional, needed for 4/4A) 2/4: Download a mock sky: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/sides_angular_cubes/TIM/pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits .
-    and put it in namap/fits_and_hdf5/
-    
-    3/4: generate the KIDs file: python gen_det_names.py params_strategy.par
+    2/2: Download the TOD file: https://drive.google.com/file/d/1BnkEUj_yhPBPJte7ZgwxNHtMI75y8Nj6/view?usp=drive_link
+    and put it in fits_and_hdf5/
 
-    4/4A: generate the TOD file: python strategy.py params_strategy.par 
-    OR
-    4/4B: Download the TOD file: scp yournetid@cc-login.campuscluster.illinois.edu:/projects/ncsa/caps/TIM_analysis/timestreams/TOD_pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full
-_de_Looze_smoothed_MJy_sr.hdf5 . , 
-    and put it in namap/fits_and_hdf5/
-
-    To run: python namap_main.py params_namap.par
+    To run: python namap_main.py --params-file PAR_FILES/params_namap.par
 
     Left to be done:
-        Implement respons correction
-        Test parallactic angle 
-        Implement noise detectors
-        add buffer frames
+        (I,Q) --> df/f (tod.kidsutils)
+        Improve downsampling (ld.frame_zoom_sync)
+        Implement respons correction and noise detectors ? Replaced by sigma clipping. 
+        Test parallactic angle & telescope coordinates
+        Improve TOD compression (ld.compress_tods)
+    
+        Focus (see src/beam.py)
+        Boresight (see src/coordinate.py/rotate)
+        Double check every par file key can be passed as argument
     '''
 
     ## bookend mathilde code 
