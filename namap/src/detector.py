@@ -67,6 +67,7 @@ class data_cleaned():
             list of cleaned data timestreams
         '''
         
+        
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
         rejected_detetectors_list = []
         accepted_detectors_list = []
