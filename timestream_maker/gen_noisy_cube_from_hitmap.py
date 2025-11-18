@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     #------------------------------
     #Load the previously generated scanning path and time array. 
-    tod_file=P['output_path']+f"TOD_{format_duration(P['T_duration'])}.hdf5" #os.getcwd()+'/'+'+P['file'][:-5]+'
+    tod_file=P['output_name'] #os.getcwd()+'/'+'+P['file'][:-5]+'
     H = h5py.File(tod_file, "a")
     T = H['data_time']['data'][()] #LST in seconds
     LST = H['data_lst']['data'][()] #LST in hour angle. 
