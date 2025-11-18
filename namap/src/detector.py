@@ -539,13 +539,41 @@ class detector_trend():
 class sigma_clipping():
 
     '''
+    Class to measure the variance in a timestream
+    Parameters
+    ----------
+    Returns
+    -------
     '''
 
     def __init__(self, data):
+        '''
+        Create an instance of the class to measure the variance in a timestream
+        Parameters
+        ----------
+        data: 1d array
+            the detector timestream
+        Returns
+        -------
+        '''
 
         self.data = np.float32(data)
     
     def clipping(self, low_thresh, high_thresh):
+        '''
+        Measure the variance of a timestream and return True if its variance is within the thresholds.
+        Parameters
+        ----------
+        low_trhesh: float
+            the lower threshold in sigma for the timestream variance
+        
+        high_trhesh: float
+            the higher threshold in sigma for the timestream variance
+        Returns
+        -------
+        reject: bool
+            if the timestream variance is inside the thresholds or not. 
+        '''        
 
         # mean in sliding window
         
