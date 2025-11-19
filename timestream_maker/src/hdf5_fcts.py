@@ -46,12 +46,9 @@ def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="6
     """ 
     H = h5py.File(tod_file, "a")
     for i, (name, coord) in enumerate(zip(keys, (scan_path[:,0],scan_path[:,1]))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        if('acquisition frequency' in grp): del grp['acquisition frequency'] 
+
+        if name in H: del H[name]   # WARNING: deletes entire detector group
+        grp = H.create_group(name)
 
         if(save=="32bytes"): coord = (coord).astype(np.float32)
         elif(save=="16bytes"): coord = (coord).astype(np.float16)
@@ -80,25 +77,21 @@ def save_timestamps(tod_file, T, spf, acquisition_frequency, key, compression='g
     -------
     '''
     H = h5py.File(tod_file, "a")
-    namegrp = key
-    if namegrp not in H: grp = H.create_group(namegrp)
-    else:                grp = H[namegrp]
-    if('data' in grp): del grp['data'] 
-    if('spf' in grp): del grp['spf'] 
-    if('acquisition frequency' in grp): del grp['acquisition frequency'] 
-        
+
+    if key in H: del H[key]   # WARNING: deletes entire detector group
+    grp = H.create_group(key)
+
     if(save=="32bytes"): T = (T).astype(np.float32)
     elif(save=="16bytes"): T = (T).astype(np.float16)
-    
     if(compression is not None): grp.create_dataset('data', data=T, compression=compression, compression_opts=9)
     else: grp.create_dataset('data', data=T, compression=compression)
-
 
     grp.create_dataset('spf', data=spf)
     grp.create_dataset('acquisition frequency', data=acquisition_frequency)
 
     H.close()
 
+        
 def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, compression='gzip',save="64bytes"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
@@ -134,14 +127,8 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     for detector, (offset, shift, name) in enumerate(zip(pixel_offset, pixel_shift, det_names)):
             
         namegrp = f'kid_{name}_roach'
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        if('pixel_offset_y' in grp): del grp['pixel_offset_y'] 
-        if('pixel_offset_x' in grp): del grp['pixel_offset_x'] 
-        if('frequency' in grp): del grp['frequency'] 
-        if('acquisition frequency' in grp): del grp['acquisition frequency'] 
+        if namegrp in H: del H[namegrp]   # WARNING: deletes entire detector group
+        grp = H.create_group(namegrp)
 
         grp.create_dataset('spf', data=np.float16(spf))
         grp.create_dataset('pixel_offset_y', data=np.float16(offset))
