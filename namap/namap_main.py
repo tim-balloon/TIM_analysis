@@ -126,17 +126,21 @@ def main(P, nbdets=None):
         filtered = btable
     #option in the par file to good kids list
 
-    result_rows = []
-    # Loop over unique frequencies
-    for freq in np.unique(filtered['Frequency']):
-        sub = filtered[filtered['Frequency'] == freq]
-        # take first N rows for this frequency
-        result_rows.append(sub[:nbdets])
+    #-------- for profiling purpose only -------------
+    if(nbdets is not None):
+        result_rows = []
+        # Loop over unique frequencies
+        for freq in np.unique(filtered['Frequency']):
+            sub = filtered[filtered['Frequency'] == freq]
+            # take first N rows for this frequency
+            result_rows.append(sub[:nbdets])
 
-    # Concatenate back into a single table
-    kid_num = Table(np.hstack(result_rows))['Name']
+        # Concatenate back into a single table
+        kid_num = Table(np.hstack(result_rows))['Name']
 
-    #if(nbdets is not None): kid_num = filtered['Name'][:nbdets]
+    else: kid_num = filtered['Name']
+    #-------------------------------------------------
+
     print('Nb dets: ', len(kid_num))
     #----------------------------------------------------------------
 
@@ -205,7 +209,6 @@ def main(P, nbdets=None):
                                            coord1, coord2, coord1_data, coord2_data, 
                                            first_frame, num_frames, lst_data, lat_data,P,
                                             DT, IT, int8=P['int8'])
-
         tods_compressor.save_tods()
 
     else:

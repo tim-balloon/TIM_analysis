@@ -330,7 +330,7 @@ class det_table():
 
         for i, kid in enumerate(self.name):
 
-            index, = np.where(btable['Name'] == kid)
+            index, = np.where(btable['Name'] == kid) 
             det_off[i, 0] = btable['XEL'][index] 
             det_off[i, 1] = btable['EL'][index] 
 
