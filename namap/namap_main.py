@@ -209,7 +209,6 @@ def main(P, nbdets=None):
                                            coord1, coord2, coord1_data, coord2_data, 
                                            first_frame, num_frames, lst_data, lat_data,P,
                                             DT, IT, int8=P['int8'])
-
         tods_compressor.save_tods()
 
     else:
