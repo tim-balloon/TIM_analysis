@@ -1,5 +1,5 @@
 #NAMAP parameters 
-precision = 'float16'
+precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
