@@ -3,6 +3,7 @@ import src.loaddata as ld
 import src.detector as tod
 import src.mapmaker as mp
 import src.pointing as pt  
+import src.beam as bm
 import copy
 from astropy import wcs 
 import astropy.table as tb
@@ -253,10 +254,190 @@ def main(P, nbdets=None):
         #Plot the maps
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #--------------------------------------------------
+        
+        if P['checkBeam'] and P['coadd']:
+                embed()
+                
+                print('BEAM')
+                beam_value = bm.beam(map_values, )#param = self.beamparam
+                beam_map = beam_value.beam_fit()
+
+                param = beam_map[1]
+
+                '''
+                if isinstance(beam_map[0], str):
+                    msg = 'Fit not converged'
+    
+
+                else:
+                    beams.updateTab(data=beam_map[0], coord1 = self.tab1.coord1slice, coord2 = self.tab1.coord2slice, \
+                                    crval = self.tab1.crval, ctype=ctype, pixnum = self.tab1.pixnum, telcoord = self.tab1.telescopecoordinateCheckBox.isChecked(),\
+                                    crpix = crpix_new, cdelt = self.tab1.cdelt, projection = self.proj_new, xystage=xystagebool)
+                    
+                    .map2d(data=data, coord1=coord1, coord2=coord2, crval=crval, ctype= ctype, pixnum=pixnum, telcoord=telcoord, cdelt=cdelt, crpix=crpix, \
+                            projection=projection,xystage=xystage)
+                '''
+
+
+                ####################33
+                def updatedata(self):
+                    '''
+                    This function updates the map values everytime that the plot button is pushed
+                    '''
+
+                    if self.tab1.PointingOffsetCheckBox.isChecked() or self.tab1.DettableCheckBox.isChecked():
+                        correction = True
+                    else:
+                        correction = False
+                    pb =  ProgressBarWindow()
+                    pb.setCurrentAction('Loading Data')
+                    pb.setValue(0)
+                    #functions to compute the updated values
+
+                    self.tab1.load_func(offset = self.todoffsetvalue, correction = correction, \
+                                        LSTtype=self.LSTtype, LATtype=self.LATtype,\
+                                        LSTconv=self.LSTconv, LATconv=self.LATconv, \
+                                        lstlatfreq=self.lstlatfreq, lstlatsample = self.lstlatsampleframe, \
+                                        polynomialorder = int(self.todpolynomialvalue), despike = self.toddespikevalue, \
+                                        sigma = int(self.todsigmavalue), prominence=int(self.todprominencevalue))
+
+                    self.data = self.tab1.detslice
+                    self.lst = self.tab1.lstslice
+                    self.lat = self.tab1.latslice
+
+                    pb.setCurrentAction('Processing Data')
+                    pb.setValue(25)
+
+                    self.cleandata = self.tab1.cleaned_data
+
+                    self.tab2.detlist_selection(self.tab1.det_list)
+
+                    pb.setCurrentAction('Drawing TOD')
+                    pb.setValue(50)
+
+                    if np.size(np.shape(self.data)) == 1:
+                        self.tab2.draw_TOD(self.data)
+                        self.tab2.draw_cleaned_TOD(self.cleandata)
+                    else:
+                        self.tab2.draw_TOD(self.data[0])
+                        self.tab2.draw_cleaned_TOD(self.cleandata[0])
+
+                    pb.setCurrentAction('Drawing Maps')
+                    pb.setValue(75)
+
+                    try:
+                        
+                        self.tab1.mapvalues(self.cleandata)
+
+                        #Update Maps
+                        maps = self.tab1.map_value
+                        mp_ini = self.tab1.createMapPlotGroup
+                        if np.size(self.tab1.det_list) == 1:
+                            x_min_map = np.floor(np.amin(self.tab1.w[:,0]))
+                            # x_max_map = np.floor(np.amax(self.tab1.w[:,0])) 
+                            y_min_map = np.floor(np.amin(self.tab1.w[:,1]))
+                            # y_max_map = np.floor(np.amax(self.tab1.w[:,1]))
+                            index1, = np.where(self.tab1.w[:,0]<0)
+                            index2, = np.where(self.tab1.w[:,1]<0)
+                        else:
+                            x_min_map = np.floor(np.amin(self.tab1.w[:,:,0]))
+                            # x_max_map = np.floor(np.amax(self.tab1.w[:,:,0])) 
+                            y_min_map = np.floor(np.amin(self.tab1.w[:,:,1]))
+                            # y_max_map = np.floor(np.amax(self.tab1.w[:,:,1]))
+                            index1, = np.where(self.tab1.w[0,:,0]<0)
+                            index2, = np.where(self.tab1.w[0,:,1]<0)
+            
+                        if np.size(index1) > 1:
+                            crpix1_new  = (self.tab1.crpix[0]-x_min_map)
+                        else:
+                            crpix1_new = copy.copy(self.tab1.crpix[0])
+                        
+                        if np.size(index2) > 1:
+                            crpix2_new  = (self.tab1.crpix[1]-y_min_map)
+                        else:
+                            crpix2_new = copy.copy(self.tab1.crpix[1])
+
+                        crpix_new = np.array([crpix1_new, crpix2_new])
+
+                        wcsworld = mp.wcs_world(self.tab1.ctype, crpix_new, self.tab1.cdelt, self.tab1.crval)
+
+                        coord_test, self.proj_new = wcsworld.world(np.reshape(self.tab1.crval, (1,2)), self.tab1.parallactic)
+                        # if crpix_new[0]*2 < x_max_map:
+                        #     x_sel = np.array([crpix_new[0]-self.tab1.pixnum[0]/2, crpix_new[0]+self.tab1.pixnum[0]/2], dtype=int)
+                        # else:
+                        #     x_sel = np.array([x_max_map-self.tab1.pixnum[0],x_max_map], dtype=int)
+
+                        # if crpix_new[1]*2 < y_max_map:
+                        #     y_sel = np.array([crpix_new[1]-self.tab1.pixnum[1]/2, crpix_new[1]+self.tab1.pixnum[1]/2], dtype=int)
+                        # else:
+                        #     y_sel = np.array([y_max_map-self.tab1.pixnum[1],y_max_map], dtype=int)
+
+                        if self.tab1.coordchoice.currentText() == 'XY Stage':
+                            xystagebool = True
+                        else:
+                            xystagebool = False
+                        
+                        ctype = self.tab1.coordchoice.currentText()
+                        print('CTYPE_1', ctype)
+                        mp_ini.updateTab(data=maps, coord1 = self.tab1.coord1slice, coord2 = self.tab1.coord2slice, \
+                                        crval = self.tab1.crval, ctype = ctype, pixnum = self.tab1.pixnum, \
+                                        telcoord = self.tab1.telescopecoordinateCheckBox.isChecked(),\
+                                        crpix = crpix_new, cdelt = self.tab1.cdelt, projection = self.proj_new, xystage=xystagebool)
+                        # cutout = mp_ini.cutout
+
+                        # self.proj_new = cutout.wcs
+
+                        #Update Offset
+                        if self.tab1.PointingOffsetCalculationCheckBox.isChecked():
+                            if self.refpoint is not None:
+                                self.tab1.updateOffsetValue(self.refpoint[0], self.refpoint[1])
+                            else:
+                                self.tab1.updateOffsetValue()
+
+                        checkBeam = self.tab1.BeamCheckBox
+
+                        #Create Beams
+                        if checkBeam.isChecked():
+                            print('BEAM')
+                            beam_value = bm.beam(maps, param = self.beamparam)
+                            beam_map = beam_value.beam_fit()
+
+                            param = beam_map[1]
+
+                            beams = self.tab3.beammaps
+
+                            if isinstance(beam_map[0], str):
+                                self.warningbox = QMessageBox()
+                                self.warningbox.setIcon(QMessageBox.Warning)
+                                self.warningbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+                                self.warningbox.setWindowTitle('Warning')
+
+                                msg = 'Fit not converged'
+                                
+                                self.warningbox.setText(msg)        
+                            
+                                self.warningbox.exec_()
+
+                            else:
+                                beams.updateTab(data=beam_map[0], coord1 = self.tab1.coord1slice, coord2 = self.tab1.coord2slice, \
+                                                crval = self.tab1.crval, ctype=ctype, pixnum = self.tab1.pixnum, telcoord = self.tab1.telescopecoordinateCheckBox.isChecked(),\
+                                                crpix = crpix_new, cdelt = self.tab1.cdelt, projection = self.proj_new, xystage=xystagebool)
+                                self.tab3.updateTable(param)
+
+                    except AttributeError:
+                        pass
+                    
+                    pb.close()
+
+                    
 
     return 0
 
 if __name__ == "__main__":
+
+    #Repogroup.add_argument('-te', '--telemetry', action='store_true', help='For BLAST-TNG, specify if the data are coming from \
+
 
     '''
     If you want to modify this code, please create your own branch. 
