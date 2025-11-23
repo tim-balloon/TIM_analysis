@@ -25,8 +25,8 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_duration = 5/60
-acquisition_frequency = 100
-acquisition_frequency_coords= 100
+acquisition_frequency = 488.3
+acquisition_frequency_coords= 100.3
 #---------------------------
 
 #----- Sky simulation -----
