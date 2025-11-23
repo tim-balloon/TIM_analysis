@@ -39,26 +39,8 @@ def generate_strings(total_count, groups):
 
     return all_strings
 
-if __name__ == "__main__":
-    '''
-    Do python gen_det_names.py params_strategy.par
-    before running strategy.py or namap_main.py
-    Generate a .cvs file containing the info of the detectors. 
-    '''
+def gen_detectors_main(P):
 
-    random.seed(42)   # Fixes the seed for Python's random module
-    np.random.seed(42)  # Fixes the seed for NumPy
-
-    #---------------------------
-    #Iinitialization
-    parser = argparse.ArgumentParser(description='Gen a random file of names for TIM kids', \
-                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    #options
-    parser.add_argument('params', help=".par file with params", default = None)
-    args = parser.parse_args()
-
-    P = load_params(args.params)
-    #---------------------------
 
     #---------------------------    
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
@@ -115,3 +97,28 @@ if __name__ == "__main__":
     df = pd.read_csv(os.getcwd()+'/'+file, sep='\t')
     print(df.head())
     #---------------------------
+
+
+if __name__ == "__main__":
+    '''
+    Do python gen_det_names.py params_strategy.par
+    before running strategy.py or namap_main.py
+    Generate a .cvs file containing the info of the detectors. 
+    '''
+
+    random.seed(42)   # Fixes the seed for Python's random module
+    np.random.seed(42)  # Fixes the seed for NumPy
+
+    #---------------------------
+    #Iinitialization
+    parser = argparse.ArgumentParser(description='Gen a random file of names for TIM kids', \
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    #options
+    parser.add_argument('params', help=".par file with params", default = None)
+    args = parser.parse_args()
+
+    P = load_params(args.params)
+    #---------------------------
+
+
+    gen_detectors_main(P)
