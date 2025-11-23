@@ -625,9 +625,9 @@ class frame_zoom_sync():
         self.freq_target = freq_target                           #Frequency to downsample the data to. 
 
         if self.startframe < 100:
-            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
-            self.bufferframe = int(100)
+            self.bufferframe = int(0)
   
     def resampling(self, X, spf_start, spf_end, DT):
 
@@ -724,7 +724,7 @@ class frame_zoom_sync():
         lat_data: array
             latitude TOD.
         '''
-        
+    
         num = self.numframes+self.bufferframe
         first_frame = self.startframe+self.bufferframe
         #---------------------------------------------------------------
@@ -826,6 +826,8 @@ class frame_zoom_sync():
         #Keep only the previous samples
         for i in range(len(self.det_data)):
             self.det_data[i] = self.det_data[i][i_d_start:i_d_end]
+
+
         ctime   = ctime[i_c_start:i_c_end]
         self.coord1_data = self.coord1_data[i_c_start:i_c_end]
         self.coord2_data = self.coord2_data[i_c_start:i_c_end]
@@ -833,7 +835,6 @@ class frame_zoom_sync():
         self.lat_data = self.lat_data[i_c_start:i_c_end]
         turnaround_flags = turnaround_flags[i_c_start:i_c_end]
         #---------------------------------------------------------------
-
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
         self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
