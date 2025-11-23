@@ -3,10 +3,10 @@ precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = 'fits_and_hdf5/TODref_64B.hdf5' 
+hdf5_file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF.hdf5' #'fits_and_hdf5/TODref_64B.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = 'config/TIM_kid_table.tsv' 
+detector_table = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/TIM_kid_table.tsv' #'config/TIM_kid_table.tsv' 
 
 #if you want to use preselected good detectors list
 detectors_to_use = None 
@@ -53,6 +53,7 @@ sigma_clipping = True
 low_thresh = 1e-5
 high_thresh = 5
 remove_turnarounds = True
+checkBeam = False
 #-----------------------------------------------
 
 
