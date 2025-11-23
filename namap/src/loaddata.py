@@ -693,8 +693,9 @@ class frame_zoom_sync():
         coord2_int: array
             the coordinates 2 interpolated.
         '''
-        coord1_int = interp1d(time_acs, coord1, kind='linear')
-        coord2_int = interp1d(time_acs, coord2, kind= 'linear')
+        print('ok ok ok')
+        coord1_int = interp1d(time_acs, coord1, kind='linear',bounds_error=False,fill_value="extrapolate")
+        coord2_int = interp1d(time_acs, coord2, kind= 'linear',bounds_error=False,fill_value="extrapolate")
 
         return coord1_int(time_det), coord2_int(time_det)
 
@@ -837,7 +838,7 @@ class frame_zoom_sync():
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
         self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
         self.lst_data, self.lat_data       = self.coord_int(self.lst_data, self.lat_data, ctime, dettime)
-        f = interp1d(ctime, turnaround_flags, kind='linear')
+        f = interp1d(ctime, turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
         turnaround_flags_interp = np.round(f(dettime)).astype(self.IT)
         #---------------------------------------------------------------
 
