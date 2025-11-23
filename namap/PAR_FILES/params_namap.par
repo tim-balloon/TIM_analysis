@@ -3,7 +3,7 @@ precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF.hdf5' #'fits_and_hdf5/TODref_64B.hdf5' 
+hdf5_file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF.hdf5' #'fits_and_hdf5/TODref_64B.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/TIM_kid_table_reduced.tsv' #'config/TIM_kid_table.tsv' 
@@ -12,11 +12,11 @@ detector_table = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/TIM_kid_
 detectors_to_use = None 
 
 #Choose the frequency band to make a map from
-frequencies = (715.0, 719.0) #GHz
+frequencies = (715.0,) #GHz
  
 Chose the data in the time dimension 
-num_frames=180 #integration time in seconds to be loaded. 
-first_frame=0 #Starting time in second to loaded
+num_frames=3300 #integration time in seconds to be loaded. 
+first_frame=110 #Starting time in second to loaded
 #----------------------------
 
 #--- Astrometry Parameters ---
@@ -61,7 +61,7 @@ checkBeam = False
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
 coadd = True
-output_map = 'individual.fits' 
+output_map = 'coadd.fits' 
 save_downsampled_TODS = False
 output_hdf5 = 'fits_and_hdf5/tods.hdf5'
 int8 = False #For testing purpose only 
