@@ -295,7 +295,7 @@ def main_tod(P):
         ]
         
         hdul = fits.HDUList(hdus)
-        savepath = f'fits_and_hdf5/scanned_map_{P["output_name"][:-5]}_{array_name}.fits'
+        savepath = f'{P["output_path"]}/scanned_map_{P["output_name"][:-5]}_{array_name}.fits'
         hdul.writeto(savepath, overwrite=True)
         bar.finish
         print('')
