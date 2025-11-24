@@ -186,7 +186,8 @@ def main_tod(P):
     #Remove the mean in each map, to wich we are not sensitive. 
     cubemean = np.mean(cube, axis=(1,2)) 
     cube -= cubemean[:, None, None]
-    cube *= 1e6*pix_size #conversion MJy/sr to Jy/beam
+    cube *= pix_size #conversion Jy/sr to Jy/beam
+    if('MJy' in hdr['BUNIT']): cube *= 1e6 #conversion MJy/beam to Jy/beam
     #-----------------------------
 
     #-----------------------------
