@@ -3,10 +3,11 @@ precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF.hdf5' #'fits_and_hdf5/TODref_64B.hdf5' 
+hdf5_file = 'fits_and_hdf5/TODref_64B.hdf5' 
+#'/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_on_2_sources_separated_by_60.3arcsecs_with_2xbigger_sigma_PSF.hdf5' '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/TIM_kid_table_reduced.tsv' 
 
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/TIM_kid_table_reduced.tsv' #'config/TIM_kid_table.tsv' 
+detector_table = 'config/TIM_kid_table.tsv' 
 
 #if you want to use preselected good detectors list
 detectors_to_use = None 
@@ -44,14 +45,15 @@ pixnum = 100., 100. #Number of pixels along the two axis. The input needs to be 
 
 #--- Parameters for the pre-processing of the TODs ---
 downsample_frequency = 100 #Hz
-highpassfreq = 0.1 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
-polynomialorder = 5 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
-despike = True #Despike flag. If called, two possible parameters can be explicited. 
+highpassfreq = 0 #Cutoff frequency for high-pass filter detector data. Default value is 0.1
+polynomialorder = 0 #Polynomial orderelevations used to fit the TOD to detrend data. Default value is 5
+despike = False #Despike flag. If called, two possible parameters can be explicited. 
 sigma=5        #The first is the height in sigma unit for the peak, 
 prominence=5   #and the second is the prominence in sigma unit for the peak
 sigma_clipping = True
 low_thresh = 1e-5
 high_thresh = 5
+bypass_synch = False
 remove_turnarounds = True
 checkBeam = False
 #-----------------------------------------------
