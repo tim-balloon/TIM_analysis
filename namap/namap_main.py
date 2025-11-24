@@ -257,7 +257,19 @@ def main(P, nbdets=None):
         wcs = maps.w
         map_values = maps.map2d()
         #--------------------
-
+        import matplotlib.pyplot as plt
+        plt.imshow(map_values, origin='lower'); plt.show()
+        f = fits.PrimaryHDU(map_values, header=wcs.to_header())
+        hdu = fits.HDUList([f])
+        hdr = hdu[0].header
+        hdr.set("map")
+        hdr.set("Datas")
+        hdr["BITPIX"] = ("64", "array data type")
+        hdr["BUNIT"] = 'MJy/sr'
+        hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+        hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+        hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+'test.fits', overwrite=True)
+        hdu.close()
         #--------------------------------------------------
         #Plot the maps
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
@@ -265,13 +277,15 @@ def main(P, nbdets=None):
         
         if P['checkBeam'] and P['coadd']:
                 
+                map_values = np.nan_to_num(map_values, nan=0.0)
+
                 beam_value = bm.beam(map_values, )#param = self.beamparam
 
                 beam_map = beam_value.beam_fit()
 
                 param = beam_map[1]
 
-                f = fits.PrimaryHDU(beam_map[0], header=wcs)
+                f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                 hdu = fits.HDUList([f])
                 hdr = hdu[0].header
                 hdr.set("map")
@@ -282,6 +296,10 @@ def main(P, nbdets=None):
                 hdr["INFO"] = json.dumps(P, ensure_ascii=True)
                 hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
                 hdu.close()
+
+
+                import matplotlib.pyplot as plt
+                plt.imshow(beam_map[0], origin='lower'); plt.show()
 
     return 0
 
