@@ -401,7 +401,7 @@ if __name__ == "__main__":
     from astropy.io import fits
     import matplotlib.pyplot as plt
 
-    map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_75.4arcsecs_with_1xbigger_sigma_PSF_LW.fits', ext=1)[0]
+    map_value = fits.getdata('../fits_and_hdf5/cube_2sources_separated_by_90.5arcsecs_with_2xbigger_sigma_PSF.fits', ext=1)[0]
     map_value = np.nan_to_num(map_value, nan=0.0)
 
     # Compute 1% of the max
