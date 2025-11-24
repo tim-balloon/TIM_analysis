@@ -401,15 +401,20 @@ if __name__ == "__main__":
     from astropy.io import fits
     import matplotlib.pyplot as plt
 
-    map_value = fits.getdata('../fits_and_hdf5/cube_2sources_separated_by_90.5arcsecs_with_2xbigger_sigma_PSF.fits', ext=1)[0]
+    map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_60.3arcsecs_with_1xbigger_sigma_PSF_SW.fits', ext=1)[0]
     map_value = np.nan_to_num(map_value, nan=0.0)
 
+    '''
     # Compute 1% of the max
     noise_level = 0.05 * np.max(map_value)
     # Add white Gaussian noise
     map_value += np.random.normal(loc=0.0, scale=noise_level, size=map_value.shape)
+    '''
 
+    plt.imshow(map_value, origin='lower'); plt.show()
     beam_value = beam(map_value )#param = self.beamparam
+
+    embed()
     
     beam_map = beam_value.beam_fit()
 
