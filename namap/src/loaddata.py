@@ -92,9 +92,9 @@ class data_value():
         self.IT=IT #Int precision required 
 
         if self.startframe < 100:
-            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
-            self.bufferframe = int(100)
+            self.bufferframe = int(0)
 
     def loadspf(file, field, IT):
         """
@@ -693,7 +693,6 @@ class frame_zoom_sync():
         coord2_int: array
             the coordinates 2 interpolated.
         '''
-        print('ok ok ok')
         coord1_int = interp1d(time_acs, coord1, kind='linear',bounds_error=False,fill_value="extrapolate")
         coord2_int = interp1d(time_acs, coord2, kind= 'linear',bounds_error=False,fill_value="extrapolate")
 
@@ -835,6 +834,7 @@ class frame_zoom_sync():
         self.lat_data = self.lat_data[i_c_start:i_c_end]
         turnaround_flags = turnaround_flags[i_c_start:i_c_end]
         #---------------------------------------------------------------
+        
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
         self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)

@@ -169,28 +169,30 @@ def main(P, nbdets=None):
 
     #---------------------------------
     #First remove noise peaks and discard TODs with large & low variance. 
-    det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
-    cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
-    P['rejected detectors list'] = rejected_detetectors_list
+    #det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
+    #cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
+    #P['rejected detectors list'] = rejected_detetectors_list
+    cleaned_data=det_data
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data) or not P['bypass_synch']): #<-- for testing purpose only
+    if(len(cleaned_data[0]) != len(coord1_data) and not P['bypass_synch']): #<-- for testing purpose only
         
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
 
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data()  
+    else: print('bypassed synch')
     #---------------------------------
 
     #---------------------------------
     #Clean the TOD by removing smooth polynomial component and apply a high pass filter
-    det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
-    cleaned_data, _, _, _ = det_tod.data_clean()
+    #det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
+    #cleaned_data, _, _, _ = det_tod.data_clean()
 
     #Filter out the turnarounds
-    if(P['remove_turnarounds']):
+    if(P['remove_turnarounds'] and not P['bypass_synch']):
         for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
         if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
         lst_data = lst_data[turnarounds_flag==1]
@@ -198,6 +200,7 @@ def main(P, nbdets=None):
         coord2_data = coord2_data[turnarounds_flag==1]
         coord1_data = coord1_data[turnarounds_flag==1] 
     #---------------------------------------------------------------
+
     
     #---------------------------------------------------------------
     #Apply detector's response
