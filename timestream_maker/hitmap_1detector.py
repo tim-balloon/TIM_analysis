@@ -35,6 +35,8 @@ def main_1det(P):
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
 
+    print(f'res={res*3600:.2f}arcsecs')
+
     #Angle of the rotation to apply to the detector array. 
     theta = np.radians(P['theta'])
 
@@ -43,7 +45,6 @@ def main_1det(P):
     acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
     dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
     spf = np.round(acquisition_frequency).astype(int)
-
 
     #---
     #local sideral time
