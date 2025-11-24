@@ -402,9 +402,19 @@ if __name__ == "__main__":
     from astropy.io import fits
     import matplotlib.pyplot as plt
 
-    map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_301.5arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=0)[0]
-    map_value = np.nan_to_num(map_value, nan=0.0)
+    #map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_301.5arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=0)[0]
+    map_value = fits.getdata('../fits_and_hdf5/test.fits')
+    #map_value = np.nan_to_num(map_value, nan=0.0)
 
+
+    plt.figure(figsize=(8, 6))
+    #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
+    plt.imshow(map_value, origin='lower', cmap='viridis', alpha=0.5, vmin = map_value.min(),vmax = map_value.max())
+    plt.colorbar(label='Amplitude')
+    plt.title('2D Gaussian Fit Contours')
+    plt.xlabel('X pixel')
+    plt.ylabel('Y pixel')
+    plt.show()
     '''     
     # Compute 1% of the max
     noise_level = 0.05 * np.max(map_value)
