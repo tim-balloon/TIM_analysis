@@ -401,15 +401,22 @@ if __name__ == "__main__":
     import numpy as np
     from astropy.io import fits
     import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
 
-    #map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_301.5arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=0)[0]
-    map_value = fits.getdata('../fits_and_hdf5/test.fits')
+
+
+    map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
     #map_value = np.nan_to_num(map_value, nan=0.0)
 
+    # Compute zscale limits
+    zscale = ZScaleInterval()
+    vmin, vmax = zscale.get_limits(map_value)
+
+    # Display with matplotlib
 
     plt.figure(figsize=(8, 6))
     #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
-    plt.imshow(map_value, origin='lower', cmap='viridis', alpha=0.5, vmin = map_value.min(),vmax = map_value.max())
+    plt.imshow(map_value, origin='lower', cmap='viridis',   vmin=vmin, vmax=vmax)
     plt.colorbar(label='Amplitude')
     plt.title('2D Gaussian Fit Contours')
     plt.xlabel('X pixel')
@@ -432,7 +439,7 @@ if __name__ == "__main__":
     else: 
         plt.figure(figsize=(8, 6))
         #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
-        plt.imshow(beam_map[0], origin='lower', cmap='viridis', alpha=0.5)
+        plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
         plt.colorbar(label='Amplitude')
         plt.title('2D Gaussian Fit Contours')
         plt.xlabel('X pixel')
@@ -440,7 +447,7 @@ if __name__ == "__main__":
 
         plt.figure(figsize=(8, 6))
         #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
-        plt.imshow(map_value, origin='lower', cmap='viridis', alpha=0.5)
+        plt.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
         plt.colorbar(label='Amplitude')
         plt.title('2D Gaussian Fit Contours')
         plt.xlabel('X pixel')
