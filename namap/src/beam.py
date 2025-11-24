@@ -398,10 +398,12 @@ class beam(object):
             
 if __name__ == "__main__":
 
+    import numpy as np
     from astropy.io import fits
     import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
 
-    map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_60.3arcsecs_with_1xbigger_sigma_PSF_SW.fits', ext=1)[0]
+    map_value = fits.getdata('scanned_map_TOD_on_2_sources_separated_by_45.2arcsecs_with_1xbigger_sigma_PSF_SW.fits', ext=1)[0]
     map_value = np.nan_to_num(map_value, nan=0.0)
 
     '''
@@ -411,11 +413,16 @@ if __name__ == "__main__":
     map_value += np.random.normal(loc=0.0, scale=noise_level, size=map_value.shape)
     '''
 
-    plt.imshow(map_value, origin='lower'); plt.show()
-    beam_value = beam(map_value )#param = self.beamparam
+    # Compute zscale limits
+    zscale = ZScaleInterval()
+    vmin, vmax = zscale.get_limits(map_value)
 
-    embed()
-    
+    # Display with matplotlib
+    plt.imshow(map_value, origin='lower', cmap='gray', vmin=vmin, vmax=vmax)
+    plt.colorbar()
+    plt.show()
+
+    beam_value = beam(map_value )#param = self.beamparam
     beam_map = beam_value.beam_fit()
 
     param = beam_map[1]
