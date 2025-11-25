@@ -1,6 +1,6 @@
 #----- TIM arrays information -----
 #Array parameters used to geenrate the TODs and the KIDs file.
-detectors_name_file = '/home/mvancuyck/Desktop/TIM_analysis/namap/config/TIM_kid_table.tsv'
+detectors_name_file = '/home/mvancuyck/Desktop/TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
 nb_pixel_SW = 64 #Number of pixel per frequency band in the SW array.
 offset_SW = 0.0145  #[deg] separation in angle between 2 consecutive pixels for the SW array
@@ -24,7 +24,7 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration = 1.5
+T_duration = 25/60
 acquisition_frequency = 488.3
 acquisition_frequency_coords = 100.3
 #---------------------------
