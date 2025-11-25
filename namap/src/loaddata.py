@@ -210,6 +210,18 @@ class data_value():
             # Assume all the data have the same spf       
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
+
+        
+        '''
+        ras = []
+        decs = []
+        for kid in kid_num: 
+            H = h5py.File(self.det_path, "a")
+            f = H[f'kid_{kid}_roach']
+            ras.append( f['RA_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
+            decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
+            H.close()
+        '''
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
 
@@ -228,7 +240,7 @@ class data_value():
         lst_lat_spf = data_value.loadspf(self.det_path, 'lst',self.DT)
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf#, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """
