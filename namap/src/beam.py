@@ -16,7 +16,7 @@ class beam(object):
     -------
     """
 
-    def __init__(self, data, param = None):
+    def __init__(self, data, param = None, fact=20):
         """
         Create an instance of the beam class. 
 
@@ -34,6 +34,7 @@ class beam(object):
 
         self.data = data
         self.param = param
+        self.fact = fact
 
 
         shape = self.data.shape
@@ -348,7 +349,7 @@ class beam(object):
             force_fit = True   # We already have parameters, so we force a single fit
         else:
             # No initial parameters → find peaks in the map and generate guesses
-            self.peak_finder(map_data=self.data, mask_pf=mask_pf)
+            self.peak_finder(map_data=self.data, mask_pf=mask_pf, fact=self.fact)
             
             peak_number_ini = np.size(self.param) / 6  # initial number of peaks found
             peak_found = peak_number_ini
@@ -375,7 +376,7 @@ class beam(object):
                     res = self.data - fit_data
 
                     # Look for additional peaks in the residual
-                    self.peak_finder(map_data=res)
+                    self.peak_finder(map_data=res, fact=self.fact)
 
                     # Update the number of new peaks found
                     peak_number = np.size(self.param) / 6
@@ -404,53 +405,47 @@ if __name__ == "__main__":
     from astropy.visualization import ZScaleInterval
 
 
+    for extension, fact in zip((0,1), (20,20)):
 
-    map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-    #map_value = np.nan_to_num(map_value, nan=0.0)
+        #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
+        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] * 1e6 #ext=0)[0]
+        #map_value = np.nan_to_num(map_value, nan=0.0)
 
-    # Compute zscale limits
-    zscale = ZScaleInterval()
-    vmin, vmax = zscale.get_limits(map_value)
+        # Compute zscale limits
+        zscale = ZScaleInterval()
+        vmin, vmax = zscale.get_limits(map_value)
 
-    # Display with matplotlib
+        # Display with matplotlib
 
-    plt.figure(figsize=(8, 6))
-    #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
-    plt.imshow(map_value, origin='lower', cmap='viridis',   vmin=vmin, vmax=vmax)
-    plt.colorbar(label='Amplitude')
-    plt.title('2D Gaussian Fit Contours')
-    plt.xlabel('X pixel')
-    plt.ylabel('Y pixel')
-    plt.show()
-    '''     
-    # Compute 1% of the max
-    noise_level = 0.05 * np.max(map_value)
-    # Add white Gaussian noise
-    map_value += np.random.normal(loc=0.0, scale=noise_level, size=map_value.shape)
-    ''' 
+        '''     
+        # Compute 1% of the max
+        noise_level = 0.05 * np.max(map_value)
+        # Add white Gaussian noise
+        map_value += np.random.normal(loc=0.0, scale=noise_level, size=map_value.shape)
+        ''' 
 
-    beam_value = beam(map_value )#param = self.beamparam
-    beam_map = beam_value.beam_fit()
+        beam_value = beam(map_value, fact=fact )#param = self.beamparam
+        beam_map = beam_value.beam_fit()
 
-    param = beam_map[1]
-    print('Final params = ',param)
-
-    if isinstance(beam_map[0], str): msg = 'Fit not converged'
-    else: 
-        plt.figure(figsize=(8, 6))
-        #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
-        plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-        plt.colorbar(label='Amplitude')
-        plt.title('2D Gaussian Fit Contours')
-        plt.xlabel('X pixel')
-        plt.ylabel('Y pixel')
+        param = beam_map[1]
+        print('Final params = ',param)
 
         plt.figure(figsize=(8, 6))
         #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
+        plt.title('extension')
         plt.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
         plt.colorbar(label='Amplitude')
-        plt.title('2D Gaussian Fit Contours')
         plt.xlabel('X pixel')
         plt.ylabel('Y pixel')
 
-        plt.show()
+        if isinstance(beam_map[0], str): msg = 'Fit not converged'
+        else: 
+            plt.figure(figsize=(8, 6))
+            #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
+            plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            plt.colorbar(label='Amplitude')
+            plt.title('2D Gaussian Fit Contours')
+            plt.xlabel('X pixel')
+            plt.ylabel('Y pixel')
+
+    plt.show()
