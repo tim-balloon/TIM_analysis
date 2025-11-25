@@ -187,7 +187,7 @@ def main_tod(P):
     cubemean = np.mean(cube, axis=(1,2)) 
     cube -= cubemean[:, None, None]
     cube *= pix_size #conversion Jy/sr to Jy/beam
-    if('MJy' in hdr['BUNIT']): cube *= 1e6 #conversion MJy/beam to Jy/beam
+    if('MJy' in hdr['BUNIT'] ): cube *= 1e6 #conversion MJy/beam to Jy/beam
     #-----------------------------
 
     #-----------------------------
@@ -248,12 +248,12 @@ def main_tod(P):
             F = f
             if(array_name=='LW'): F += P['nb_channels_per_array'] 
             Map = cube[F,:,:]
-            cube_simu.append(Map)
+            cube_simu.append(Map/pix_size)
             #----------------------------------------
 
             #----------------------------------------
             hist, norm, samples, positions_x, positions_y = gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths_to_save, T=None)
-            cube_obs.append(hist)
+            cube_obs.append(hist/pix_size)
             cube_hits.append(norm)
             #----------------------------------------
 
@@ -273,7 +273,6 @@ def main_tod(P):
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
             plt.close()
-
 
             #----------------------------------------
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, save=P['format'], compression=P['compression'])
