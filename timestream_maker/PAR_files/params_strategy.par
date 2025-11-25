@@ -1,6 +1,6 @@
 #----- TIM arrays information -----
 #Array parameters used to geenrate the TODs and the KIDs file.
-detectors_name_file = 'TIM_kid_table.tsv'
+detectors_name_file = '/home/mvancuyck/Desktop/TIM_analysis/namap/config/TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
 nb_pixel_SW = 64 #Number of pixel per frequency band in the SW array.
 offset_SW = 0.0145  #[deg] separation in angle between 2 consecutive pixels for the SW array
@@ -25,16 +25,16 @@ longitude =  166.69 #deg
 
 #----- Time parameters -----
 T_duration = 1.5
-acquisition_frequency = 100
-acquisition_frequency_coords = 100 
+acquisition_frequency = 488.3
+acquisition_frequency_coords = 100.3
 #---------------------------
 
 #----- Sky simulation -----
 #Fits file containing the mock sky out of which we generates the TOD
 path = 'fits_and_hdf5/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
-output_path = './'
-output_name = 'TOD_example.hdf5' 
+output_path = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+output_name = 'TODref_64B.hdf5' 
 format = '64bytes' #64,32,16
 compression='gzip' #None, 'gzip'
 
