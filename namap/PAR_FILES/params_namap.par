@@ -36,7 +36,7 @@ lat=True
 lst=True
 
 crpix = 126, 127
-cdelt = 0.005555555555555556, 0.005555555555555556 #Pixel resolution along the two axis in degree. 
+cdelt = 0.011111111111111112, 0.011111111111111112 #Pixel resolution along the two axis in degree. 
 crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. Default value is np.asarray([230.  , -55.79])
 pixnum = 100., 100. #Number of pixels along the two axis. The input needs to be written as XX YY. Not implement so far. 
 #-----------------------------
