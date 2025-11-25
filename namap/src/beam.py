@@ -180,11 +180,19 @@ class beam(object):
         # Detection threshold = median + 5σ
         threshold = median + (5. * std)
 
+        if hasattr(self, 'nanmask'):
+            nanmask = self.nanmask
+        else:
+            nanmask = np.isnan(map_data)
+
+
         # If no mask provided, create a fresh empty mask
         if mask_pf is False:
+            
             tbl = find_peaks(map_data, threshold, box_size=bs)
             mask_pf = np.zeros_like(self.xy_mesh[0])
         else:
+
             # If mask given, store and use it to avoid picking masked regions
             self.mask = mask_pf.copy()
             tbl = find_peaks(map_data, threshold, box_size=bs, mask=self.mask)
@@ -193,7 +201,7 @@ class beam(object):
         # Only keep peaks with amplitude above a threshold
         
         if tbl is None or len(tbl) == 0: return 0
-        tbl = tbl[tbl['peak_value'] > 0.05*map_data.max()]  
+        tbl = tbl[tbl['peak_value'] > 0.9*map_data.max()]  
         tbl['peak_value'].info.format = '%.8g'
 
         # Arrays to collect initial Gaussian guesses
@@ -349,9 +357,13 @@ class beam(object):
             force_fit = True   # We already have parameters, so we force a single fit
         else:
             # No initial parameters → find peaks in the map and generate guesses
+            print('initial peak finder')
             self.peak_finder(map_data=self.data, mask_pf=mask_pf, fact=self.fact)
-            
+            print('after initial peak finder')
+
             peak_number_ini = np.size(self.param) / 6  # initial number of peaks found
+            print('peak_number_ini ',peak_number_ini)
+            print(self.param)
             peak_found = peak_number_ini
             force_fit = False  # May need to iterate to find additional peaks
 
@@ -369,17 +381,21 @@ class beam(object):
                 break
             else:
                 # Compute the fitted Gaussian map from the fitted parameters
+                print('fitting...')
                 fit_data = self.multivariate_gaussian_2d(fit_param.x).reshape(np.outer(self.ygrid, self.xgrid).shape)
+                print('after fitting...')
 
                 if force_fit is False:
                     # Subtract the fitted map from the original to find residual peaks
                     res = self.data - fit_data
-
+                    print('find peaks')
                     # Look for additional peaks in the residual
                     self.peak_finder(map_data=res, fact=self.fact)
-
+                    print('after finding peaks')
                     # Update the number of new peaks found
                     peak_number = np.size(self.param) / 6
+                    print('peak number=', peak_number)
+                    print(self.param)
                     peak_found = peak_number - peak_number_ini
                     peak_number_ini = peak_number
                 else:
@@ -404,36 +420,52 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from astropy.visualization import ZScaleInterval
 
-
-    for extension, fact in zip((0,1), (20,20)):
+    for extension in (0, 1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] * 1e6 #ext=0)[0]
-        #map_value = np.nan_to_num(map_value, nan=0.0)
-
+        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
+        # mask of valid (non-NaN) pixels
+        valid = ~np.isnan(map_value)
+        # find rows & columns containing at least one valid pixel
+        rows = np.where(valid.any(axis=1))[0]
+        cols = np.where(valid.any(axis=0))[0]
+        # crop
+        map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
+        #Replace NaN by zeros
+        map_value = np.nan_to_num(map_value, nan=0.0)
+        
         # Compute zscale limits
+    
         zscale = ZScaleInterval()
         vmin, vmax = zscale.get_limits(map_value)
 
-        # Display with matplotlib
-
-        '''     
-        # Compute 1% of the max
-        noise_level = 0.05 * np.max(map_value)
-        # Add white Gaussian noise
-        map_value += np.random.normal(loc=0.0, scale=noise_level, size=map_value.shape)
-        ''' 
-
-        beam_value = beam(map_value, fact=fact )#param = self.beamparam
+        beam_value = beam(map_value )#param = self.beamparam
         beam_map = beam_value.beam_fit()
-
         param = beam_map[1]
-        print('Final params = ',param)
+
+        '''
+        if(extension == 0): 
+
+            param_ini = param
+        
+        else:
+             
+            beam_value = beam(map_value ,param = param_ini)
+            beam_map = beam_value.beam_fit()
+            param = beam_map[1]
+        '''
 
         plt.figure(figsize=(8, 6))
-        #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
         plt.title('extension')
         plt.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        plt.colorbar(label='Amplitude')
+        plt.xlabel('X pixel')
+        plt.ylabel('Y pixel')
+
+
+        plt.figure(figsize=(8, 6))
+        plt.title('extension')
+        plt.imshow(map_value / map_value.max(), origin='lower', cmap='binary', vmin=-1, vmax=1)
         plt.colorbar(label='Amplitude')
         plt.xlabel('X pixel')
         plt.ylabel('Y pixel')
@@ -441,11 +473,14 @@ if __name__ == "__main__":
         if isinstance(beam_map[0], str): msg = 'Fit not converged'
         else: 
             plt.figure(figsize=(8, 6))
-            #plt.contour(X, Y, gaussian_map, levels=10, colors='red')
+            plt.contour(beam_map[0], levels=10, colors='red')
             plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
             plt.colorbar(label='Amplitude')
             plt.title('2D Gaussian Fit Contours')
             plt.xlabel('X pixel')
             plt.ylabel('Y pixel')
+        print('')
+        print('')
+        print('')
 
     plt.show()
