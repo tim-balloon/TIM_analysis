@@ -180,7 +180,7 @@ def main(P, nbdets=None):
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data) or True): #<-- for testing purpose only
+    if(len(cleaned_data[0]) != len(coord1_data)): #<-- for testing purpose only
 
         
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
@@ -192,6 +192,7 @@ def main(P, nbdets=None):
     else: 
         print('Bypass Synch')
         P['bypass_synch'] = True
+
     #---------------------------------
 
     #---------------------------------
@@ -229,6 +230,7 @@ def main(P, nbdets=None):
         xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
         #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
         #xsc_offset = xsc_file.read_file()
+
         
         corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
         coord1slice, coord2slice = corr.correction()
@@ -250,6 +252,7 @@ def main(P, nbdets=None):
         #--------------------
         #Create the maps
 
+
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
                     np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
@@ -269,7 +272,6 @@ def main(P, nbdets=None):
         wcs = maps.w
         map_values = maps.map2d()
         map_values /= ((P['cdelt'][0]*u.deg)**2).to(u.sr).value
-
 
         vmin, vmax = zscale.get_limits(map_values)
         plt.figure(figsize=(8, 6))
