@@ -187,7 +187,8 @@ def main(P, nbdets=None):
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
 
-        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data()  
+        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data() 
+        P['bypass_synch'] = False
     else: 
         print('Bypass Synch')
         P['bypass_synch'] = True
@@ -267,39 +268,32 @@ def main(P, nbdets=None):
         maps.wcs_proj()
         wcs = maps.w
         map_values = maps.map2d()
-        pix_size = ((P['cdelt'][0]*u.deg)**2).to(u.sr).value
-        print(pix_size)
-        map_values /= pix_size
+        map_values /= ((P['cdelt'][0]*u.deg)**2).to(u.sr).value
 
 
         vmin, vmax = zscale.get_limits(map_values)
-
         plt.figure(figsize=(8, 6))
-        plt.title('extension')
         plt.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
         plt.colorbar(label='Amplitude')
         plt.xlabel('X pixel')
         plt.ylabel('Y pixel')
-        
-
-        M = fits.getdata('fits_and_hdf5/cube_2sources_separated_by_301.5arcsecs_with_2xbigger_sigma_PSF.fits', ext=1)[0]
-
-        vmin, vmax = zscale.get_limits(M)
-
-        plt.figure(figsize=(8, 6))
-        plt.title('original')
-        plt.imshow(M, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-        plt.colorbar(label='Amplitude')
-        plt.xlabel('X pixel')
-        plt.ylabel('Y pixel')
         plt.show()
-
+        
         #--------------------------------------------------
         #Plot the maps
-        maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        #maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #--------------------------------------------------
         
         if P['checkBeam'] and P['coadd']:
+                
+
+                vmin, vmax = zscale.get_limits(map_values)
+                plt.figure(figsize=(8, 6))
+                plt.title('extension')
+                plt.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                plt.colorbar(label='Amplitude')
+                plt.xlabel('X pixel')
+                plt.ylabel('Y pixel')
                 
                 beam_value = bm.beam(map_values, )#param = self.beamparam
 
@@ -328,6 +322,8 @@ def main(P, nbdets=None):
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
                     hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
                     hdu.close()
+                
+                plt.show()
 
     return 0
 
