@@ -421,7 +421,7 @@ if __name__ == "__main__":
     for extension in (0,1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_90.5arcsecs_with_1xbigger_sigma_PSF_SW.fits', ext=extension)[0] 
+        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8arcsecs_with_2xbigger_sigma_PSF_SW.fits', ext=extension)[0] 
         # mask of valid (non-NaN) pixels
         valid = ~np.isnan(map_value)
         # find rows & columns containing at least one valid pixel
