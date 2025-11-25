@@ -180,7 +180,7 @@ def main(P, nbdets=None):
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data)): #<-- for testing purpose only
+    if(len(cleaned_data[0]) != len(coord1_data) or True): #<-- for testing purpose only
 
         
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
