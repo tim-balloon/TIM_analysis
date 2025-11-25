@@ -275,7 +275,8 @@ def main_tod(P):
             plt.close()
 
             #----------------------------------------
-            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, save=P['format'], compression=P['compression'])
+            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
+
             bar.next()
         #------------------------------------------------------------------
 

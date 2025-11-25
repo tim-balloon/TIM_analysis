@@ -92,7 +92,7 @@ def save_timestamps(tod_file, T, spf, acquisition_frequency, key, compression='g
     H.close()
 
         
-def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, compression='gzip',save="64bytes"):
+def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, pointing_paths_to_save, compression='gzip',save="64bytes"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
 
@@ -134,6 +134,12 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         grp.create_dataset('pixel_offset_y', data=np.float16(offset))
         grp.create_dataset('pixel_offset_x', data=np.float16(shift))
         grp.create_dataset('acquisition frequency', data=np.float16(acquisition_frequency))
+
+        scan_path = pointing_paths_to_save[detector]
+        for i, (name_coord, coord) in enumerate(zip(('RA_roach','DEC_roach'), (scan_path[:,0],scan_path[:,1]))):
+            if(compression is not None): 
+                    grp.create_dataset(name_coord, data=coord, compression=compression, compression_opts=9)
+            else: grp.create_dataset(name_coord, data=coord, compression=compression)
         
         if(save=="32bytes"):
             sample = (samples[detector,:]).astype(np.float32)
