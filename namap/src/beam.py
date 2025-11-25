@@ -140,7 +140,7 @@ class beam(object):
         # Compute normalized residuals for selected pixels
         return (y[index] - dat[index]) / err[index]
 
-    def peak_finder(self, map_data, mask_pf = False, fact=20, sigma_clip=3.0):
+    def peak_finder(self, map_data, mask_pf = False, fact=10, sigma_clip=3.0):
 
         """
         Find peaks in a 2D map, build Gaussian initial guesses,
@@ -171,37 +171,36 @@ class beam(object):
 
         # Peak-finding box size (height, width),
         # roughly map-size/20 in each direction
-        bs = np.array([int(np.floor(y_lim / fact)),
-                    int(np.floor(x_lim / fact))])
-
+        bs = np.array([ np.max((int(np.floor(y_lim / fact)),12)),
+                        np.max((int(np.floor(x_lim / fact)),12)) ])
+        
         # Compute sigma-clipped statistics of the full dataset
         mean, median, std = sigma_clipped_stats(self.data, sigma=sigma_clip)
 
         # Detection threshold = median + 5σ
         threshold = median + (5. * std)
 
+        # --- Build a mask for NaN values ---
         if hasattr(self, 'nanmask'):
             nanmask = self.nanmask
         else:
             nanmask = np.isnan(map_data)
 
-
-        # If no mask provided, create a fresh empty mask
+        # --- Peak detection ---
         if mask_pf is False:
-            
-            tbl = find_peaks(map_data, threshold, box_size=bs)
-            mask_pf = np.zeros_like(self.xy_mesh[0])
-        else:
+            # No mask provided → create an empty mask
+            mask_pf = np.zeros_like(map_data, dtype=bool)
 
-            # If mask given, store and use it to avoid picking masked regions
-            self.mask = mask_pf.copy()
-            tbl = find_peaks(map_data, threshold, box_size=bs, mask=self.mask)
+        # Combine user mask and NaN mask
+        combined_mask = mask_pf | nanmask
+
+        # Peak finding with NaN masking
+        tbl = find_peaks(map_data, threshold, box_size=bs, mask=combined_mask)
 
         # Formatting for printing the peak values
         # Only keep peaks with amplitude above a threshold
-        
         if tbl is None or len(tbl) == 0: return 0
-        tbl = tbl[tbl['peak_value'] > 0.9*map_data.max()]  
+        tbl = tbl[tbl['peak_value'] > threshold]  
         tbl['peak_value'].info.format = '%.8g'
 
         # Arrays to collect initial Gaussian guesses
@@ -357,13 +356,10 @@ class beam(object):
             force_fit = True   # We already have parameters, so we force a single fit
         else:
             # No initial parameters → find peaks in the map and generate guesses
-            print('initial peak finder')
+            
             self.peak_finder(map_data=self.data, mask_pf=mask_pf, fact=self.fact)
-            print('after initial peak finder')
 
             peak_number_ini = np.size(self.param) / 6  # initial number of peaks found
-            print('peak_number_ini ',peak_number_ini)
-            print(self.param)
             peak_found = peak_number_ini
             force_fit = False  # May need to iterate to find additional peaks
 
@@ -372,7 +368,10 @@ class beam(object):
         # -----------------------------
         while peak_found > 0:
             # Perform the least-squares Gaussian fit
+            save = self.data
+            self.data = np.nan_to_num(self.data, nan=0.0)
             fit_param, var = self.fit()
+            self.data = save
 
             # Check if the fit converged
             if isinstance(fit_param, str):
@@ -381,21 +380,20 @@ class beam(object):
                 break
             else:
                 # Compute the fitted Gaussian map from the fitted parameters
-                print('fitting...')
+                
                 fit_data = self.multivariate_gaussian_2d(fit_param.x).reshape(np.outer(self.ygrid, self.xgrid).shape)
-                print('after fitting...')
+                
 
                 if force_fit is False:
                     # Subtract the fitted map from the original to find residual peaks
                     res = self.data - fit_data
-                    print('find peaks')
+                    
                     # Look for additional peaks in the residual
                     self.peak_finder(map_data=res, fact=self.fact)
-                    print('after finding peaks')
+                    
                     # Update the number of new peaks found
                     peak_number = np.size(self.param) / 6
-                    print('peak number=', peak_number)
-                    print(self.param)
+                    
                     peak_found = peak_number - peak_number_ini
                     peak_number_ini = peak_number
                 else:
@@ -420,10 +418,10 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from astropy.visualization import ZScaleInterval
 
-    for extension in (0, 1):
+    for extension in (0,1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8arcsecs_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
+        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_90.5arcsecs_with_1xbigger_sigma_PSF_SW.fits', ext=extension)[0] 
         # mask of valid (non-NaN) pixels
         valid = ~np.isnan(map_value)
         # find rows & columns containing at least one valid pixel
@@ -432,28 +430,14 @@ if __name__ == "__main__":
         # crop
         map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
         #Replace NaN by zeros
-        map_value = np.nan_to_num(map_value, nan=0.0)
+        #map_value = np.nan_to_num(map_value, nan=0.0)
         
-        # Compute zscale limits
-    
-        zscale = ZScaleInterval()
-        vmin, vmax = zscale.get_limits(map_value)
-
-        beam_value = beam(map_value )#param = self.beamparam
+        beam_value = beam(map_value, )#param = self.beamparam
         beam_map = beam_value.beam_fit()
         param = beam_map[1]
 
-        '''
-        if(extension == 0): 
-
-            param_ini = param
-        
-        else:
-             
-            beam_value = beam(map_value ,param = param_ini)
-            beam_map = beam_value.beam_fit()
-            param = beam_map[1]
-        '''
+        zscale = ZScaleInterval()
+        vmin, vmax = zscale.get_limits(map_value)
 
         plt.figure(figsize=(8, 6))
         plt.title('extension')
@@ -462,15 +446,7 @@ if __name__ == "__main__":
         plt.xlabel('X pixel')
         plt.ylabel('Y pixel')
 
-
-        plt.figure(figsize=(8, 6))
-        plt.title('extension')
-        plt.imshow(map_value / map_value.max(), origin='lower', cmap='binary', vmin=-1, vmax=1)
-        plt.colorbar(label='Amplitude')
-        plt.xlabel('X pixel')
-        plt.ylabel('Y pixel')
-
-        if isinstance(beam_map[0], str): msg = 'Fit not converged'
+        if isinstance(beam_map[0], str): print(beam_map[0])
         else: 
             plt.figure(figsize=(8, 6))
             plt.contour(beam_map[0], levels=10, colors='red')

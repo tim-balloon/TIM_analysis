@@ -245,6 +245,17 @@ def main(P, nbdets=None):
 
         #--------------------
         #Create the maps
+        from astropy.visualization import ZScaleInterval
+        zscale = ZScaleInterval()
+        vmin, vmax = zscale.get_limits(map_values)
+
+        plt.figure(figsize=(8, 6))
+        plt.title('extension')
+        plt.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        plt.colorbar(label='Amplitude')
+        plt.xlabel('X pixel')
+        plt.ylabel('Y pixel')
+
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
                     np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
@@ -259,17 +270,6 @@ def main(P, nbdets=None):
         #--------------------
         import matplotlib.pyplot as plt
         plt.imshow(map_values, origin='lower'); plt.show()
-        f = fits.PrimaryHDU(map_values, header=wcs.to_header())
-        hdu = fits.HDUList([f])
-        hdr = hdu[0].header
-        hdr.set("map")
-        hdr.set("Datas")
-        hdr["BITPIX"] = ("64", "array data type")
-        hdr["BUNIT"] = 'MJy/sr'
-        hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-        hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-        hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+'test.fits', overwrite=True)
-        hdu.close()
         #--------------------------------------------------
         #Plot the maps
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
@@ -277,29 +277,33 @@ def main(P, nbdets=None):
         
         if P['checkBeam'] and P['coadd']:
                 
-                map_values = np.nan_to_num(map_values, nan=0.0)
-
                 beam_value = bm.beam(map_values, )#param = self.beamparam
 
                 beam_map = beam_value.beam_fit()
 
                 param = beam_map[1]
 
-                f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
-                hdu = fits.HDUList([f])
-                hdr = hdu[0].header
-                hdr.set("map")
-                hdr.set("Datas")
-                hdr["BITPIX"] = ("64", "array data type")
-                hdr["BUNIT"] = 'MJy/sr'
-                hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-                hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
-                hdu.close()
+                if isinstance(beam_map[0], str): print(beam_map[0])
+                else: 
+                    plt.figure(figsize=(8, 6))
+                    plt.contour(beam_map[0], levels=10, colors='red')
+                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                    plt.colorbar(label='Amplitude')
+                    plt.title('2D Gaussian Fit Contours')
+                    plt.xlabel('X pixel')
+                    plt.ylabel('Y pixel')
 
-
-                import matplotlib.pyplot as plt
-                plt.imshow(beam_map[0], origin='lower'); plt.show()
+                    f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
+                    hdu = fits.HDUList([f])
+                    hdr = hdu[0].header
+                    hdr.set("map")
+                    hdr.set("Datas")
+                    hdr["BITPIX"] = ("64", "array data type")
+                    hdr["BUNIT"] = 'MJy/sr'
+                    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+                    hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+                    hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
+                    hdu.close()
 
     return 0
 
