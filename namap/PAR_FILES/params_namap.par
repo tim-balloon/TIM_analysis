@@ -35,10 +35,10 @@ ctype = 'RA and DEC' #['RA and DEC', 'AZ and EL', CROSS-EL and EL,'XY Stage'],
 lat=True
 lst=True
 
-crpix = 126, 127
+crpix = 126, 127 #Default crpix, updated automatically by src.mapmaker/mapmaking.map_Ionly() to fit map size
 cdelt = 0.011111111111111112, 0.011111111111111112 #Pixel resolution along the two axis in degree. 
-crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. Default value is np.asarray([230.  , -55.79])
-pixnum = 100., 100. #Number of pixels along the two axis. The input needs to be written as XX YY. Not implement so far. 
+crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. 
+pixnum = 50, 50 #Number of pixels along the two axis. The input needs to be written as XX YY. Not implement so far. 
 #-----------------------------
 
 
