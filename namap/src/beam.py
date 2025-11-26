@@ -274,17 +274,27 @@ class beam(object):
             # - x0=self.param: initial guess for all parameters
             # - args: additional arguments passed to the residual function
             # - method='lm': use Levenberg–Marquardt (requires dense Jacobian)
+
+            # Flatten data
+            flat_data = np.ravel(self.data)
+            # Mask of finite pixels
+            mask = np.isfinite(flat_data)
+            # Masked data
+            data_flat = flat_data[mask]
+                        
+            
             p = least_squares(
                 self.residuals,
                 x0=self.param,
                 args=(
                     self.xy_mesh,                 # meshgrid of (x, y)
-                    np.ravel(self.data),          # flattened data array
-                    np.ones(len(np.ravel(self.data))),  # weights (all = 1)
-                    np.amax(self.data)            # maximum of the data (often used for normalizing)
+                    data_flat,          # flattened data array
+                    np.ones(len(data_flat)),  # weights (all = 1)
+                    np.amax(data_flat)            # maximum of the data (often used for normalizing)
                 ),
                 method='lm'
             )
+                
 
             # ----------------------------------------------------------------------
             # Compute covariance matrix using the Jacobian from the optimized fit.
@@ -368,10 +378,10 @@ class beam(object):
         # -----------------------------
         while peak_found > 0:
             # Perform the least-squares Gaussian fit
-            save = self.data
+            
             self.data = np.nan_to_num(self.data, nan=0.0)
             fit_param, var = self.fit()
-            self.data = save
+            
 
             # Check if the fit converged
             if isinstance(fit_param, str):
