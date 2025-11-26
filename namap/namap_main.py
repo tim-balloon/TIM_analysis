@@ -230,7 +230,6 @@ def main(P, nbdets=None):
         xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
         #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
         #xsc_offset = xsc_file.read_file()
-
         
         corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
         coord1slice, coord2slice = corr.correction()
@@ -246,13 +245,10 @@ def main(P, nbdets=None):
         else:
             for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
                 parallactic.append(np.zeros_like(c1, dtype=DT))
-        
         #---------------------------------
 
         #--------------------
         #Create the maps
-
-
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
                     np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
@@ -261,41 +257,35 @@ def main(P, nbdets=None):
                     cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
                     coadd=P['coadd'],   parang=parallactic, params=str(P)) #noise=noise_det,telcoord = P['telescope_coordinate'],
         
+        maps.wcs_proj()
+        map_values = maps.map2d()
 
         #--------------------
+
         import matplotlib.pyplot as plt
         from astropy.visualization import ZScaleInterval
-        import astropy.units as u
         zscale = ZScaleInterval()
-
-        maps.wcs_proj()
         wcs = maps.w
-        map_values = maps.map2d()
-        map_values /= ((P['cdelt'][0]*u.deg)**2).to(u.sr).value
-
+        zscale = ZScaleInterval()
         vmin, vmax = zscale.get_limits(map_values)
-        plt.figure(figsize=(8, 6))
-        plt.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-        plt.colorbar(label='Amplitude')
-        plt.xlabel('X pixel')
-        plt.ylabel('Y pixel')
+        fig, ax = plt.subplots(dpi=150,figsize=(8, 6),subplot_kw={'projection': wcs})
+        img = ax.imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+        fig.colorbar(img, ax=ax, label='Amplitude')
+        ax.coords[0].set_format_unit('deg', decimal=True)  # RA
+        ax.coords[1].set_format_unit('deg', decimal=True)  # De
+        ax.set_ylabel('Dec [deg]')
+        ax.set_xlabel('RA [deg]')
+        ax.plot(P['crval'][0], P['crval'][1],'or', transform=ax.get_transform('world'))
         plt.show()
         
-        #--------------------------------------------------
+        #--------------------------------------------------    
         #Plot the maps
-        #maps.map_plot(data_maps = map_values, kid_num=kid_num)
-        #--------------------------------------------------
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        #--------------------------------------------------      
         
         if P['checkBeam'] and P['coadd']:
                 
-
                 vmin, vmax = zscale.get_limits(map_values)
-                plt.figure(figsize=(8, 6))
-                plt.title('extension')
-                plt.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                plt.colorbar(label='Amplitude')
-                plt.xlabel('X pixel')
-                plt.ylabel('Y pixel')
                 
                 beam_value = bm.beam(map_values, )#param = self.beamparam
 
@@ -305,6 +295,8 @@ def main(P, nbdets=None):
 
                 if isinstance(beam_map[0], str): print(beam_map[0])
                 else: 
+
+                    '''
                     plt.figure(figsize=(8, 6))
                     plt.contour(beam_map[0], levels=10, colors='red')
                     plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
@@ -312,6 +304,7 @@ def main(P, nbdets=None):
                     plt.title('2D Gaussian Fit Contours')
                     plt.xlabel('X pixel')
                     plt.ylabel('Y pixel')
+                    '''
 
                     f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                     hdu = fits.HDUList([f])
