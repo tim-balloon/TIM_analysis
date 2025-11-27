@@ -210,7 +210,6 @@ class data_value():
             # Assume all the data have the same spf       
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
-
         
         '''
         ras = []
@@ -241,7 +240,7 @@ class data_value():
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
         #---
-
+        '''
         coord2_raw= data_value.loaddata(self.det_path, 'data_'+f'{self.coord2_name}', self.DT, num, first_frame) #!!
         coord1_raw = data_value.loaddata(self.det_path, 'data_'+f'{self.coord1_name}', self.DT, num, first_frame) #!!
         spf_coord_raw = data_value.loadspf(self.det_path, 'data_'+self.coord2_name, self.DT)
@@ -251,9 +250,9 @@ class data_value():
         lst_raw = data_value.loaddata(self.det_path, 'data_lst',self.DT, num, first_frame)
         lst_lat_spf_raw = data_value.loadspf(self.det_path, 'data_lst',self.DT)
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
+        '''
         #---
 
-        embed()
         return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf#, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
