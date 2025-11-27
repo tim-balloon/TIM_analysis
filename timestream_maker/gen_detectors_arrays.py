@@ -94,7 +94,7 @@ def gen_detectors_main(P):
     #---------------------------
     # Show first 5 rows
     import pandas as pd
-    df = pd.read_csv(os.getcwd()+'/'+file, sep='\t')
+    df = pd.read_csv(file, sep='\t') #os.getcwd()+'/'+
     print(df.head())
     #---------------------------
 

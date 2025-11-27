@@ -7,6 +7,41 @@ from astropy.io import fits
 import os
 from astropy.wcs import WCS
 from gen_timestreams import gen_tod
+from scipy.interpolate import PchipInterpolator
+
+def resampling(X, spf_start, spf_end):
+
+    '''
+    Interpolates an array with a sample per frame to a different sample per frame 
+    Parameters
+    ----------
+    X: array
+        The arrray to be interpolated. 
+    spf_start: int
+        the sample per frame of X
+    spf_end: int
+        the final sample per frame wanted. 
+    DT: type
+        Float precision required
+    Returns
+    -------
+    x: array
+        the array with the new sample per frame. 
+    '''
+
+    # Compute ratio in DT
+    ratio = spf_start/spf_end
+
+    # Create interpolator
+    interper = PchipInterpolator(np.arange(0, len(X)), X)
+
+    # New sample points
+    new_points = np.arange(0, len(X), ratio)
+
+    # Interpolated values
+    x = interper(new_points)
+
+    return x
 
 def main_1det(P):
     
@@ -91,7 +126,8 @@ def main_1det(P):
     axc.set_ylabel('Dec [deg]')
     axc.set_aspect('auto')
     #---
-    axradec.plot(az-az.max()/2,alt-alt.max()/2,'k', aspect='equal')
+    axradec.plot(az-az.max()/2,alt-alt.max()/2,'k', )
+    axradec.set_aspect('auto')
     axradec.set_xlabel('RA [deg]')
     axradec.set_ylabel('Dec [deg]')
     #---
@@ -168,37 +204,32 @@ def main_1det(P):
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
     
-    lat = P['latitude']
-
     acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
-    dt_coords = 1/acquisition_frequency_prime/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf_prime = np.round(acquisition_frequency_prime).astype(int)
+    spf_prime = np.round(P['acquisition_frequency_coords'] ).astype(int)
 
-    LST_prime = np.arange(-T_duration/2,T_duration/2,dt_coords) #hours
-    T_prime = LST_prime * 3600 #s np.arange(0,T_duration,dt_coords)
-    pps = np.floor(T_prime).astype(int)
-    subsecond_ps = T_prime-pps
+    LST_prime = resampling(LST, acquisition_frequency, acquisition_frequency_prime)
+    T_prime = resampling(T, acquisition_frequency, acquisition_frequency_prime)
+    pps_prime = np.floor(T_prime).astype(int)
+    subsecond_ps_prime = T_prime-pps_prime
+    lat_prime = P['latitude'] * np.ones(len(LST_prime))
 
-    if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
-    if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
-    if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(3600*dt_coords,3))
+    az_prime = resampling(azel[:,0], acquisition_frequency, acquisition_frequency_prime)
+    el_prime = resampling(azel[:,1], acquisition_frequency, acquisition_frequency_prime)
+    azelprime = np.vstack((az_prime,el_prime)).T
+    ra_prime = resampling(scan_path_sky[:,0], acquisition_frequency, acquisition_frequency_prime)
+    dec_prime = resampling(scan_path_sky[:,1], acquisition_frequency, acquisition_frequency_prime)
+    scan_path_sky_prime = np.vstack((ra_prime,dec_prime)).T
 
-    scan_path_prime, scan_flag = genScanPath(T_prime, dt, alt, az, flag)
-    scan_path_sky_prime, azelprime = genPointingPath(T_prime, scan_path_prime, LST_prime, lat, dec, azel=True) 
-    lat = np.ones(len(LST_prime)) * lat
-    
-    #spf_prime = spf
-    #acquisition_frequency_prime = acquisition_frequency
-
-    save_scan_path(tod_file, np.array((LST_prime, lat)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, np.array((LST_prime, lat_prime)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'],compression=P['compression'])
     save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'],compression=P['compression'])
     save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'],compression=P['compression'])
-    save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'],compression=P['compression'])
+    #save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'],compression=P['compression'])
-    save_timestamps(tod_file, pps, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'],compression=P['compression'])
-    save_timestamps(tod_file, subsecond_ps, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, pps_prime, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, subsecond_ps_prime, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'],compression=P['compression'])
 
+    
 if __name__ == "__main__":
     '''
     '''
