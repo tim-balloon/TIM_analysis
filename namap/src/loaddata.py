@@ -225,11 +225,11 @@ class data_value():
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
 
-        coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) 
+        coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) #!!
         if self.coord1_name.lower() == 'xel': 
             coord1_data = data_value.loaddata(self.det_path, 'EL', self.DT, num, first_frame) 
             coord1_data *= np.cos(np.radians(coord2_data)) 
-        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) 
+        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) #!!
 
         spf_coord = data_value.loadspf(self.det_path, self.coord2_name, self.DT)
         #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
@@ -240,6 +240,20 @@ class data_value():
         lst_lat_spf = data_value.loadspf(self.det_path, 'lst',self.DT)
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
+        #---
+
+        coord2_raw= data_value.loaddata(self.det_path, 'data_'+f'{self.coord2_name}', self.DT, num, first_frame) #!!
+        coord1_raw = data_value.loaddata(self.det_path, 'data_'+f'{self.coord1_name}', self.DT, num, first_frame) #!!
+        spf_coord_raw = data_value.loadspf(self.det_path, 'data_'+self.coord2_name, self.DT)
+        #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
+        #---------------------------------------------------------------------------------
+        lat_raw = data_value.loaddata(self.det_path, 'data_lat',self.DT, num, first_frame)
+        lst_raw = data_value.loaddata(self.det_path, 'data_lst',self.DT, num, first_frame)
+        lst_lat_spf_raw = data_value.loadspf(self.det_path, 'data_lst',self.DT)
+        #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
+        #---
+
+        embed()
         return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf#, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
