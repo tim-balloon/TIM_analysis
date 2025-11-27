@@ -3,7 +3,7 @@ precision = 'float32'
 
 #--- Data Paths Parameters --
 #Path for TOD data#
-hdf5_file = 'fits_and_hdf5/TODref_64B.hdf5' 
+hdf5_file = 'fits_and_hdf5/TOD_488.3Hz_data.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
