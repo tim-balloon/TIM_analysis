@@ -91,7 +91,7 @@ def main_1det(P):
     axc.set_ylabel('Dec [deg]')
     axc.set_aspect('auto')
     #---
-    axradec.plot(az-az.max()/2,alt-alt.max()/2,'cyan')
+    axradec.plot(az-az.max()/2,alt-alt.max()/2,'k', aspect='equal')
     axradec.set_xlabel('RA [deg]')
     axradec.set_ylabel('Dec [deg]')
     #---
