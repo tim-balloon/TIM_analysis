@@ -211,7 +211,7 @@ class data_value():
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
         
-        '''
+        
         ras = []
         decs = []
         for kid in kid_num: 
@@ -220,7 +220,7 @@ class data_value():
             ras.append( f['RA_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             H.close()
-        '''
+        
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
 
@@ -241,19 +241,19 @@ class data_value():
 
         #---
         '''
-        coord2_raw= data_value.loaddata(self.det_path, 'data_'+f'{self.coord2_name}', self.DT, num, first_frame) #!!
-        coord1_raw = data_value.loaddata(self.det_path, 'data_'+f'{self.coord1_name}', self.DT, num, first_frame) #!!
-        spf_coord_raw = data_value.loadspf(self.det_path, 'data_'+self.coord2_name, self.DT)
+        coord2_data= data_value.loaddata(self.det_path, 'data_'+f'{self.coord2_name}', self.DT, num, first_frame) #!!
+        coord1_data = data_value.loaddata(self.det_path, 'data_'+f'{self.coord1_name}', self.DT, num, first_frame) #!!
+        spf_coord = data_value.loadspf(self.det_path, 'data_'+self.coord2_name, self.DT)
         #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
         #---------------------------------------------------------------------------------
-        lat_raw = data_value.loaddata(self.det_path, 'data_lat',self.DT, num, first_frame)
-        lst_raw = data_value.loaddata(self.det_path, 'data_lst',self.DT, num, first_frame)
-        lst_lat_spf_raw = data_value.loadspf(self.det_path, 'data_lst',self.DT)
+        lat = data_value.loaddata(self.det_path, 'data_lat',self.DT, num, first_frame)
+        lst = data_value.loaddata(self.det_path, 'data_lst',self.DT, num, first_frame)
+        lst_lat_spf = data_value.loadspf(self.det_path, 'data_lst',self.DT)
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
         '''
         #---
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf#, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """

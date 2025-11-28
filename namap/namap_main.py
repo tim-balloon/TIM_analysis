@@ -132,13 +132,14 @@ def main(P, nbdets=None):
     #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
+    nbdets = None
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
         for freq in np.unique(filtered['Frequency']):
             sub = filtered[filtered['Frequency'] == freq]
             # take first N rows for this frequency
-            result_rows.append(sub[:nbdets])
+            result_rows.append(sub[nbdets:])
 
         # Concatenate back into a single table
         kid_num = Table(np.hstack(result_rows))['Name']
@@ -182,7 +183,6 @@ def main(P, nbdets=None):
     #---------------------------------
     if(len(cleaned_data[0]) != len(coord1_data) ): #<-- for testing purpose only
 
-        
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
