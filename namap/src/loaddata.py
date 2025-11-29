@@ -211,7 +211,9 @@ class data_value():
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
         
-        
+        '''
+        #--------------------------
+        #For debbuging purpose only
         ras = []
         decs = []
         for kid in kid_num: 
@@ -220,6 +222,8 @@ class data_value():
             ras.append( f['RA_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             H.close()
+        #--------------------------
+        '''
         
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------

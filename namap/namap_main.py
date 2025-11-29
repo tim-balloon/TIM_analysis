@@ -132,7 +132,6 @@ def main(P, nbdets=None):
     #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
-    nbdets = None
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
@@ -261,22 +260,40 @@ def main(P, nbdets=None):
         map_values = maps.map2d()
 
         #--------------------
+        if(P['coadd']):
+            import matplotlib.pyplot as plt
+            from astropy.visualization import ZScaleInterval
+            zscale = ZScaleInterval()
+            wcs = maps.w
+            zscale = ZScaleInterval()
+            vmin, vmax = zscale.get_limits(map_values)
+            fig, ax = plt.subplots(dpi=150,figsize=(8, 6),subplot_kw={'projection': wcs})
+            img = ax.imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+            fig.colorbar(img, ax=ax, label='Amplitude')
+            ax.coords[0].set_format_unit('deg', decimal=True)  # RA
+            ax.coords[1].set_format_unit('deg', decimal=True)  # De
+            ax.set_ylabel('Dec [deg]')
+            ax.set_xlabel('RA [deg]')
+            ax.plot(P['crval'][0], P['crval'][1],'or', transform=ax.get_transform('world'))
+            plt.show()
+        else: 
+            import matplotlib.pyplot as plt
+            from astropy.visualization import ZScaleInterval
+            zscale = ZScaleInterval()
+            wcs = maps.w
+            zscale = ZScaleInterval()
+            for id in range(len(kid_num)):
+                vmin, vmax = zscale.get_limits(map_values[id])
+                fig, ax = plt.subplots(dpi=150,figsize=(8, 6),subplot_kw={'projection': wcs})
+                img = ax.imshow(map_values[id], origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+                fig.colorbar(img, ax=ax, label='Amplitude')
+                ax.coords[0].set_format_unit('deg', decimal=True)  # RA
+                ax.coords[1].set_format_unit('deg', decimal=True)  # De
+                ax.set_ylabel('Dec [deg]')
+                ax.set_xlabel('RA [deg]')
+                ax.plot(P['crval'][0], P['crval'][1],'or', transform=ax.get_transform('world'))
+            plt.show()
 
-        import matplotlib.pyplot as plt
-        from astropy.visualization import ZScaleInterval
-        zscale = ZScaleInterval()
-        wcs = maps.w
-        zscale = ZScaleInterval()
-        vmin, vmax = zscale.get_limits(map_values)
-        fig, ax = plt.subplots(dpi=150,figsize=(8, 6),subplot_kw={'projection': wcs})
-        img = ax.imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
-        fig.colorbar(img, ax=ax, label='Amplitude')
-        ax.coords[0].set_format_unit('deg', decimal=True)  # RA
-        ax.coords[1].set_format_unit('deg', decimal=True)  # De
-        ax.set_ylabel('Dec [deg]')
-        ax.set_xlabel('RA [deg]')
-        ax.plot(P['crval'][0], P['crval'][1],'or', transform=ax.get_transform('world'))
-        plt.show()
         
         #--------------------------------------------------    
         #Plot the maps
@@ -286,11 +303,8 @@ def main(P, nbdets=None):
         if P['checkBeam'] and P['coadd']:
                 
                 vmin, vmax = zscale.get_limits(map_values)
-                
                 beam_value = bm.beam(map_values, )#param = self.beamparam
-
                 beam_map = beam_value.beam_fit()
-
                 param = beam_map[1]
 
                 if isinstance(beam_map[0], str): print(beam_map[0])
@@ -319,6 +333,43 @@ def main(P, nbdets=None):
                     hdu.close()
                 
                 plt.show()
+
+        if P['checkBeam'] and not P['coadd']:
+            embed()
+            for i_det, name in enumerate(kid_num):
+
+                vmin, vmax = zscale.get_limits(map_values[i_det])
+                beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
+
+                if isinstance(beam_map[0], str): print(beam_map[0])
+                else: 
+
+                    
+                    plt.figure(figsize=(8, 6))
+                    plt.contour(beam_map[0], levels=10, colors='red')
+                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                    plt.colorbar(label='Amplitude')
+                    plt.title('2D Gaussian Fit Contours')
+                    plt.xlabel('X pixel')
+                    plt.ylabel('Y pixel')
+                    
+                    '''
+                    f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
+                    hdu = fits.HDUList([f])
+                    hdr = hdu[0].header
+                    hdr.set("map")
+                    hdr.set("Datas")
+                    hdr["BITPIX"] = ("64", "array data type")
+                    hdr["BUNIT"] = 'MJy/sr'
+                    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+                    hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+                    hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
+                    hdu.close()
+                    '''
+                plt.show()
+
 
     return 0
 
