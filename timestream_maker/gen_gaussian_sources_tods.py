@@ -1,0 +1,58 @@
+import astropy.units as u
+import scipy.constants as cst
+from astropy.stats import gaussian_fwhm_to_sigma
+import astropy.convolution as conv
+import datetime
+import matplotlib.pyplot as plt
+from hitmap_1detector import main_1det
+from hitmap_array import main_arrays
+from gen_timestreams import main_tod, gen_tod
+from src.load_params import load_params, format_duration
+from src.hdf5_fcts import save_tod_in_hdf5
+from IPython import embed
+import numpy as np 
+import os
+import pickle
+from src.scan_fcts import *
+from gen_detectors_arrays import gen_detectors_main
+import h5py 
+import shutil
+from astropy.io import fits
+from astropy.wcs import WCS
+
+P = load_params('PAR_files/params_strategy.par')    
+
+P['detectors_name_file'] = 'TIM_kid_table_reduced.tsv'
+P['nb_pixel_SW'] = 10 #Number of pixel per frequency band in the SW array.
+P['nb_pixel_LW'] = 10 #Number of pixel per frequency band in the LW array.
+P['T_duration'] = 0.5
+P['output_path'] = f'fits_and_hdf5/'
+P['scan'] ='gittering'
+P['az_size'] = 0.2
+P['alt_step'] = 40/3600*1/3
+P['acquisition_frequency'] = 100
+P['acquisition_frequency_coords'] = 100
+P['vertical_steps'] = 10
+P['N_scans'] = 2
+
+gen_detectors_main(P)
+
+P['output_name'] = f'TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5' 
+P['file'] = f"cube_1source_with_1xbigger_sigma_PSF.fits" 
+
+if( not os.path.isfile(P['output_path']+P['output_name']) ):
+    main_1det(P)
+    #main_arrays(P)
+    main_tod(P)
+
+for factor_on_Sigma in (1,1.5,2,2.5): 
+
+    for separation_in_arcsecs in (150.8, 226.1, 301.5, 376.9):
+
+        P['output_name'] = f'TOD_on_2_sources_separated_by_{separation_in_arcsecs}_with_{factor_on_Sigma}xbigger_sigma_PSF.hdf5' 
+        P['file'] = f"cube_2sources_separated_by_{separation_in_arcsecs}arcsecs_with_{factor_on_Sigma}xbigger_sigma_PSF.fits" 
+
+        if( not os.path.isfile(P['output_path']+P['output_name']) ):
+            main_1det(P)
+            #main_arrays(P)
+            main_tod(P)
