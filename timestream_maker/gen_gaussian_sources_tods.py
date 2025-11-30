@@ -35,12 +35,15 @@ P['acquisition_frequency_coords'] = 100
 P['vertical_steps'] = 10
 P['N_scans'] = 2
 
-gen_detectors_main(P)
-
-P['output_name'] = f'TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5' 
+P['output_path'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+P['output_name'] = f'TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5'
+P['path']  = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
 P['file'] = f"cube_1source_with_1xbigger_sigma_PSF.fits" 
 
-if( not os.path.isfile(P['output_path']+P['output_name']) ):
+gen_detectors_main(P)
+
+
+if( not os.path.isfile(P['output_path']+P['output_name']) or True ):
     main_1det(P)
     #main_arrays(P)
     main_tod(P)
@@ -52,7 +55,7 @@ for factor_on_Sigma in (1,1.5,2,2.5):
         P['output_name'] = f'TOD_on_2_sources_separated_by_{separation_in_arcsecs}_with_{factor_on_Sigma}xbigger_sigma_PSF.hdf5' 
         P['file'] = f"cube_2sources_separated_by_{separation_in_arcsecs}arcsecs_with_{factor_on_Sigma}xbigger_sigma_PSF.fits" 
 
-        if( not os.path.isfile(P['output_path']+P['output_name']) ):
+        if( not os.path.isfile(P['output_path']+P['output_name']) or True):
             main_1det(P)
             #main_arrays(P)
             main_tod(P)
