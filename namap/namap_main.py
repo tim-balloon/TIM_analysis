@@ -176,7 +176,7 @@ def main(P, nbdets=None):
     #det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
     #cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
     #P['rejected detectors list'] = rejected_detetectors_list
-    cleaned_data=det_data
+    cleaned_data=det_data.copy()
     #---------------------------------
 
     #---------------------------------
@@ -258,6 +258,8 @@ def main(P, nbdets=None):
         
         maps.wcs_proj()
         map_values = maps.map2d()
+        map_values = np.asarray(map_values)
+        map_values /=( P['cdelt'][0] * np.pi / 180 )**2
 
         #--------------------
         if(P['coadd']):
@@ -265,17 +267,40 @@ def main(P, nbdets=None):
             from astropy.visualization import ZScaleInterval
             zscale = ZScaleInterval()
             wcs = maps.w
-            zscale = ZScaleInterval()
             vmin, vmax = zscale.get_limits(map_values)
-            fig, ax = plt.subplots(dpi=150,figsize=(8, 6),subplot_kw={'projection': wcs})
-            img = ax.imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
-            fig.colorbar(img, ax=ax, label='Amplitude')
-            ax.coords[0].set_format_unit('deg', decimal=True)  # RA
-            ax.coords[1].set_format_unit('deg', decimal=True)  # De
-            ax.set_ylabel('Dec [deg]')
-            ax.set_xlabel('RA [deg]')
-            ax.plot(P['crval'][0], P['crval'][1],'or', transform=ax.get_transform('world'))
+            
+            fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+            img = ax[0].imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+            fig.colorbar(img, ax=ax[0], label='Amplitude')
+            ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
+            ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
+            ax[0].set_ylabel('Dec [deg]')
+            ax[0].set_xlabel('RA [deg]')
+            ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
+
+            #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
+            map_value = fits.getdata('fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF_LW.fits', ext=1)[0] 
+            valid = ~np.isnan(map_value)
+            # find rows & columns containing at least one valid pixel
+            rows = np.where(valid.any(axis=1))[0]
+            cols = np.where(valid.any(axis=0))[0]
+            # crop
+            map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
+            #Replace NaN by zeros
+            #map_value = np.nan_to_num(map_value, nan=0.0)
+            zscale = ZScaleInterval()
+            vmin, vmax = zscale.get_limits(map_value)
+            im = ax[1].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            fig.colorbar(im, ax=ax[1], orientation='vertical',)
+
+            ax[1].coords[0].set_format_unit('deg', decimal=True)  # RA
+            ax[1].coords[1].set_format_unit('deg', decimal=True)  # De
+            ax[1].set_ylabel('Dec [deg]')
+            ax[1].set_xlabel('RA [deg]')
+
             plt.show()
+
+
         else: 
             import matplotlib.pyplot as plt
             from astropy.visualization import ZScaleInterval
@@ -310,7 +335,6 @@ def main(P, nbdets=None):
                 if isinstance(beam_map[0], str): print(beam_map[0])
                 else: 
 
-                    '''
                     plt.figure(figsize=(8, 6))
                     plt.contour(beam_map[0], levels=10, colors='red')
                     plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
@@ -318,7 +342,7 @@ def main(P, nbdets=None):
                     plt.title('2D Gaussian Fit Contours')
                     plt.xlabel('X pixel')
                     plt.ylabel('Y pixel')
-                    '''
+                    plt.show()
 
                     f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                     hdu = fits.HDUList([f])
@@ -336,8 +360,9 @@ def main(P, nbdets=None):
 
         if P['checkBeam'] and not P['coadd']:
             embed()
-            for i_det, name in enumerate(kid_num):
 
+            for i_det, name in enumerate(kid_num[4:]):
+                print(name, map_values[i_det].mean())
                 vmin, vmax = zscale.get_limits(map_values[i_det])
                 beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
