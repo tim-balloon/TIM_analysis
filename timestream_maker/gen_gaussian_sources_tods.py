@@ -22,7 +22,7 @@ from astropy.wcs import WCS
 
 P = load_params('PAR_files/params_strategy.par')    
 
-P['detectors_name_file'] = 'TIM_kid_table_reduced.tsv'
+P['detectors_name_file'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/TIM_kid_table_reduced_number_of_dets.tsv'
 P['nb_pixel_SW'] = 5 #Number of pixel per frequency band in the SW array.
 P['nb_pixel_LW'] = 5 #Number of pixel per frequency band in the LW array.
 P['nb_channels_per_array'] = 1
