@@ -37,8 +37,9 @@ P['vertical_steps'] = 30
 P['N_scans'] = 1
 
 P['output_path'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+P['path']        = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+
 P['output_name'] = f'TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5'
-P['path']  = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
 P['file'] = f"cube_1source_with_1xbigger_sigma_PSF.fits" 
 
 gen_detectors_main(P)
