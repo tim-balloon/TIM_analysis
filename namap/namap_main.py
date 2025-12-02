@@ -358,8 +358,9 @@ def main(P, nbdets=None):
                 
                 plt.show()
 
+        embed()
+
         if P['checkBeam'] and not P['coadd']:
-            embed()
 
             for i_det, name in enumerate(kid_num[4:]):
                 print(name, map_values[i_det].mean())
