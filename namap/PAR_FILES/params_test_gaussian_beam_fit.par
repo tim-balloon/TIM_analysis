@@ -6,7 +6,7 @@ precision = 'float64'
 hdf5_file = 'fits_and_hdf5/TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5' 
             
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = config/TIM_kid_table_reduced.tsv
+detector_table = config/TIM_kid_table_reduced_number_of_dets.tsv
 
 #if you want to use preselected good detectors list
 detectors_to_use = None 

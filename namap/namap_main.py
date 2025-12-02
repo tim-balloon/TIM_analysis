@@ -277,7 +277,7 @@ def main(P, nbdets=None):
             ax[0].set_ylabel('Dec [deg]')
             ax[0].set_xlabel('RA [deg]')
             ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
-
+            '''
             #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
             map_value = fits.getdata('fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF_LW.fits', ext=1)[0] 
             valid = ~np.isnan(map_value)
@@ -297,6 +297,7 @@ def main(P, nbdets=None):
             ax[1].coords[1].set_format_unit('deg', decimal=True)  # De
             ax[1].set_ylabel('Dec [deg]')
             ax[1].set_xlabel('RA [deg]')
+            '''
 
             plt.show()
 
