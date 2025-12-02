@@ -178,7 +178,6 @@ class beam(object):
 
         # Detection threshold = median + 5σ
         threshold = median + (5. * std)
-        print(threshold)
 
         # --- Build a mask for NaN values ---
         if hasattr(self, 'nanmask'):
@@ -419,7 +418,7 @@ class beam(object):
             return msg, 0, 0
         else:
             # Successful fit → return fitted map, parameters, and covariance
-            print('PARAM_FIT', fit_param.x)
+            #print('PARAM_FIT', fit_param.x)
             return fit_data, fit_param.x, var
 
 
@@ -636,7 +635,7 @@ class Beam1D(object):
             return msg, 0, 0
         else:
             # Successful fit → return fitted map, parameters, and covariance
-            print('PARAM_FIT', fit_param.x)
+            #print('PARAM_FIT', fit_param.x)
             return fit_data, fit_param.x, var
         
 if __name__ == "__main__":

@@ -211,7 +211,7 @@ class data_value():
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
         
-        '''
+        
         #--------------------------
         #For debbuging purpose only
         ras = []
@@ -223,7 +223,7 @@ class data_value():
             decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             H.close()
         #--------------------------
-        '''
+        
         
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
@@ -257,7 +257,7 @@ class data_value():
         '''
         #---
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf, ras, decs #, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """

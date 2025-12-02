@@ -6,7 +6,7 @@ precision = 'float64'
 hdf5_file = 'fits_and_hdf5/TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5' 
             
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = config/TIM_kid_table_reduced_number_of_dets.tsv
+detector_table = 'TIM_kid_table_reduced_number_of_dets.tsv'
 
 #if you want to use preselected good detectors list
 detectors_to_use = None 
@@ -36,7 +36,7 @@ lat=True
 lst=True
 
 crpix = 126, 127
-cdelt = 0.004166666666666667, 0.004166666666666667 #Pixel resolution along the two axis in degree. 
+cdelt = 0.004187799348395014, 0.004187799348395014 #Pixel resolution along the two axis in degree. 
 crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. Default value is np.asarray([230.  , -55.79])
 pixnum = 1000., 1000. #Number of pixels along the two axis. The input needs to be written as XX YY. Not implement so far. 
 #-----------------------------
@@ -61,7 +61,8 @@ checkBeam = True
 #--- Parameters for the post-processing of the TODs and the map ---
 Coadd the detectors 
 #if True, the data of detectors are coadded. Else, Namap produces a map for each detector. 
-coadd = True
+coadd = False
+check_offsets = True
 output_map = 'coadd.fits' 
 save_downsampled_TODS = False
 output_hdf5 = 'fits_and_hdf5/tods.hdf5'
