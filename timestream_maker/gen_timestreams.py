@@ -112,6 +112,13 @@ def gen_tod(wcs, Map, hdr, ybins, xbins, pointing_paths, T=None):
         positions_x[detector,:] = x_pixel_coords
         positions_y[detector,:] = y_pixel_coords
 
+        norm, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins),  )
+        hist, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins), weights=samples[detector].ravel())
+        #plt.figure()
+        #plt.imshow(hist/norm, origin = 'lower')
+        #plt.title(f'detector={detector}')
+    #plt.show()
+
     #Compute the number of times each sky pixel is hit by the detectors.
     norm, edges = np.histogramdd(sample=(positions_x.ravel(), positions_y.ravel()), bins=(xbins,ybins),  )
     hist, edges = np.histogramdd(sample=(positions_x.ravel(), positions_y.ravel()), bins=(xbins,ybins), weights=samples.ravel())
