@@ -364,7 +364,6 @@ def genScanPath(T, dt, alt, az, flag ):
 
     return coor, flag_full
 
-
 def genScanPath_original(T, alt, az, flag, plot=False):
     """    
     Function that generates the pointing coordinates vs time.
@@ -396,7 +395,6 @@ def genScanPath_original(T, alt, az, flag, plot=False):
     flag      = flag[idx]
     
     return coor,flag
-
 
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
@@ -502,7 +500,9 @@ def binMap(pointing_paths, res=0.02,  dec=0, ra=0, shape=None):
     x_res = res
     y_res = x_res
 
-    pointings = np.concatenate([pixel for pixel in pointing_paths])
+    if(len(np.asarray(pointing_paths).shape)>2 ):
+        pointings = np.concatenate([pixel for pixel in pointing_paths])
+    else: pointings = pointing_paths
 
     if(shape is None):
 
