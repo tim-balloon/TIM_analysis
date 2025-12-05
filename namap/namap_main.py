@@ -328,10 +328,8 @@ def main(P, nbdets=None):
                 ra_list, dec_list = wcs.wcs_pix2world(x_peaks, y_peaks, 0)  # degrees
 
                 # --- 2. RA/DEC → AZ/EL ---
-                xsc_offset = (0,0)
-                det_off = np.zeros((len(kid_num), 2))
 
-                corr = pt.apply_offset('RA and DEC', ra_list, dec_list, 'CROSS-EL and EL', xsc_offset, DT,IT, lst = lst , lat = lat  )
+                corr = pt.apply_offset('RA and DEC', ra_list, dec_list, 'CROSS-EL and EL', (0,0), DT,IT, lst = lst , lat = lat  )
                 xEL, EL = corr.correction()
                 xEL = xEL[0,:]; EL = EL[0,:]
             
@@ -378,7 +376,7 @@ def main(P, nbdets=None):
             plt.show()
 
             plt.figure()
-            ref = 0
+            ref = -1
             delta_xel_list = []
             delta_el_list = []
             for lst_i, lat_i in zip(lst_data[::500],lat_data[::500]):
@@ -394,8 +392,8 @@ def main(P, nbdets=None):
             dettable = ld.det_table(kid_num, P['detector_table'])     
   
             det_off, _,_ = dettable.loadtable() 
-            a = det_off[:,0] - det_off[ref,0]
-            b = det_off[:,1] - det_off[ref,1]
+            a = det_off[:,0] - det_off[0,0]
+            b = det_off[:,1] - det_off[0,1]
             plt.plot(a,b, 'og')
 
             print(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0))
@@ -405,6 +403,8 @@ def main(P, nbdets=None):
             plt.xlim(a.min()-0.01, a.max()+0.01)
             plt.ylim(b.min()-0.01, b.max()+0.01)
             plt.show()
+
+            embed()
             
     return 0
 
