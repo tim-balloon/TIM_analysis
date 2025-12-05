@@ -8,7 +8,6 @@ nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
 offset_LW = 0.0182 #[deg] separation in angle between 2 consecutive pixels for the LW array
 arrays_separation = 0.066 #[deg]
 theta = 0 #[deg] rotation angle of detectors. 
-f_range = 0.6 #spatial extent for the plots. 
 #---------------------------
 
 #----- Targetted field coordinates -----
@@ -24,8 +23,8 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration = 2/60
-acquisition_frequency = 488.3
+T_duration = 0.5
+acquisition_frequency = 100
 acquisition_frequency_coords = 100
 #---------------------------
 
@@ -33,10 +32,11 @@ acquisition_frequency_coords = 100
 #Fits file containing the mock sky out of which we generates the TOD
 path = 'fits_and_hdf5/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
-output_path = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
-output_name = 'TOD_488.3Hz_2min_data.hdf5' 
+output_path = 'fits_and_hdf5/'
+output_name = 'TOD_30min_example.hdf5' 
 format = '64bytes' #64,32,16
 compression='gzip' #None, 'gzip'
+f_range = 0.6 #spatial extent for the plots. 
 
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
 res = None #[deg] if res is None, the res is the resolution of the sky fits file

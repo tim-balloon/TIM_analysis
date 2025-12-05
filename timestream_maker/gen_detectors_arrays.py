@@ -58,7 +58,7 @@ def gen_detectors_main(P):
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
     pixel_offset_EL_SW, pixel_offset_xEL_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
     pixel_offset_EL_LW, pixel_offset_xEL_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
-    pixel_offset_xEL_LW[::2] +=  P['arrays_separation']*2
+    #pixel_offset_xEL_LW[::2] +=  P['arrays_separation']*2
     in_array_LW = ['LW'] * len(pixel_offset_EL_LW)
     in_array_SW = ['SW'] * len(pixel_offset_EL_SW)
 
@@ -69,9 +69,6 @@ def gen_detectors_main(P):
     pixel_offset_xEL_SW_tot = np.tile(pixel_offset_xEL_SW, P['nb_channels_per_array'])
     pixel_offset_xEL_LW_tot = np.tile(pixel_offset_xEL_LW, P['nb_channels_per_array'])
     pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW_tot, pixel_offset_xEL_LW_tot))
-
-    import matplotlib.pyplot as plt
-    plt.plot(pixel_offset_xEL, pixel_offset_EL, 'ok'); plt.show()
 
     in_array_LW_tot = np.tile(in_array_LW, P['nb_channels_per_array']) 
     in_array_SW_tot = np.tile(in_array_SW, P['nb_channels_per_array']) 
