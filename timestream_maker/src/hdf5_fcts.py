@@ -177,8 +177,9 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
 
         with open(dect_file, 'w') as f:
             f.write("Name\tEL\tXEL\tFrequency\n")  # Column headers
-            for name in det_names:
-                f.write(f"{name}\t\t\t\t\t\t\n")  # Tab-separated values
+            for detector, (offset, shift, name) in enumerate(zip(pixel_offset, pixel_shift, det_names)):
+
+                f.write(f"{name}\t{offset}\t{shift}\t\t\t\t\n")  # Tab-separated values
     #---------------------------
 
     if(True):
