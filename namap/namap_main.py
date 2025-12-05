@@ -457,24 +457,20 @@ def main(P, nbdets=None):
                 cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
                 fig.colorbar(im, cax=cax, label='Amplitude')
                 ax[0].set_aspect('equal')         
-
                 fig.suptitle(name_kid)
-
                 beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
 
                 if isinstance(beam_map[0], str): print(name_kid, beam_map[0])
-                    
                 else: 
-
                     im=ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax,extent=extent)   
                     # create a new small axis to the right of ax[1] for the colorbar
                     divider = make_axes_locatable(ax[1])
                     cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
                     fig.colorbar(im, cax=cax, label='Amplitude')
                     ax[1].set_aspect('equal')
-
+                    '''
                     N_gaussians = len(beam_map[1]) // 6
                     if(N_gaussians >1 ): 
                         w = np.where( beam_map[1][::6] == beam_map[1][::6].max() )
@@ -482,26 +478,35 @@ def main(P, nbdets=None):
                         params = beam_map[1][j:j+6]
                         cov = beam_map[2][j:j+6, j:j+6]
                     else: 
-                        params = beam_map[1]
-                        cov = beam_map[2]
-
+                    '''
+                    params = beam_map[1]
+                    cov = beam_map[2]
                     uncertainties = np.sqrt(np.diag(cov))
                     print(f'xo={params[1]:.2f} pm {uncertainties[1]:.2f} | yo={params[2]:.2f} pm {uncertainties[2]:.2f}' )
-                    x_peaks.append(params[1]); y_peaks.append(params[0])
+                    x_peaks.append(params[1]); y_peaks.append(params[2])
 
                 fig.tight_layout()
+            plt.close('all')
 
-            delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= lst_data[-1], lat = lat_data[-1], ref=0)
-        
-            dettable = ld.det_table(kid_num, P['detector_table']) 
-            det_off, _,_ = dettable.loadtable() #noise_det, resp
             plt.figure()
-            plt.plot(delta_xel, delta_el, 'ok')
-            plt.plot(delta_el, delta_xel, '.r')
-            plt.plot(0*det_off[:,0], det_off[:,1], 'og')
+            plt.xlim(-0.16, 0.16)
+            plt.ylim(-0.16, 0.16)
+            ref = -1
+            delta_xel_list = []
+            delta_el_list = []
+            for lst_i, lat_i in zip(lst_data[::500],lat_data[::500]):
+                delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= lst_i, lat = lat_i, ref=ref)
+                delta_xel_list.append(delta_xel), delta_el_list.append(delta_el)
+        
+            delta_xel_list = np.asarray(delta_xel_list)
+            delta_el_list = np.asarray(delta_el_list)
+            dettable = ld.det_table(kid_num, P['detector_table'])             
+            det_off, _,_ = dettable.loadtable() 
+            plt.errorbar(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0),
+                         xerr = np.std(delta_xel_list, axis = 0), yerr = np.std(delta_el_list, axis=0),
+                         fmt='.', color='k')
+            plt.plot(det_off[:,0], det_off[:,1] + det_off[ref,1], 'og')
             plt.show()
-            
-            
             embed()
 
     return 0
