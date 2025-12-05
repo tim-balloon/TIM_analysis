@@ -379,39 +379,27 @@ def main(P, nbdets=None):
             ref = -1
             delta_xel_list = []
             delta_el_list = []
-            for lst_i, lat_i in zip(lst_data[::500],lat_data[::500]):
-                delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= lst_i, lat = lat_i, ref=ref)
-                delta_xel_list.append(delta_xel), delta_el_list.append(delta_el)
+
+            LST_value = lst_data.mean()
+            lat_value = lat_data[0]
+
+            delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= LST_value, lat = lat_value, ref=ref)
         
-            delta_xel_list = np.asarray(delta_xel_list)
-            delta_el_list = np.asarray(delta_el_list)
+            delta_xel -= delta_xel[0]  # now detector 0 is zero
+            delta_el  -= delta_el[0]
 
-            delta_xel_avg = np.mean(delta_xel_list, axis = 0)
-            delta_el_avg = np.mean(delta_el_list, axis=0)
-
-            delta_xel_avg -= delta_xel_avg[0]  # now detector 0 is zero
-            delta_el_avg  -= delta_el_avg[0]
-
-            plt.errorbar(delta_xel_avg, delta_el_avg,
-                         xerr = np.std(delta_xel_list, axis = 0), yerr = np.std(delta_el_list, axis=0),
-                         fmt='.', color='k')
+            plt.errorbar(delta_xel, delta_el,fmt='.', color='k')
     
             dettable = ld.det_table(kid_num, P['detector_table'])     
-  
             det_off, _,_ = dettable.loadtable() 
             a = det_off[:,0] - det_off[ref,0]
             b = det_off[:,1] - det_off[ref,1]
             plt.plot(a,b, 'og')
 
-            print(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0))
-            print('')
-            print(det_off)
-
             plt.xlim(a.min()-0.01, a.max()+0.01)
             plt.ylim(b.min()-0.01, b.max()+0.01)
             plt.show()
 
-            embed()
             
     return 0
 
