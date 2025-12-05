@@ -491,19 +491,18 @@ def main(P, nbdets=None):
 
                 fig.tight_layout()
 
-            plt.close('all')
-
             delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= lst_data[-1], lat = lat_data[-1], ref=0)
         
             dettable = ld.det_table(kid_num, P['detector_table']) 
             det_off, _,_ = dettable.loadtable() #noise_det, resp
+            plt.figure()
             plt.plot(delta_xel, delta_el, 'ok')
             plt.plot(delta_el, delta_xel, '.r')
             plt.plot(0*det_off[:,0], det_off[:,1], 'og')
             plt.show()
             
             
-        
+            embed()
 
     return 0
 
