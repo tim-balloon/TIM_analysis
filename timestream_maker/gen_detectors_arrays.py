@@ -70,7 +70,6 @@ def gen_detectors_main(P):
 
     #---------------------------
     # Generate detector names
-
     det_names_SW = generate_strings(P['nb_pixel_SW'] * P['nb_channels_per_array'], ['01', '02', '03', '04'])
     det_names_LW = generate_strings(P['nb_pixel_LW'] * P['nb_channels_per_array'], ['05', '06', '07', '08'])
     det_names = np.concatenate((det_names_SW,det_names_LW))

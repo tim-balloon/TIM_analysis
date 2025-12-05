@@ -232,12 +232,23 @@ def main_tod(P):
         # Extract XEL and EL from the MultiIndex of the row
         xel = group.index.get_level_values('XEL')
         el = group.index.get_level_values('EL')
+
+        xel = np.asarray(xel)
+        if(array_name == 'LW'): xel[::2] +=  P['arrays_separation']*3
+        else: xel[::2] -=  P['arrays_separation']*3
         #-------------------------------
-        
+        plt.figure()
+        plt.plot(xel,el,'ok')
         #-------------------------------
+        plt.figure()
         pixel_offsets = pixels_rotations(el, xel, P['theta'])
         #Generate the pointing on the sky of each pixel. 
         pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, offsets) for offsets in pixel_offsets]
+        n=10
+        for i in range(len(pixel_offsets)):
+            plt.scatter(pointing_paths_to_save[i][::n,0], pointing_paths_to_save[i][::n,1], s=0.1,)
+        plt.title(P['arrays_separation']*3)
+        plt.show()
         #-------------------------------
 
         #------------------------------------------------------------------
@@ -279,7 +290,7 @@ def main_tod(P):
                 if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-            plt.close()
+            plt.show()
 
             #----------------------------------------
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
