@@ -58,6 +58,9 @@ def gen_detectors_main(P):
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
     pixel_offset_EL_SW, pixel_offset_xEL_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
     pixel_offset_EL_LW, pixel_offset_xEL_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
+    pixel_offset_xEL_LW[::2] +=  P['arrays_separation']*3
+    in_array_LW = ['LW'] * len(pixel_offset_EL_LW)
+    in_array_SW = ['SW'] * len(pixel_offset_EL_SW)
 
     pixel_offset_EL_SW_tot = np.tile(pixel_offset_EL_SW, P['nb_channels_per_array'])
     pixel_offset_EL_LW_tot = np.tile(pixel_offset_EL_LW, P['nb_channels_per_array'])
@@ -66,6 +69,10 @@ def gen_detectors_main(P):
     pixel_offset_xEL_SW_tot = np.tile(pixel_offset_xEL_SW, P['nb_channels_per_array'])
     pixel_offset_xEL_LW_tot = np.tile(pixel_offset_xEL_LW, P['nb_channels_per_array'])
     pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW_tot, pixel_offset_xEL_LW_tot))
+
+    in_array_LW_tot = np.tile(in_array_LW, P['nb_channels_per_array']) 
+    in_array_SW_tot = np.tile(in_array_SW, P['nb_channels_per_array']) 
+    in_array_tot = np.concatenate((in_array_SW_tot, in_array_LW_tot))
     #---------------------------    
 
     #---------------------------
@@ -98,9 +105,9 @@ def gen_detectors_main(P):
     # Define the output file path
     file = P['detectors_name_file']    
     with open(file, 'w') as f:
-        f.write("Name\tResp.\tWhiteNoise\ttime offset\tEL\tXEL\tFrequency\n")  # Column headers
-        for name,  r,n,t, e, xe,F in zip(det_names, resp, noise,time_offset, EL, XEL, freqs):
-            f.write(f"{name}\t{r:1f}\t{n:1f}\t{t:1f}\t{e:1f}\t{xe:1f}\t{F:1f}\n")  # Tab-separated values
+        f.write("Name\tResp.\tWhiteNoise\ttime offset\tEL\tXEL\tFrequency\tArray\n")  # Column headers
+        for name,  r,n,t, e, xe,F, arr in zip(det_names, resp, noise,time_offset, EL, XEL, freqs, in_array_tot):
+            f.write(f"{name}\t{r:1f}\t{n:1f}\t{t:1f}\t{e:1f}\t{xe:1f}\t{F:1f}\t{arr}\n")  # Tab-separated values
     #---------------------------
 
     #---------------------------

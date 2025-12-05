@@ -200,65 +200,61 @@ def main_tod(P):
     #-----------------------------
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
 
-    LW = det_names_dict[det_names_dict['XEL'] >= 0]
-    SW = det_names_dict[det_names_dict['XEL'] < 0]
 
-    for array_name, array, freqs_array in zip( ('SW', 'LW'), (SW, LW),
-                                   (freqs[:P['nb_channels_per_array']], freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ])):
+    def group_detectors(det_names_dict, array):
+
+        lw = det_names_dict[det_names_dict['Array'] == 'LW']
+
+        # Group by (EL, XEL), sort offsets to keep a stable order
+        grouped = (
+            lw.groupby(['EL', 'XEL'])['Name']
+            .apply(list)
+            .sort_index()  # ensure deterministic order
+        )
+
+        # These are the unique (EL, XEL) pairs in order
+        offsets = list(grouped.index)  # list of (EL, XEL) tuples
+
+        # Lists of detectors for each offset pair
+        lists_per_offset = list(grouped.values)
+
+        # Number of groups = min size among offset groups
+        N_groups = min(len(lst) for lst in lists_per_offset)
+
+        # Build the groups
+        final_groups = []
+        for i in range(N_groups):
+            group = [lst[i] for lst in lists_per_offset]
+            final_groups.append(group)
+
+        return final_groups, offsets
+
+
+    for array_name, freqs_array in zip( ('SW', 'LW'), 
+                                   (freqs[:P['nb_channels_per_array']], 
+                                    freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ])):
         
-        cube_simu= []
-        cube_obs = []
+        cube_simu=  []
+        cube_obs =  []
         cube_hits = []
 
-        #------------------------------------------------------------------
-        # Group by (XEL, EL), keeping both the group keys and names
-        same_offset_groups = array.groupby(['XEL', 'EL'])['Name'].apply(list)
+        groups,offset = group_detectors(det_names_dict, array_name)
 
-        # Extract (XEL, EL) as a MultiIndex and convert to list
-        xel_el_keys = same_offset_groups.index.tolist()
+        xel = np.asarray(offset)[:,1]
+        el = np.asarray(offset)[:,0]
 
-        # Transpose the list of lists of Names
-        grouped_lists = same_offset_groups.tolist()
-        transposed_groups = list(zip(*grouped_lists))  # One element from each group
-
-        # Combined detectors per group of electromagnetic frequency
-        frequency_groups = pd.DataFrame(transposed_groups, columns=pd.MultiIndex.from_tuples(xel_el_keys, names=["XEL", "EL"]))
-        #------------------------------------------------------------------
-
-        #------------------------------------------------------------------
-        #Load the pointing path for a group of pixel seeing the same electromagnetic frequency
-        group = frequency_groups.iloc[0]
-        names = group.values
-        # Extract XEL and EL from the MultiIndex of the row
-        xel = group.index.get_level_values('XEL')
-        el = group.index.get_level_values('EL')
-
-        xel = np.asarray(xel)
-        if(array_name == 'LW'): xel[::2] +=  P['arrays_separation']*3
-        else: xel[::2] -=  P['arrays_separation']*3
-        #-------------------------------
-        plt.figure()
-        plt.plot(xel,el,'ok')
-        #-------------------------------
-        plt.figure()
         pixel_offsets = pixels_rotations(el, xel, P['theta'])
         #Generate the pointing on the sky of each pixel. 
         pointing_paths_to_save = [genPointingPath(T, scan_path, LST, lat, dec, offsets) for offsets in pixel_offsets]
-        n=10
-        for i in range(len(pixel_offsets)):
-            plt.scatter(pointing_paths_to_save[i][::n,0], pointing_paths_to_save[i][::n,1], s=0.1,)
-        plt.title(P['arrays_separation']*3)
-        plt.show()
         #-------------------------------
 
         #------------------------------------------------------------------
-        bar = Bar(f'Generate the TODs of the {array_name} array', max=len(frequency_groups))
+        bar = Bar(f'Generate the TODs of the {array_name} array', max=len(freqs_array))
         #for each frequency,
-        for f in range(len(frequency_groups)):
+        for f in range(len(freqs_array)):
             #----------------------------------------
             #select the detectors
-            group = frequency_groups.iloc[f]
-            names = group.values
+            names = groups[0]
             #----------------------------------------
 
             #----------------------------------------
@@ -290,15 +286,15 @@ def main_tod(P):
                 if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
             plt.subplots_adjust(wspace=0, hspace=0)
             plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
-            plt.show()
+            plt.close()
+            #----------------------------------------
 
             #----------------------------------------
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
 
             bar.next()
         #------------------------------------------------------------------
-
-
+        
         # ------------------ Save FITS --------------------
         hdr_out = hdr
         hdr_out["DATE"]  = str(datetime.datetime.now())
@@ -320,6 +316,7 @@ def main_tod(P):
         print('')
         print("saved ", savepath)
         print('')
+        #----------------------------------------
         
 
 if __name__ == "__main__":

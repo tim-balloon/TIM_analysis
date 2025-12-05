@@ -49,6 +49,7 @@ P['file'] = f"cube_1source_with_1xbigger_sigma_PSF.fits"
 gen_detectors_main(P)
 
 if( not os.path.isfile(P['output_path']+P['output_name']) or True ):
+    print('')
     main_1det(P)
     #main_arrays(P)
     main_tod(P)
