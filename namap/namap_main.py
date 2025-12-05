@@ -505,7 +505,7 @@ def main(P, nbdets=None):
             plt.errorbar(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0),
                          xerr = np.std(delta_xel_list, axis = 0), yerr = np.std(delta_el_list, axis=0),
                          fmt='.', color='k')
-            plt.plot(det_off[:,0], det_off[:,1] + det_off[ref,1], 'og')
+            plt.plot(det_off[:,0] + det_off[ref,0], det_off[:,1] + det_off[ref,1], 'og')
             plt.show()
             embed()
 
