@@ -30,12 +30,12 @@ P['offset_LW'] =  1/3600 #[deg] separation in angle between 2 consecutive pixels
 P['arrays_separation'] = 0 #[deg]
 
 P['nb_channels_per_array'] = 1
-P['T_duration'] = 2
+P['T_duration'] = 10/60
 P['output_path'] = f'fits_and_hdf5/'
 P['scan'] ='raster'
 P['az_size'] = 0.2
-P['alt_step'] = 5/3600*2/3
-P['alt_size'] = 5/3600*2/3
+P['alt_step'] = 2/3600
+P['alt_size'] = 50/3600
 P['acquisition_frequency'] = 100
 P['acquisition_frequency_coords'] = 100
 P['vertical_steps'] = 60
