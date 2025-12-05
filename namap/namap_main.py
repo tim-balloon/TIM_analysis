@@ -220,30 +220,20 @@ def main(P, nbdets=None):
 
     else:
         
-        if(not P['check_offsets']): 
 
-            #load the table
-            dettable = ld.det_table(kid_num, P['detector_table']) 
-            det_off, _,_ = dettable.loadtable() #noise_det, resp
-            
-            #---------------------------------
-            #Offset with respect to star cameras in xEL and EL
-            xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
-            #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-            #xsc_offset = xsc_file.read_file()
-            corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-            coord1slice, coord2slice = corr.correction()
-            #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
-            #---------------------------------
+        #load the table
+        dettable = ld.det_table(kid_num, P['detector_table']) 
+        det_off, _,_ = dettable.loadtable() #noise_det, resp
         
-        else:
-
-            if(P['coadd']): print('Warning, cannot coadd maps without offsets !')
-            det_off = np.zeros((len(kid_num), 2))
-            xsc_offset = (0,0) 
-            corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-            coord1slice, coord2slice = corr.correction()
-            #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.k')
+        #---------------------------------
+        #Offset with respect to star cameras in xEL and EL
+        xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
+        #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+        #xsc_offset = xsc_file.read_file()
+        corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
+        coord1slice, coord2slice = corr.correction()
+        #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
+        #---------------------------------
 
         #--------------------
         #Need to be implemented ! So far, set parallactic angle to 0.
@@ -273,29 +263,20 @@ def main(P, nbdets=None):
         map_values /= ( P['cdelt'][0] * np.pi / 180 )**2
         wcs = maps.w
         #--------------------------------------------------
+
         #--------------------------------------------------    
         #Plot the maps
-        #maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #--------------------------------------------------      
         
         if P['checkBeam'] and P['coadd']:
                 
-                vmin, vmax = zscale.get_limits(map_values)
                 beam_value = bm.beam(map_values, )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
 
                 if isinstance(beam_map[0], str): print(beam_map[0])
                 else: 
-
-                    fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
-                    ax[0].contour(beam_map[0], levels=10, colors='red')
-                    im = ax[0].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    fig.colorbar(im, ax=ax[0], label='Amplitude')
-                    ax[0].title('2D Gaussian Fit Contours')
-                    ax[0].xlabel('X pixel')
-                    ax[0].ylabel('Y pixel')
-                    ax[0].show()
 
                     f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                     hdu = fits.HDUList([f])
@@ -306,101 +287,9 @@ def main(P, nbdets=None):
                     hdr["BUNIT"] = 'MJy/sr'
                     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                    hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
-                    hdu.close()
-                
-                plt.show()
-
-        if P['check_offsets'] and not P['coadd']:
-
-            from astropy.coordinates import SkyCoord
-            import matplotlib.pyplot as plt
-            from astropy.visualization import ZScaleInterval
-            zscale = ZScaleInterval()
-            from mpl_toolkits.axes_grid1 import make_axes_locatable
-            vmin, vmax = zscale.get_limits(map_values[0])
-            
-            def compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs,  lst, lat, ref=0 ):
-
-                N = len(x_peaks)
-
-                # --- 1. PIXEL → RA/DEC ---
-                ra_list, dec_list = wcs.wcs_pix2world(x_peaks, y_peaks, 0)  # degrees
-
-                # --- 2. RA/DEC → AZ/EL ---
-
-                corr = pt.apply_offset('RA and DEC', ra_list, dec_list, 'CROSS-EL and EL', (0,0), DT,IT, lst = lst , lat = lat  )
-                xEL, EL = corr.correction()
-                xEL = xEL[0,:]; EL = EL[0,:]
-            
-                # --- 4. Offsets relative to reference detector ---
-                delta_EL = EL - EL[ref]
-                delta_xEL = xEL - xEL[ref]
-
-                return delta_EL, delta_xEL
-
-            x_peaks = []
-            y_peaks = []
-
-            for i_det, name_kid in enumerate(kid_num):
-
-                fig, ax = plt.subplots(1,2,dpi=150,figsize=(11, 3))
-                ny, nx = map_values[i_det].shape
-                extent = (0, nx, 0, ny)
-                im = ax[0].imshow(map_values[i_det], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax,extent=extent)
-                divider = make_axes_locatable(ax[0])
-                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-                fig.colorbar(im, cax=cax, label='Amplitude')
-                ax[0].set_aspect('equal')         
-                fig.suptitle(name_kid)
-                beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
-                beam_map = beam_value.beam_fit()
-                param = beam_map[1]
-
-                if isinstance(beam_map[0], str): print(name_kid, beam_map[0])
-                else: 
-                    im=ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax,extent=extent)   
-                    # create a new small axis to the right of ax[1] for the colorbar
-                    divider = make_axes_locatable(ax[1])
-                    cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-                    fig.colorbar(im, cax=cax, label='Amplitude')
-                    ax[1].set_aspect('equal')
-                    #!! if more than 1 peak ?
-                    params = beam_map[1]
-                    cov = beam_map[2]
-                    uncertainties = np.sqrt(np.diag(cov))
-                    print(f'xo={params[1]:.2f} pm {uncertainties[1]:.2f} | yo={params[2]:.2f} pm {uncertainties[2]:.2f}' )
-                    x_peaks.append(params[1]); y_peaks.append(params[2])
-
-                fig.tight_layout()
-            plt.show()
-
-            plt.figure()
-            ref = -1
-            delta_xel_list = []
-            delta_el_list = []
-
-            LST_value = lst_data.mean()
-            lat_value = lat_data[0]
-
-            delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= LST_value, lat = lat_value, ref=ref)
-        
-            delta_xel -= delta_xel[0]  # now detector 0 is zero
-            delta_el  -= delta_el[0]
-
-            plt.errorbar(delta_xel, delta_el,fmt='.', color='k')
-    
-            dettable = ld.det_table(kid_num, P['detector_table'])     
-            det_off, _,_ = dettable.loadtable() 
-            a = det_off[:,0] - det_off[ref,0]
-            b = det_off[:,1] - det_off[ref,1]
-            plt.plot(a,b, 'og')
-
-            plt.xlim(a.min()-0.01, a.max()+0.01)
-            plt.ylim(b.min()-0.01, b.max()+0.01)
-            plt.show()
-
-            
+                    hdu.writeto( 'fits_and_hdf5/'+P['beam_output'], overwrite=True)
+                    print('save fits_and_hdf5/'+P['beam_output'])
+                    hdu.close()    
     return 0
 
 if __name__ == "__main__":
