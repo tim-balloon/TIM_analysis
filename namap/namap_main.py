@@ -385,15 +385,22 @@ def main(P, nbdets=None):
         
             delta_xel_list = np.asarray(delta_xel_list)
             delta_el_list = np.asarray(delta_el_list)
-            plt.errorbar(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0),
+
+            delta_xel_avg = np.mean(delta_xel_list, axis = 0)
+            delta_el_avg = np.mean(delta_el_list, axis=0)
+
+            delta_xel_avg -= delta_xel_avg[0]  # now detector 0 is zero
+            delta_el_avg  -= delta_el_avg[0]
+
+            plt.errorbar(delta_xel_avg, delta_el_avg,
                          xerr = np.std(delta_xel_list, axis = 0), yerr = np.std(delta_el_list, axis=0),
                          fmt='.', color='k')
-            
+    
             dettable = ld.det_table(kid_num, P['detector_table'])     
   
             det_off, _,_ = dettable.loadtable() 
-            a = det_off[:,0] - det_off[0,0]
-            b = det_off[:,1] - det_off[0,1]
+            a = det_off[:,0] - det_off[ref,0]
+            b = det_off[:,1] - det_off[ref,1]
             plt.plot(a,b, 'og')
 
             print(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0))
