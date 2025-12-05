@@ -30,7 +30,7 @@ P['offset_LW'] = 3 * 15/3600 #[deg] separation in angle between 2 consecutive pi
 P['arrays_separation'] = 0 #[deg]
 
 P['nb_channels_per_array'] = 1
-P['T_duration'] = 10/60
+P['T_duration'] = 1
 P['output_path'] = f'fits_and_hdf5/'
 P['scan'] ='raster'
 P['az_size'] = 0.1
