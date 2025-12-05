@@ -132,7 +132,7 @@ def main(P, nbdets=None):
     #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
-    nbdets = 1
+    
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
