@@ -486,7 +486,7 @@ def main(P, nbdets=None):
                     x_peaks.append(params[1]); y_peaks.append(params[2])
 
                 fig.tight_layout()
-            plt.close('all')
+            plt.show()
 
             plt.figure()
             plt.xlim(-0.16, 0.16)
