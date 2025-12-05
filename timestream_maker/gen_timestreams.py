@@ -183,7 +183,7 @@ def main_tod(P):
     hdr['CRPIX2'] = hdr['NAXIS2']//2
     wcs = WCS(hdr, naxis=2) 
     #Create the list of frequency channels of the simulated cube. 
-    freqs =( np.arange(hdr['CRVAL3'], hdr['CRVAL3']+hdr['NAXIS3']*hdr['CDELT3'], hdr['CDELT3'])*u.Unit(hdr['CUNIT3']) ).to(u.GHz)
+    freqs =( np.arange(hdr['CRVAL3'], hdr['CRVAL3']+hdr['NAXIS3']*hdr['CDELT3'], hdr['CDELT3'])*u.Unit(hdr['CUNIT3']) ).to(u.GHz).value
     #Create the binning of the map in pixel coordinates. 
     xbins = np.arange(-0.5, hdr['NAXIS1']+0.5, 1)
     ybins = np.arange(-0.5, hdr['NAXIS2']+0.5, 1)
@@ -229,7 +229,7 @@ def main_tod(P):
         return final_groups, offsets
 
 
-    for array_name, freqs_array in zip( ('SW', 'LW'), 
+    for array_name, freqs_array in zip( ('LW', 'SW'), 
                                    (freqs[:P['nb_channels_per_array']], 
                                     freqs[ P['nb_channels_per_array']:P['nb_channels_per_array']*2 ])):
         
@@ -250,17 +250,17 @@ def main_tod(P):
         #------------------------------------------------------------------
         bar = Bar(f'Generate the TODs of the {array_name} array', max=len(freqs_array))
         #for each frequency,
-        for f in range(len(freqs_array)):
+        for fi, freq in enumerate(freqs_array):
+
             #----------------------------------------
             #select the detectors
-            names = groups[0]
+            names = groups[fi]
+            index = np.argmin(np.abs(freqs - freq))
             #----------------------------------------
 
             #----------------------------------------
             #Select the electromagnetic frequency channel out of which the TODs will be sampled. 
-            F = f
-            if(array_name=='LW'): F += P['nb_channels_per_array'] 
-            Map = cube[F,:,:]
+            Map = cube[index,:,:]
             cube_simu.append(Map/pix_size)
             #----------------------------------------
 
@@ -284,13 +284,12 @@ def main_tod(P):
                 LAT.set_axislabel('Dec')
                 if(ax is not axs[0]): ax.tick_params(axis='y', labelleft=False)
             plt.subplots_adjust(wspace=0, hspace=0)
-            plt.savefig('plot/'+f'freq{freqs[F].value:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
+            plt.savefig('plot/'+f'freq{freq:.0f}GHz_channel_{P["scan"]}_summary_plot.png')
             plt.close()
             #----------------------------------------
 
             #----------------------------------------
-            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freqs[F].value, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
-
+            save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freq, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
             bar.next()
         #------------------------------------------------------------------
 
