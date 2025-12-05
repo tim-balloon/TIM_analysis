@@ -105,9 +105,9 @@ def gen_detectors_main(P):
     # Define the output file path
     file = P['detectors_name_file']    
     with open(file, 'w') as f:
-        f.write("Name\tResp.\tWhiteNoise\ttime offset\tEL\tXEL\tFrequency\tArray\n")  # Column headers
+        f.write("Name\tResp.\tWhiteNoise\ttime offset\tEL\tXEL\tArray\tFrequency\n")  # Column headers
         for name,  r,n,t, e, xe,F, arr in zip(det_names, resp, noise,time_offset, EL, XEL, freqs, in_array_tot):
-            f.write(f"{name}\t{r:1f}\t{n:1f}\t{t:1f}\t{e:1f}\t{xe:1f}\t{F:1f}\t{arr}\n")  # Tab-separated values
+            f.write(f"{name}\t{r:1f}\t{n:1f}\t{t:1f}\t{e:1f}\t{xe:1f}\t{arr}\t{F:1f}\n")  # Tab-separated values
     #---------------------------
 
     #---------------------------

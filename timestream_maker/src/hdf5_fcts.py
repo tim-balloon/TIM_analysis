@@ -91,7 +91,6 @@ def save_timestamps(tod_file, T, spf, acquisition_frequency, key, compression='g
 
     H.close()
 
-        
 def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, pointing_paths_to_save, compression='gzip',save="64bytes"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
@@ -183,8 +182,18 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     #---------------------------
 
     if(True):
-        #Finally, update the detectors file with the central frequency of the detectors
-        det_names_dict = pd.read_csv(dect_file, sep='\t')
+
+        # Load detectors file   
+        det_names_dict = pd.read_csv(dect_file, sep="\t")
+
+        # Ensure Frequency column exists and is numeric
+        det_names_dict["Frequency"] = pd.to_numeric(det_names_dict["Frequency"], errors="coerce")
+
+        # Build mask
         mask = det_names_dict["Name"].isin(det_names)
-        det_names_dict.loc[mask, 'Frequency'] = F
-        det_names_dict.to_csv(dect_file, sep='\t', index=False)
+
+        # Assign F to all matching detectors
+        det_names_dict.loc[mask, "Frequency"] = float(F)
+
+        # Write back TSV (same columns, same order)
+        det_names_dict.to_csv(dect_file, sep="\t", index=False)

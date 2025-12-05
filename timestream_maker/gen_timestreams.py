@@ -200,10 +200,9 @@ def main_tod(P):
     #-----------------------------
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
 
-
     def group_detectors(det_names_dict, array):
 
-        lw = det_names_dict[det_names_dict['Array'] == 'LW']
+        lw = det_names_dict[det_names_dict['Array'] == array]
 
         # Group by (EL, XEL), sort offsets to keep a stable order
         grouped = (
@@ -238,7 +237,7 @@ def main_tod(P):
         cube_obs =  []
         cube_hits = []
 
-        groups,offset = group_detectors(det_names_dict, array_name)
+        groups, offset = group_detectors(det_names_dict, array_name)
 
         xel = np.asarray(offset)[:,1]
         el = np.asarray(offset)[:,0]
@@ -294,7 +293,7 @@ def main_tod(P):
 
             bar.next()
         #------------------------------------------------------------------
-        
+
         # ------------------ Save FITS --------------------
         hdr_out = hdr
         hdr_out["DATE"]  = str(datetime.datetime.now())
