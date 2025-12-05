@@ -70,6 +70,9 @@ def gen_detectors_main(P):
     pixel_offset_xEL_LW_tot = np.tile(pixel_offset_xEL_LW, P['nb_channels_per_array'])
     pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW_tot, pixel_offset_xEL_LW_tot))
 
+    import matplotlib.pyplot as plt
+    plt.plot(pixel_offset_xEL, pixel_offset_EL, 'ok'); plt.show()
+
     in_array_LW_tot = np.tile(in_array_LW, P['nb_channels_per_array']) 
     in_array_SW_tot = np.tile(in_array_SW, P['nb_channels_per_array']) 
     in_array_tot = np.concatenate((in_array_SW_tot, in_array_LW_tot))

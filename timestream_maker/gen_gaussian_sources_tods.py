@@ -27,7 +27,7 @@ P['nb_pixel_SW'] = 3  #Number of pixel per frequency band in the SW array.
 P['nb_pixel_LW'] = 3 #Number of pixel per frequency band in the LW array.
 P['offset_SW'] =  0.01 #[deg] separation in angle between 2 consecutive pixels for the SW array
 P['offset_LW'] =  0.01 #[deg] separation in angle between 2 consecutive pixels for the LW array
-P['arrays_separation'] =  1e-10#[deg]
+P['arrays_separation'] = 0 #[deg]
 
 P['nb_channels_per_array'] = 1
 P['T_duration'] = 1
