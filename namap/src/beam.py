@@ -469,8 +469,9 @@ class Beam1D(object):
 
         data_for_fit = np.nan_to_num(self.data, nan=-np.inf)
         # --- Peak detection ---
-        if mask_pf is False: mask_pf = np.zeros_like(map_data, dtype=bool)
-
+        if self.mask is False: mask_pf = np.zeros_like(map_data, dtype=bool)
+        else: mask_pf = self.mask.copy()
+        
         data_for_fit[mask_pf] = -np.inf # or np.nan if you prefer
 
         # Peak finding with NaN masking
