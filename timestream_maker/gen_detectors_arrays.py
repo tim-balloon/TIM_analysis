@@ -4,9 +4,10 @@ from src.load_params import load_params
 import argparse
 import numpy as np
 import os
-
+from IPython import embed
 random.seed(42)   # Fixes the seed for Python's random module
 np.random.seed(42)  # Fixes the seed for NumPy
+
 
 def generate_strings(total_count, groups):
     """
@@ -25,22 +26,33 @@ def generate_strings(total_count, groups):
     list: list
         List of unique detector names.
     """
-    n_per_group = total_count // 4  # Number of names per XX group (1008 each)
+
+    n_groups = len(groups)
+
+    # Distribute as evenly as possible
+    base = total_count // n_groups
+    remainder = total_count % n_groups
+
+    # Example for total_count=3, groups=['01','02','03','04']:
+    # base = 0, remainder = 3
+    # distribution = [1,1,1,0]
+
+    counts = [base + (1 if i < remainder else 0) for i in range(n_groups)]
 
     all_strings = []
 
-    for group in groups:
+    for group, n_per_group in zip(groups, counts):
         strings = set()
         while len(strings) < n_per_group:
-            rand_digits = f"{random.randint(0, 9999):04d}"  # Generate 4-digit random number
-            strings.add(f"A_{group}_{rand_digits}")  # Format as A_XX_NNNN
+            rand_digits = f"{random.randint(0, 9999):04d}"
+            strings.add(f"A_{group}_{rand_digits}")
         
-        all_strings.extend(sorted(strings))  # Sort for consistency
+        all_strings.extend(sorted(strings))
 
     return all_strings
 
-def gen_detectors_main(P):
 
+def gen_detectors_main(P):
 
     #---------------------------    
     #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
@@ -58,6 +70,7 @@ def gen_detectors_main(P):
 
     #---------------------------
     # Generate detector names
+
     det_names_SW = generate_strings(P['nb_pixel_SW'] * P['nb_channels_per_array'], ['01', '02', '03', '04'])
     det_names_LW = generate_strings(P['nb_pixel_LW'] * P['nb_channels_per_array'], ['05', '06', '07', '08'])
     det_names = np.concatenate((det_names_SW,det_names_LW))

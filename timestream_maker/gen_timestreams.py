@@ -200,7 +200,7 @@ def main_tod(P):
     #-----------------------------
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
 
-    LW = det_names_dict[det_names_dict['XEL'] > 0]
+    LW = det_names_dict[det_names_dict['XEL'] >= 0]
     SW = det_names_dict[det_names_dict['XEL'] < 0]
 
     for array_name, array, freqs_array in zip( ('SW', 'LW'), (SW, LW),

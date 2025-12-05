@@ -29,7 +29,7 @@ P['offset_SW'] = 0.03  #[deg] separation in angle between 2 consecutive pixels f
 P['offset_LW'] = 0.03 #[deg] separation in angle between 2 consecutive pixels for the LW array
 P['arrays_separation'] = 0.001 #[deg]
 
-P['nb_channels_per_array'] = 3
+P['nb_channels_per_array'] = 1
 P['T_duration'] = 0.5
 P['output_path'] = f'fits_and_hdf5/'
 P['scan'] ='gittering'
