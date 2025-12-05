@@ -23,8 +23,8 @@ from astropy.wcs import WCS
 P = load_params('PAR_files/params_strategy.par')    
 
 P['detectors_name_file'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/TIM_kid_table_reduced_number_of_dets.tsv'
-P['nb_pixel_SW'] = 2  #Number of pixel per frequency band in the SW array.
-P['nb_pixel_LW'] = 2 #Number of pixel per frequency band in the LW array.
+P['nb_pixel_SW'] = 5  #Number of pixel per frequency band in the SW array.
+P['nb_pixel_LW'] = 5 #Number of pixel per frequency band in the LW array.
 P['offset_SW'] =  1/3600 #[deg] separation in angle between 2 consecutive pixels for the SW array
 P['offset_LW'] =  1/3600 #[deg] separation in angle between 2 consecutive pixels for the LW array
 P['arrays_separation'] = 0 #[deg]
@@ -34,8 +34,8 @@ P['T_duration'] = 10/60
 P['output_path'] = f'fits_and_hdf5/'
 P['scan'] ='raster'
 P['az_size'] = 0.2
-P['alt_step'] = 2/3600
-P['alt_size'] = 50/3600
+P['alt_step'] = 4/3600
+P['alt_size'] = 120/3600
 P['acquisition_frequency'] = 100
 P['acquisition_frequency_coords'] = 100
 P['vertical_steps'] = 60
