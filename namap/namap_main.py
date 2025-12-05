@@ -3,6 +3,7 @@ import src.loaddata as ld
 import src.detector as tod
 import src.mapmaker as mp
 import src.pointing as pt  
+import src.beam as bm
 import copy
 from astropy import wcs 
 import astropy.table as tb
@@ -11,6 +12,7 @@ import argparse
 import ast
 import sys
 from astropy.table import Table
+
 
 #for debugging purpose only
 from IPython import embed
@@ -179,7 +181,6 @@ def main(P, nbdets=None):
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
         
-
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data()  
     #---------------------------------
 
@@ -254,6 +255,28 @@ def main(P, nbdets=None):
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #--------------------------------------------------
 
+        #--------------------------------------------------
+        if P['checkBeam'] and P['coadd']:
+                
+                beam_value = bm.beam(map_values, )#param = self.beamparam
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
+
+                if isinstance(beam_map[0], str): print(beam_map[0])
+                else: 
+                    from astropy.io import fits
+                    import datetime
+
+                    f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
+                    hdu = fits.HDUList([f])
+                    hdr = hdu[0].header
+                    hdr.set("map")
+                    hdr.set("Datas")
+                    hdr["BITPIX"] = ("64", "array data type")
+                    hdr["BUNIT"] = 'MJy/sr'
+                    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+                    hdu.writeto('fits_and_hdf5/'+P['beam_output'], overwrite=True)
+                    hdu.close()
     return 0
 
 if __name__ == "__main__":
