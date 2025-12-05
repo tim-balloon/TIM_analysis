@@ -25,19 +25,19 @@ P = load_params('PAR_files/params_strategy.par')
 P['detectors_name_file'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/TIM_kid_table_reduced_number_of_dets.tsv'
 P['nb_pixel_SW'] = 3  #Number of pixel per frequency band in the SW array.
 P['nb_pixel_LW'] = 3 #Number of pixel per frequency band in the LW array.
-P['offset_SW'] =  0.03 #[deg] separation in angle between 2 consecutive pixels for the SW array
-P['offset_LW'] =  0.03 #[deg] separation in angle between 2 consecutive pixels for the LW array
+P['offset_SW'] =  0.01 #[deg] separation in angle between 2 consecutive pixels for the SW array
+P['offset_LW'] =  0.01 #[deg] separation in angle between 2 consecutive pixels for the LW array
 P['arrays_separation'] =  0.06#[deg]
 
 P['nb_channels_per_array'] = 2
-P['T_duration'] = 0.5
+P['T_duration'] = 1
 P['output_path'] = f'fits_and_hdf5/'
 P['scan'] ='gittering'
-P['az_size'] = 0.2
+P['az_size'] = 0.5
 P['alt_step'] = 10/3600*2/3
 P['acquisition_frequency'] = 100
 P['acquisition_frequency_coords'] = 100
-P['vertical_steps'] = 40
+P['vertical_steps'] = 60
 P['N_scans'] = 1
 
 P['output_path'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
@@ -51,9 +51,9 @@ gen_detectors_main(P)
 if( not os.path.isfile(P['output_path']+P['output_name']) or True ):
     print('')
     main_1det(P)
-    #main_arrays(P)
+    main_arrays(P)
     main_tod(P)
-
+    
 if(False):
 
     for factor_on_Sigma in (1,1.5,2,2.5): 

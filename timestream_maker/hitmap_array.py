@@ -13,6 +13,7 @@ import datetime
 import time
 import astropy.table as tb
 from progress.bar import Bar
+from gen_timestreams import group_detectors
 
 def main_arrays(P):
 
@@ -54,12 +55,14 @@ def main_arrays(P):
     #-----------------------------
 
     #-----------------------------
-    #Generate the offset of the pixels with respect to the center of the two arrays, in degrees. 
-    pixel_offset_EL_SW, pixel_offset_xEL_SW = pixelOffset(P['nb_pixel_SW'], P['offset_SW'], -P['arrays_separation']/2)
-    pixel_offset_EL_LW, pixel_offset_xEL_LW = pixelOffset(P['nb_pixel_LW'], P['offset_LW'], P['arrays_separation']/2) 
-    pixel_offset_EL = np.concatenate((pixel_offset_EL_SW, pixel_offset_EL_LW))
-    pixel_offset_xEL = np.concatenate((pixel_offset_xEL_SW, pixel_offset_xEL_LW))
-    #-------------------------------
+
+    det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
+
+    groups, offset_SW = group_detectors(det_names_dict, 'SW')
+    groups, offset_LW = group_detectors(det_names_dict, 'SW')
+
+    pixel_offset_xEL = np.concatenate((np.asarray(offset_SW)[:,1], np.asarray(offset_LW)[:,1]))
+    pixel_offset_EL = np.concatenate((np.asarray(offset_SW)[:,0], np.asarray(offset_LW)[:,0]))
 
     #-------------------------------
     pixel_offsets = pixels_rotations(pixel_offset_EL, pixel_offset_xEL, P['theta'])

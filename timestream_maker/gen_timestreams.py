@@ -16,6 +16,34 @@ from astropy.wcs import WCS
 import datetime
 from IPython import embed
 
+def group_detectors(det_names_dict, array):
+
+    lw = det_names_dict[det_names_dict['Array'] == array]
+
+    # Group by (EL, XEL), sort offsets to keep a stable order
+    grouped = (
+        lw.groupby(['EL', 'XEL'])['Name']
+        .apply(list)
+        .sort_index()  # ensure deterministic order
+    )
+
+    # These are the unique (EL, XEL) pairs in order
+    offsets = list(grouped.index)  # list of (EL, XEL) tuples
+
+    # Lists of detectors for each offset pair
+    lists_per_offset = list(grouped.values)
+
+    # Number of groups = min size among offset groups
+    N_groups = min(len(lst) for lst in lists_per_offset)
+
+    # Build the groups
+    final_groups = []
+    for i in range(N_groups):
+        group = [lst[i] for lst in lists_per_offset]
+        final_groups.append(group)
+
+    return final_groups, offsets
+
 def add_polynome_to_timestream(timestream, time, order=1, percent_scale=30, random_coeffs=True):
     """
     Add a polynomial trend (order 1 to 4) to a timestream.
@@ -199,35 +227,6 @@ def main_tod(P):
 
     #-----------------------------
     det_names_dict = pd.read_csv(P['detectors_name_file'], sep='\t')
-
-    def group_detectors(det_names_dict, array):
-
-        lw = det_names_dict[det_names_dict['Array'] == array]
-
-        # Group by (EL, XEL), sort offsets to keep a stable order
-        grouped = (
-            lw.groupby(['EL', 'XEL'])['Name']
-            .apply(list)
-            .sort_index()  # ensure deterministic order
-        )
-
-        # These are the unique (EL, XEL) pairs in order
-        offsets = list(grouped.index)  # list of (EL, XEL) tuples
-
-        # Lists of detectors for each offset pair
-        lists_per_offset = list(grouped.values)
-
-        # Number of groups = min size among offset groups
-        N_groups = min(len(lst) for lst in lists_per_offset)
-
-        # Build the groups
-        final_groups = []
-        for i in range(N_groups):
-            group = [lst[i] for lst in lists_per_offset]
-            final_groups.append(group)
-
-        return final_groups, offsets
-
 
     for array_name, freqs_array in zip( ('LW', 'SW'), 
                                    (freqs[:P['nb_channels_per_array']], 
