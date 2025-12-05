@@ -132,7 +132,7 @@ def main(P, nbdets=None):
     #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
-    nbdets = 1
+    
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
@@ -220,30 +220,20 @@ def main(P, nbdets=None):
 
     else:
         
-        if(not P['check_offsets']): 
 
-            #load the table
-            dettable = ld.det_table(kid_num, P['detector_table']) 
-            det_off, _,_ = dettable.loadtable() #noise_det, resp
-            
-            #---------------------------------
-            #Offset with respect to star cameras in xEL and EL
-            xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
-            #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-            #xsc_offset = xsc_file.read_file()
-            corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-            coord1slice, coord2slice = corr.correction()
-            #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
-            #---------------------------------
+        #load the table
+        dettable = ld.det_table(kid_num, P['detector_table']) 
+        det_off, _,_ = dettable.loadtable() #noise_det, resp
         
-        else:
-
-            if(P['coadd']): print('Warning, cannot coadd maps without offsets !')
-            det_off = np.zeros((len(kid_num), 2))
-            xsc_offset = (0,0) 
-            corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-            coord1slice, coord2slice = corr.correction()
-            #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.k')
+        #---------------------------------
+        #Offset with respect to star cameras in xEL and EL
+        xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
+        #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+        #xsc_offset = xsc_file.read_file()
+        corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
+        coord1slice, coord2slice = corr.correction()
+        #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
+        #---------------------------------
 
         #--------------------
         #Need to be implemented ! So far, set parallactic angle to 0.
@@ -258,9 +248,6 @@ def main(P, nbdets=None):
         #---------------------------------
 
         #--------------------
-
-        coord1slice = ra_list
-        coord2slice = dec_list
         #Create the maps
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
@@ -273,96 +260,23 @@ def main(P, nbdets=None):
         maps.wcs_proj()
         map_values = maps.map2d()
         map_values = np.asarray(map_values)
-        #map_values /=( P['cdelt'][0] * np.pi / 180 )**2
+        map_values /= ( P['cdelt'][0] * np.pi / 180 )**2
         wcs = maps.w
+        #--------------------------------------------------
 
-        #--------------------
-        if(P['coadd']):
-            import matplotlib.pyplot as plt
-            from astropy.visualization import ZScaleInterval
-            zscale = ZScaleInterval()
-            vmin, vmax = zscale.get_limits(map_values)
-            
-            fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
-            img = ax[0].imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
-            fig.colorbar(img, ax=ax[0], label='Amplitude')
-            ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
-            ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
-            ax[0].set_ylabel('Dec [deg]')
-            ax[0].set_xlabel('RA [deg]')
-            ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
-
-
-        else: 
-            
-            embed()
-            import matplotlib.pyplot as plt
-            from astropy.visualization import ZScaleInterval
-            zscale = ZScaleInterval()
-            wcs = maps.w
-            zscale = ZScaleInterval()
-            ####################
-            if(P['coadd']): shape = map_values.shape
-            else: shape = map_values.shape[1:]
-            xbins = np.arange(-0.5, shape[0]+0.5, 1)
-            ybins = np.arange(-0.5, shape[1]+0.5, 1)
-            #We sample the map for each detector, following its path on the sky. 
-                
-            ####################
-            for id, (rapath, decpath) in enumerate(zip(ra_list, dec_list)):
-                vmin, vmax = zscale.get_limits(map_values[id])
-
-                fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
-                img = ax[0].imshow(map_values[id], origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
-                fig.colorbar(img, ax=ax[0], label='Amplitude')
-                ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
-                ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
-                ax[0].set_ylabel('Dec [deg]')
-                ax[0].set_xlabel('RA [deg]')
-                ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
-
-                '''
-                y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(rapath, decpath)    
-                # Round the positions and convert to integer indices
-                norm, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins),  )
-                hist, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins), weights=cleaned_data[id].ravel())
-           
-                im2 = ax[1].imshow(hist/norm, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
-                fig.colorbar(img, ax=ax[1], label='Amplitude')
-                ax[1].coords[0].set_format_unit('deg', decimal=True)  # RA
-                ax[1].coords[1].set_format_unit('deg', decimal=True)  # De
-                ax[1].set_ylabel('Dec [deg]')
-                ax[1].set_xlabel('RA [deg]')
-                ax[1].plot(P['crval'][0], P['crval'][1],'or', transform=ax[1].get_transform('world'))
-                '''
-                plt.tight_layout()
-            
-            plt.show()
-            
-        
         #--------------------------------------------------    
         #Plot the maps
-        #maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #--------------------------------------------------      
         
         if P['checkBeam'] and P['coadd']:
                 
-                vmin, vmax = zscale.get_limits(map_values)
                 beam_value = bm.beam(map_values, )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
 
                 if isinstance(beam_map[0], str): print(beam_map[0])
                 else: 
-
-                    plt.figure(figsize=(8, 6))
-                    plt.contour(beam_map[0], levels=10, colors='red')
-                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    plt.colorbar(label='Amplitude')
-                    plt.title('2D Gaussian Fit Contours')
-                    plt.xlabel('X pixel')
-                    plt.ylabel('Y pixel')
-                    plt.show()
 
                     f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                     hdu = fits.HDUList([f])
@@ -373,68 +287,9 @@ def main(P, nbdets=None):
                     hdr["BUNIT"] = 'MJy/sr'
                     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                    hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+P['beam_output'], overwrite=True)
-                    hdu.close()
-                
-                plt.show()
-
-
-        if P['check_offsets'] and not P['coadd']:
-
-            embed()
-            '''
-            f = fits.PrimaryHDU(map_values, header=wcs.to_header())
-            hdu = fits.HDUList([f])
-            hdr = hdu[0].header
-            hdr.set("map")
-            hdr.set("Datas")
-            hdr["BITPIX"] = ("64", "array data type")
-            hdr["BUNIT"] = 'Jy/sr'
-            hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-            hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-            hdu.writeto( os.getcwd()+'/src/'+'test_maps.fits', overwrite=True)
-            hdu.close()
-            '''
-            
-            for i_det, name in enumerate(kid_num):
-
-                vmin, vmax = zscale.get_limits(map_values[i_det])
-                beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
-                beam_map = beam_value.beam_fit()
-                param = beam_map[1]
-
-                if isinstance(beam_map[0], str): print(name, beam_map[0])
-                else: 
-
-                    plt.figure(figsize=(8, 6))
-                    plt.contour(beam_map[0], levels=10, colors='red')
-                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    plt.colorbar(label='Amplitude')
-                    plt.title('2D Gaussian Fit Contours')
-                    plt.title(name)
-                    plt.xlabel('X pixel')
-                    plt.ylabel('Y pixel')
-                    
-                    N_gaussians = len(beam_map[1]) // 6
-                    if(N_gaussians >1 ): 
-                        w = np.where( beam_map[1][::6] == beam_map[1][::6].max() )
-                        j = w[0][0] * 6
-                        params = beam_map[1][j:j+6]
-                        cov = beam_map[2][j:j+6, j:j+6]
-                    else: 
-
-                        params = beam_map[1]
-                        cov = beam_map[2]
-
-                    uncertainties = np.sqrt(np.diag(cov))
-                    print(f'xo={params[1]:.2f} pm {uncertainties[1]:.2f} | yo={params[2]:.2f} pm {uncertainties[2]:.2f}' )
-                    ra_dect, dec_dect = wcs.wcs_pix2world(params[1], params[2], 0)
-                    print(f'xo={ra_dect} | yo={dec_dect}' )
-
-                
-            plt.close('all')
-        
-
+                    hdu.writeto( 'fits_and_hdf5/'+P['beam_output'], overwrite=True)
+                    print('save fits_and_hdf5/'+P['beam_output'])
+                    hdu.close()    
     return 0
 
 if __name__ == "__main__":
@@ -457,7 +312,8 @@ if __name__ == "__main__":
     Left to be done:
         (I,Q) --> df/f (tod.kidsutils)
         Improve downsampling (ld.frame_zoom_sync)
-        Implement respons correction and noise detectors ? Replaced by sigma clipping. 
+        Implement respons correction and                    
+          noise detectors ? Replaced by sigma clipping. 
         Test parallactic angle & telescope coordinates
         Improve TOD compression (ld.compress_tods)
     
@@ -537,3 +393,120 @@ if __name__ == "__main__":
 
     main(P)
 
+
+
+
+
+    '''
+    f = fits.PrimaryHDU(map_values_forfit, header=wcs_forfit.to_header())
+    hdu = fits.HDUList([f])
+    hdr = hdu[0].header
+    hdr.set("map")
+    hdr.set("Datas")
+    hdr["BITPIX"] = ("64", "array data type")
+    hdr["BUNIT"] = 'Jy/sr'
+    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+    hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+    hdu.writeto( os.getcwd()+'/src/'+'test_maps.fits', overwrite=True)
+    hdu.close()
+    '''
+
+    '''
+    N_gaussians = len(beam_map[1]) // 6
+    if(N_gaussians >1 ): 
+        w = np.where( beam_map[1][::6] == beam_map[1][::6].max() )
+        j = w[0][0] * 6
+        params = beam_map[1][j:j+6]
+        cov = beam_map[2][j:j+6, j:j+6]
+    else: 
+    '''
+            
+"""
+Compute relative detector offsets using Gaussian peak centers in pixels.
+
+Parameters
+----------
+x_peaks, y_peaks : arrays shape (N,)
+    Pixel coordinates of Gaussian centers for each detector.
+wcs : astropy.wcs.WCS
+    WCS of your map.
+time : astropy.time.Time
+    Time of observation (needed for RA/DEC -> AZ/EL).
+location : astropy.coordinates.EarthLocation
+    Telescope location.
+ref : int
+    Index of reference detector.
+
+Returns
+-------
+delta_EL : array shape (N,)
+    Offsets in Elevation relative to detector `ref`.
+delta_xEL : array shape (N,)
+    Offsets in cross-elevation (AZ*cos(EL)).
+AZ, EL : arrays shape (N,)
+    Absolute telescope coordinates for each detector.
+"""
+
+
+"""
+if(P['coadd']):
+    import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
+    zscale = ZScaleInterval()
+    vmin, vmax = zscale.get_limits(map_values)
+    
+    fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+    img = ax[0].imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+    fig.colorbar(img, ax=ax[0], label='Amplitude')
+    ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
+    ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
+    ax[0].set_ylabel('Dec [deg]')
+    ax[0].set_xlabel('RA [deg]')
+    ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
+
+
+else: 
+    
+    import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
+    zscale = ZScaleInterval()
+    wcs = maps.w
+    zscale = ZScaleInterval()
+    ####################
+    if(P['coadd']): shape = map_values.shape
+    else: shape = map_values.shape[1:]
+    xbins = np.arange(-0.5, shape[0]+0.5, 1)
+    ybins = np.arange(-0.5, shape[1]+0.5, 1)
+    #We sample the map for each detector, following its path on the sky. 
+        
+    ####################
+    for id, (rapath, decpath) in enumerate(zip(ra_list, dec_list)):
+        vmin, vmax = zscale.get_limits(map_values[id])
+
+        fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+        img = ax[0].imshow(map_values[id], origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+        fig.colorbar(img, ax=ax[0], label='Amplitude')
+        ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
+        ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
+        ax[0].set_ylabel('Dec [deg]')
+        ax[0].set_xlabel('RA [deg]')
+        ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
+
+        '''
+        y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(rapath, decpath)    
+        # Round the positions and convert to integer indices
+        norm, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins),  )
+        hist, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins), weights=cleaned_data[id].ravel())
+    
+        im2 = ax[1].imshow(hist/norm, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+        fig.colorbar(img, ax=ax[1], label='Amplitude')
+        ax[1].coords[0].set_format_unit('deg', decimal=True)  # RA
+        ax[1].coords[1].set_format_unit('deg', decimal=True)  # De
+        ax[1].set_ylabel('Dec [deg]')
+        ax[1].set_xlabel('RA [deg]')
+        ax[1].plot(P['crval'][0], P['crval'][1],'or', transform=ax[1].get_transform('world'))
+        '''
+        plt.tight_layout()
+    
+    plt.show()
+"""
