@@ -489,8 +489,6 @@ def main(P, nbdets=None):
             plt.show()
 
             plt.figure()
-            plt.xlim(-0.16, 0.16)
-            plt.ylim(-0.16, 0.16)
             ref = -1
             delta_xel_list = []
             delta_el_list = []
@@ -500,12 +498,18 @@ def main(P, nbdets=None):
         
             delta_xel_list = np.asarray(delta_xel_list)
             delta_el_list = np.asarray(delta_el_list)
-            dettable = ld.det_table(kid_num, P['detector_table'])             
-            det_off, _,_ = dettable.loadtable() 
             plt.errorbar(np.mean(delta_xel_list, axis = 0), np.mean(delta_el_list, axis=0),
                          xerr = np.std(delta_xel_list, axis = 0), yerr = np.std(delta_el_list, axis=0),
                          fmt='.', color='k')
-            plt.plot(det_off[:,0] + det_off[ref,0], det_off[:,1] + det_off[ref,1], 'og')
+            
+
+            dettable = ld.det_table(kid_num, P['detector_table'])             
+            det_off, _,_ = dettable.loadtable() 
+            a = det_off[:,0] + det_off[ref,0]
+            b = det_off[:,1] + det_off[ref,1]
+            plt.plot(a,b, 'og')
+            plt.xlim(a.min()-0.01, a.max()+0.01)
+            plt.ylim(b.min()-0.01, b.max()+0.01)
             plt.show()
             embed()
 
