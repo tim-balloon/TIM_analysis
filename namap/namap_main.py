@@ -257,10 +257,8 @@ def main(P, nbdets=None):
                 parallactic.append(np.zeros_like(c1, dtype=DT))
         #---------------------------------
 
-        #--------------------
 
-        coord1slice = ra_list
-        coord2slice = dec_list
+        #--------------------
         #Create the maps
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
@@ -273,10 +271,10 @@ def main(P, nbdets=None):
         maps.wcs_proj()
         map_values = maps.map2d()
         map_values = np.asarray(map_values)
-        #map_values /=( P['cdelt'][0] * np.pi / 180 )**2
+        map_values /= ( P['cdelt'][0] * np.pi / 180 )**2
         wcs = maps.w
-
         #--------------------
+        """
         if(P['coadd']):
             import matplotlib.pyplot as plt
             from astropy.visualization import ZScaleInterval
@@ -295,7 +293,6 @@ def main(P, nbdets=None):
 
         else: 
             
-            embed()
             import matplotlib.pyplot as plt
             from astropy.visualization import ZScaleInterval
             zscale = ZScaleInterval()
@@ -338,7 +335,7 @@ def main(P, nbdets=None):
                 plt.tight_layout()
             
             plt.show()
-            
+        """
         
         #--------------------------------------------------    
         #Plot the maps
@@ -355,14 +352,14 @@ def main(P, nbdets=None):
                 if isinstance(beam_map[0], str): print(beam_map[0])
                 else: 
 
-                    plt.figure(figsize=(8, 6))
-                    plt.contour(beam_map[0], levels=10, colors='red')
-                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    plt.colorbar(label='Amplitude')
-                    plt.title('2D Gaussian Fit Contours')
-                    plt.xlabel('X pixel')
-                    plt.ylabel('Y pixel')
-                    plt.show()
+                    fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+                    ax[0].contour(beam_map[0], levels=10, colors='red')
+                    im = ax[0].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                    fig.colorbar(im, ax=ax[0], label='Amplitude')
+                    ax[0].title('2D Gaussian Fit Contours')
+                    ax[0].xlabel('X pixel')
+                    ax[0].ylabel('Y pixel')
+                    ax[0].show()
 
                     f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
                     hdu = fits.HDUList([f])
@@ -381,9 +378,61 @@ def main(P, nbdets=None):
 
         if P['check_offsets'] and not P['coadd']:
 
-            embed()
+            from astropy.coordinates import SkyCoord
+            import matplotlib.pyplot as plt
+            from astropy.visualization import ZScaleInterval
+            zscale = ZScaleInterval()
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+            vmin, vmax = zscale.get_limits(map_values[0])
+            
+            def compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs,  lst, lat, ref=0 ):
+                """
+                Compute relative detector offsets using Gaussian peak centers in pixels.
+
+                Parameters
+                ----------
+                x_peaks, y_peaks : arrays shape (N,)
+                    Pixel coordinates of Gaussian centers for each detector.
+                wcs : astropy.wcs.WCS
+                    WCS of your map.
+                time : astropy.time.Time
+                    Time of observation (needed for RA/DEC -> AZ/EL).
+                location : astropy.coordinates.EarthLocation
+                    Telescope location.
+                ref : int
+                    Index of reference detector.
+
+                Returns
+                -------
+                delta_EL : array shape (N,)
+                    Offsets in Elevation relative to detector `ref`.
+                delta_xEL : array shape (N,)
+                    Offsets in cross-elevation (AZ*cos(EL)).
+                AZ, EL : arrays shape (N,)
+                    Absolute telescope coordinates for each detector.
+                """
+
+                N = len(x_peaks)
+
+                # --- 1. PIXEL → RA/DEC ---
+                ra_list, dec_list = wcs.wcs_pix2world(x_peaks, y_peaks, 0)  # degrees
+
+                # --- 2. RA/DEC → AZ/EL ---
+                xsc_offset = (0,0)
+                det_off = np.zeros((len(kid_num), 2))
+
+                corr = pt.apply_offset('RA and DEC', ra_list, dec_list, 'CROSS-EL and EL', xsc_offset, DT,IT, lst = lst , lat = lat  )
+                xEL, EL = corr.correction()
+                xEL = xEL[0,:]; EL = EL[0,:]
+            
+                # --- 4. Offsets relative to reference detector ---
+                delta_EL = EL - EL[ref]
+                delta_xEL = xEL - xEL[ref]
+
+                return delta_EL, delta_xEL
+
             '''
-            f = fits.PrimaryHDU(map_values, header=wcs.to_header())
+            f = fits.PrimaryHDU(map_values_forfit, header=wcs_forfit.to_header())
             hdu = fits.HDUList([f])
             hdr = hdu[0].header
             hdr.set("map")
@@ -395,26 +444,37 @@ def main(P, nbdets=None):
             hdu.writeto( os.getcwd()+'/src/'+'test_maps.fits', overwrite=True)
             hdu.close()
             '''
-            
-            for i_det, name in enumerate(kid_num):
+            x_peaks = []
+            y_peaks = []
 
-                vmin, vmax = zscale.get_limits(map_values[i_det])
+            for i_det, name_kid in enumerate(kid_num):
+
+                fig, ax = plt.subplots(1,2,dpi=150,figsize=(11, 3))
+                ny, nx = map_values[i_det].shape
+                extent = (0, nx, 0, ny)
+                im = ax[0].imshow(map_values[i_det], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax,extent=extent)
+                divider = make_axes_locatable(ax[0])
+                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                fig.colorbar(im, cax=cax, label='Amplitude')
+                ax[0].set_aspect('equal')         
+
+                fig.suptitle(name_kid)
+
                 beam_value = bm.beam(map_values[i_det], )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
 
-                if isinstance(beam_map[0], str): print(name, beam_map[0])
+                if isinstance(beam_map[0], str): print(name_kid, beam_map[0])
+                    
                 else: 
 
-                    plt.figure(figsize=(8, 6))
-                    plt.contour(beam_map[0], levels=10, colors='red')
-                    plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    plt.colorbar(label='Amplitude')
-                    plt.title('2D Gaussian Fit Contours')
-                    plt.title(name)
-                    plt.xlabel('X pixel')
-                    plt.ylabel('Y pixel')
-                    
+                    im=ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax,extent=extent)   
+                    # create a new small axis to the right of ax[1] for the colorbar
+                    divider = make_axes_locatable(ax[1])
+                    cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                    fig.colorbar(im, cax=cax, label='Amplitude')
+                    ax[1].set_aspect('equal')
+
                     N_gaussians = len(beam_map[1]) // 6
                     if(N_gaussians >1 ): 
                         w = np.where( beam_map[1][::6] == beam_map[1][::6].max() )
@@ -422,17 +482,27 @@ def main(P, nbdets=None):
                         params = beam_map[1][j:j+6]
                         cov = beam_map[2][j:j+6, j:j+6]
                     else: 
-
                         params = beam_map[1]
                         cov = beam_map[2]
 
                     uncertainties = np.sqrt(np.diag(cov))
                     print(f'xo={params[1]:.2f} pm {uncertainties[1]:.2f} | yo={params[2]:.2f} pm {uncertainties[2]:.2f}' )
-                    ra_dect, dec_dect = wcs.wcs_pix2world(params[1], params[2], 0)
-                    print(f'xo={ra_dect} | yo={dec_dect}' )
+                    x_peaks.append(params[1]); y_peaks.append(params[0])
 
-                
+                fig.tight_layout()
+
             plt.close('all')
+
+            delta_el, delta_xel = compute_detector_offsets_from_pixels( x_peaks, y_peaks, wcs, lst= lst_data[-1], lat = lat_data[-1], ref=0)
+        
+            dettable = ld.det_table(kid_num, P['detector_table']) 
+            det_off, _,_ = dettable.loadtable() #noise_det, resp
+            plt.plot(delta_xel, delta_el, 'ok')
+            plt.plot(delta_el, delta_xel, '.r')
+            plt.plot(0*det_off[:,0], det_off[:,1], 'og')
+            plt.show()
+            
+            
         
 
     return 0

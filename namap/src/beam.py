@@ -18,7 +18,7 @@ class beam(object):
     -------
     """
 
-    def __init__(self, data, param = None, fact=20):
+    def __init__(self, data, param = None, fact=20, mask=False):
         """
         Create an instance of the beam class. 
 
@@ -31,13 +31,12 @@ class beam(object):
 
         Returns
         -------
-
         """
 
         self.data = data
         self.param = param
         self.fact = fact
-
+        self.mask = mask
         shape = self.data.shape
     
         self.xgrid = np.arange(shape[1])
@@ -139,7 +138,7 @@ class beam(object):
         # Compute normalized residuals for selected pixels
         return (y[index] - dat[index]) / err[index]
 
-    def peak_finder(self, map_data, mask_pf = False, fact=10, sigma_clip=3.0):
+    def peak_finder(self, map_data, fact=10, sigma_clip=3.0):
 
         """
         Find peaks in a 2D map, build Gaussian initial guesses,
@@ -186,9 +185,10 @@ class beam(object):
             nanmask = np.isnan(map_data)
 
         # --- Peak detection ---
-        if mask_pf is False:
+        if self.mask is False:
             # No mask provided → create an empty mask
             mask_pf = np.zeros_like(map_data, dtype=bool)
+        else: mask_pf = self.mask.copy()
 
         # Combine user mask and NaN mask
         combined_mask = mask_pf | nanmask
@@ -234,8 +234,13 @@ class beam(object):
 
             # Mark a rectangular region around the peak as "used"
             # to prevent re-identifying peaks in the same area
-            mask_pf[index_y - bs[1] : index_y + bs[1],
-                    index_x - bs[0] : index_x + bs[0]] = True
+            ymin = max(0, index_y - bs[1])
+            xmin = max(0, index_x - bs[0])
+
+            ymax = min(mask_pf.shape[0], index_y + bs[1])
+            xmax = min(mask_pf.shape[1], index_x + bs[0])
+
+            mask_pf[ymin:ymax, xmin:xmax] = True
 
             # Initialize or append to self.param and self.mask
             if self.param is None:
@@ -281,7 +286,7 @@ class beam(object):
             #data_flat = flat_data[mask]
 
             flat_data = np.ravel(self.data)
-            weights = np.isfinite(flat_data)
+            weights = np.isfinite(flat_data).astype(int)
             flat_data = np.nan_to_num(flat_data, nan=0.0)
             
             p = least_squares(
@@ -319,7 +324,6 @@ class beam(object):
             # Cov(θ) = (J^T J)^(-1)
             # Using SVD: (V diag(s^2) V^T)^(-1) = V diag(1/s^2) V^T
             var = np.dot(VT.T / s**2, VT)
-
             return p, var
 
         # --------------------------------------------------------------------------
@@ -337,7 +341,7 @@ class beam(object):
             msg = 'Too Many parameters'
             return msg, 0
 
-    def beam_fit(self, mask_pf=False):
+    def beam_fit(self):
         """
         Main function to fit one or more 2D Gaussian beams to a 2D map.
 
@@ -367,7 +371,7 @@ class beam(object):
         else:
             # No initial parameters → find peaks in the map and generate guesses
             
-            self.peak_finder(map_data=self.data, mask_pf=mask_pf, fact=self.fact)
+            self.peak_finder(map_data=self.data, fact=self.fact)
 
             peak_number_ini = np.size(self.param) / 6  # initial number of peaks found
             peak_found = peak_number_ini
@@ -379,9 +383,7 @@ class beam(object):
         while peak_found > 0:
             # Perform the least-squares Gaussian fit
             
-            
             fit_param, var = self.fit()
-            
             
             # Check if the fit converged
             if isinstance(fit_param, str):
@@ -392,9 +394,9 @@ class beam(object):
                 # Compute the fitted Gaussian map from the fitted parameters
                 
                 fit_data = self.multivariate_gaussian_2d(fit_param.x).reshape(np.outer(self.ygrid, self.xgrid).shape)
-                
 
                 if force_fit is False:
+
                     # Subtract the fitted map from the original to find residual peaks
                     res = self.data - fit_data
                     
@@ -556,7 +558,7 @@ class Beam1D(object):
         index, = np.where(y >= 0.1 * maxv)
 
         # Compute normalized residuals for selected pixels
-        return (y[index] - dat[index]) / err[index] #return self.data - self.gaussian_1d_sum(params)
+        return (y[index] - dat[index]) * err[index] #return self.data - self.gaussian_1d_sum(params)
 
     # ------------------------------------------------------------------
     # Fit
@@ -646,6 +648,48 @@ if __name__ == "__main__":
     from astropy.visualization import ZScaleInterval
     from astropy.wcs import WCS
 
+    for i in range(4):
+
+        map_value = fits.getdata('test_maps.fits')[i] 
+        hdr = fits.getheader('test_maps.fits')
+        wcs3d = WCS(hdr) 
+        wcs = wcs3d.slice((0, slice(None), slice(None)))
+        zscale = ZScaleInterval()
+        vmin, vmax = zscale.get_limits(map_value)
+
+        '''
+        valid = ~np.isnan(map_value)
+        # find rows & columns containing at least one valid pixel
+        rows = np.where(valid.any(axis=1))[0]
+        cols = np.where(valid.any(axis=0))[0]
+        # crop
+        map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
+        '''
+
+        fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
+        ax.set_title('extension')
+        im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        fig.colorbar(im, ax=ax, orientation='vertical',)
+        ax.set_xlabel('X pixel')
+        ax.set_ylabel('Y pixel')
+                            
+        beam_value = beam(map_value, )#param = self.beamparam
+        beam_map = beam_value.beam_fit()
+        param = beam_map[1]
+        if isinstance(beam_map[0], str): print(beam_map[0])
+        else: 
+            plt.figure(figsize=(8, 6))
+            plt.contour(beam_map[0], levels=10, colors='red')
+            plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            plt.colorbar(label='Amplitude')
+            plt.title('2D Gaussian Fit Contours')
+            plt.xlabel('X pixel')
+            plt.ylabel('Y pixel')
+
+    plt.show()
+    
+
+    '''
     for extension in (0,1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
@@ -697,8 +741,6 @@ if __name__ == "__main__":
 
         #diag_mean = np.mean(np.nan_to_num(np.diag(map_value), nan=0.0))       
         plt.legend()
-        
-
-        
-        
+                
     plt.show()
+    '''
