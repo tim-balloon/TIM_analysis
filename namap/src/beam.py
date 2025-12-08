@@ -739,8 +739,8 @@ if __name__ == "__main__":
     for extension in (0,1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
-        hdr = fits.getheader('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_1xbigger_sigma_PSF_LW.fits', ext=extension)
+        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
+        hdr = fits.getheader('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)
         wcs3d = WCS(hdr) 
         wcs = wcs3d.slice((extension, slice(None), slice(None)))
         valid = ~np.isnan(map_value)
@@ -753,27 +753,43 @@ if __name__ == "__main__":
         zscale = ZScaleInterval()
         vmin, vmax = zscale.get_limits(map_value)
 
+        '''
         fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
         ax.set_title('extension')
         im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
         fig.colorbar(im, ax=ax, orientation='vertical',)
         ax.set_xlabel('X pixel')
         ax.set_ylabel('Y pixel')
+        '''
                          
         beam_value = beam(map_value, )#param = self.beamparam
         beam_map = beam_value.beam_fit()
         param = beam_map[1]
         if isinstance(beam_map[0], str): print(beam_map[0])
         else: 
-            plt.figure(figsize=(8, 6))
-            plt.contour(beam_map[0], levels=10, colors='red')
-            plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-            plt.colorbar(label='Amplitude')
-            plt.title('2D Gaussian Fit Contours')
-            plt.xlabel('X pixel')
-            plt.ylabel('Y pixel')
+
+            fig, ax = plt.subplots(1,2,figsize=(9, 3), )
+            ax[0].set_title('Data')
+            im = ax[0].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            divider = make_axes_locatable(ax[0])
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            fig.colorbar(im, cax=cax, label='Jy/sr')         
+            ax[0].set_xlabel('X pixel')
+            ax[0].set_ylabel('Y pixel')           
+
+            ax[1].contour(beam_map[0], levels=2, colors='red')
+            ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            divider = make_axes_locatable(ax[1])
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            fig.colorbar(im, cax=cax, label='Jy/sr')         
+            ax[1].set_title('2D Gaussian Fit')
+            ax[1].set_xlabel('X pixel')
+            ax[1].set_ylabel('Y pixel')
+            fig.tight_layout()
+
         print('')
         
+        '''
         collapsed_map = np.mean(np.nan_to_num(map_value, nan=0.0), axis=0)
         #collapsed_map = np.nan_to_num(map_value[map_value.shape[0]//2, :], nan=0.0)
         plt.figure()
@@ -787,6 +803,7 @@ if __name__ == "__main__":
 
         #diag_mean = np.mean(np.nan_to_num(np.diag(map_value), nan=0.0))       
         plt.legend()
+        '''
                 
     plt.show()
     
