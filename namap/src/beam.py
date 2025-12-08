@@ -3,7 +3,6 @@ from scipy.linalg import svd
 from scipy.optimize import least_squares
 from photutils import find_peaks
 from scipy.signal import find_peaks as fp
-
 from astropy.stats import sigma_clipped_stats
 from IPython import embed
 
@@ -648,49 +647,95 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from astropy.visualization import ZScaleInterval
     from astropy.wcs import WCS
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    '''
+    BS = 14; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
+    figi, axs = plt.subplots(4,1,figsize=(4,6), )
 
     for i in range(4):
 
         map_value = fits.getdata('test_maps.fits')[i] 
+
         hdr = fits.getheader('test_maps.fits')
         wcs3d = WCS(hdr) 
         wcs = wcs3d.slice((0, slice(None), slice(None)))
         zscale = ZScaleInterval()
         vmin, vmax = zscale.get_limits(map_value)
 
-        '''
-        valid = ~np.isnan(map_value)
-        # find rows & columns containing at least one valid pixel
-        rows = np.where(valid.any(axis=1))[0]
-        cols = np.where(valid.any(axis=0))[0]
-        # crop
-        map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
-        '''
+        im = axs[i].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        # create a new small axis to the right of ax[1] for the colorbar
+        divider = make_axes_locatable(axs[i])
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+        figi.colorbar(im, cax=cax, label='Jy/sr')            
+        axs[i].set_xlabel('X pixel')
+        axs[i].set_ylabel('Y pixel')
+    
 
-        fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
-        ax.set_title('extension')
-        im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-        fig.colorbar(im, ax=ax, orientation='vertical',)
-        ax.set_xlabel('X pixel')
-        ax.set_ylabel('Y pixel')
+    
+
+    BS = 14; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
+    figi, axs = plt.subplots(4,2,figsize=(4,6), )
+
+    for i in range(4):
+
+        map_value = fits.getdata('test_maps.fits')[i] 
+
+        hdr = fits.getheader('test_maps.fits')
+        wcs3d = WCS(hdr) 
+        wcs = wcs3d.slice((0, slice(None), slice(None)))
+        zscale = ZScaleInterval()
+        vmin, vmax = zscale.get_limits(map_value)
+
+
+        im = axs[i,0].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        # create a new small axis to the right of ax[1] for the colorbar
+        divider = make_axes_locatable(axs[i,0])
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+        figi.colorbar(im, cax=cax, label='Jy/sr')            
+        axs[i,0].set_xlabel('X pixel')
+        axs[i,0].set_ylabel('Y pixel')
                             
         beam_value = beam(map_value, )#param = self.beamparam
         beam_map = beam_value.beam_fit()
         param = beam_map[1]
+
         if isinstance(beam_map[0], str): print(beam_map[0])
         else: 
-            plt.figure(figsize=(8, 6))
-            plt.contour(beam_map[0], levels=10, colors='red')
-            plt.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-            plt.colorbar(label='Amplitude')
-            plt.title('2D Gaussian Fit Contours')
-            plt.xlabel('X pixel')
-            plt.ylabel('Y pixel')
+
+
+            im = axs[i,1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            # create a new small axis to the right of ax[1] for the colorbar
+            divider = make_axes_locatable(axs[i,1])
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            figi.colorbar(im, cax=cax, label='Jy/sr')            
+            axs[i,1].set_xlabel('X pixel')
+            axs[i,1].set_ylabel('Y pixel')
+
+            """
+            BS = 14; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
+            fig, (ax, axb) = plt.subplots(2,1,figsize=(4,6), )
+            ax.set_title('Single detector map\n with 10$\\,$Jy source')
+            im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            # create a new small axis to the right of ax[1] for the colorbar
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            fig.colorbar(im, cax=cax, label='Jy/sr')            
+            ax.set_xlabel('X pixel')
+            ax.set_ylabel('Y pixel')
+            im = axb.imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            divider = make_axes_locatable(axb)
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            fig.colorbar(im, cax=cax, label='Jy/sr')            
+            axb.set_title('2D Gaussian Fit')
+            axb.set_xlabel('X pixel')
+            axb.set_ylabel('Y pixel')
+            fig.tight_layout()
+            """
 
     plt.show()
     
-
     '''
+    
     for extension in (0,1):
 
         #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
@@ -744,4 +789,4 @@ if __name__ == "__main__":
         plt.legend()
                 
     plt.show()
-    '''
+    
