@@ -423,13 +423,16 @@ class beam(object):
             #print('PARAM_FIT', fit_param.x)
             return fit_data, fit_param.x, var
 
-
 class Beam1D(object):
     """
-    Fit one or more 1D Gaussians to a collapsed map.
+    Fit one or more 1D Gaussians to a map collasped on a axis.
+    Parameters
+    ----------
+    Return
+    ----------
     """
 
-    def __init__(self, data, param=None, threshold_frac=0.2, fact=20):
+    def __init__(self, data, param=None, mask=False):
         """
         Parameters
         ----------
@@ -437,45 +440,65 @@ class Beam1D(object):
             The collapsed map
         param : list or array, optional
             Initial guess for multiple Gaussians:
-            [amp1, x01, sigma1, amp2, x02, sigma2, ...]
-        n_peaks : int, optional
-            Number of peaks to detect automatically
-        threshold_frac : float
-            Fraction of maximum to threshold peaks
+            [amp1, x01, sigma1, error1, amp2, x02, sigma2, error2, ...]
+        mask: 1d array of bool
+            if a mask with the same lenght as data is provided, exclude these data from the fit. 
+        Return
+        ----------
         """
         self.data = np.array(data)
         self.param = param
-        self.fact = fact
         self.xgrid = np.arange(len(self.data))
-        self.threshold_frac = threshold_frac
+        self.mask = mask
 
     # ------------------------------------------------------------------
     # Estimate initial guesses from peaks
     # ------------------------------------------------------------------
 
-    def peak_finder(self, map_data, mask_pf = False, fact=10, sigma_clip=3.0):
+    def peak_finder(self, map_data, mask_pf = False,  sigma_clip=3.0):
 
-        # Get number of pixels along each grid axis
-        x_lim = np.size(self.xgrid)
+        """
+        Find peaks in a 1D array, build Gaussian initial guesses,
+        and update an exclusion mask to avoid double detections.
 
-        # Peak-finding box size (height, width),
-        # roughly map-size/20 in each direction
-        bs = 5 #np.max((int(np.floor(x_lim / fact)),12))
-        
+        Parameters
+        ----------
+        map_data : 2D array
+            the map in which to find the peaks
+        mask_pf : bool or array-like, optional
+            Initial mask to exclude regions during peak finding. Default is False (no mask).       
+        sigma_clip: float
+            The number of standard deviations to use for both the lower and upper clipping limit.
+        Returns
+        -------
+        """
+
         # Compute sigma-clipped statistics of the full dataset
-        mean, median, std = sigma_clipped_stats(self.data, sigma=sigma_clip)
-        # Detection threshold = median + 5σ
-        threshold = np.max(( median + (5. * std), 0))
+        threshold_peak_sharpness = 0 
 
-        data_for_fit = np.nan_to_num(self.data, nan=-np.inf)
+        # sort data
+        sorted_data = np.sort(self.data)
+
+        # take the lowest 30% as noise
+        n = int(0.3 * len(sorted_data))
+        noise_region = sorted_data[:n]
+
+        median = np.median(noise_region)
+        std = np.std(noise_region)
+
+        # height threshold = median + 5σ
+        threshold = median + 5*std
+
+
+        data_for_fit = np.nan_to_num(map_data, nan=-np.inf)
         # --- Peak detection ---
         if self.mask is False: mask_pf = np.zeros_like(map_data, dtype=bool)
-        else: mask_pf = self.mask.copy()
+        else: mask_pf = self.mask
         
         data_for_fit[mask_pf] = -np.inf # or np.nan if you prefer
 
         # Peak finding with NaN masking
-        peaks, properties = fp(map_data, threshold=threshold, distance=bs, height=0)
+        peaks, properties = fp(data_for_fit, height=threshold, threshold=threshold_peak_sharpness)
 
         # Formatting for printing the peak values
         # Only keep peaks with amplitude above a threshold
@@ -496,8 +519,7 @@ class Beam1D(object):
             guess_temp = np.array([
                 properties['peak_heights'][i],
                 self.xgrid[peaks[i]],
-                1., 0.
-            ])
+                1.])
 
             # Append these parameters to the global guess array
             guess = np.append(guess, guess_temp)
@@ -539,22 +561,61 @@ class Beam1D(object):
     # Sum of 1D Gaussians
     # ------------------------------------------------------------------
     def gaussian_1d_sum(self, params):
-        n_gaussians = len(params) // 4
+
+        """
+        Compute the sum of one or more 1D Gaussian functions on the grid
+        defined by self.xmesh, and return the result.
+
+        Each Gaussian is parameterized by 3 consecutive values in `params`:
+            params = [amp, xo, sigma_x]
+        
+        Parameters
+        ----------
+        params : array
+            Current model parameter values
+
+        Returns
+        -------
+        multivariate_gaussian: array
+            the final result as a 1D array 
+        
+        """
+
+        n_gaussians = len(params) // 3
         y_model = np.zeros_like(self.xgrid, dtype=float)
         for i in range(n_gaussians):
-            amp, x0, sigma, _ = params[i*4:(i+1)*4]
+            amp, x0, sigma = params[i*3:(i+1)*3]
             y_model += amp * np.exp(-0.5 * ((self.xgrid - x0)/sigma)**2)
         return y_model
 
     # ------------------------------------------------------------------
     # Residuals
     # ------------------------------------------------------------------
-    def residuals(self, params, y, err, maxv): #x ? 
+    def residuals(self, params, y, err, maxv): 
+        """
+        Compute the residuals between the Gaussian model and the data.
+
+        Parameters
+        ----------
+        params : array
+            Current model parameter values (passed by least_squares).
+        y : array
+            The data values (flattened).
+        err : array
+            The error values for each data point.
+        maxv : float
+            Maximum value of the data (used to set a threshold).
+
+        Returns
+        -------
+        residuals : array
+            (data - model) / error, evaluated only for pixels above threshold.
+        """
 
         # Compute the model on the grid (flattened)
         dat = self.gaussian_1d_sum(params)
 
-        # Select only pixels with values >= 20% of the maximum
+        # Select only pixels with values >= 10% of the maximum
         # This masks out noisy/low-signal regions from the fit.
         index, = np.where(y >= 0.1 * maxv)
 
@@ -565,9 +626,23 @@ class Beam1D(object):
     # Fit
     # ------------------------------------------------------------------
     def fit(self):
+        """
+        Performs a Levenberg–Marquardt least-squares fit of the model defined in
+        self.residuals() to the data stored inside the class.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        p : OptimizeResult
+            Result object from scipy.optimize.least_squares containing the fitted parameters.
+        var : ndarray
+            Estimated covariance matrix of the fitted parameters, derived from the Jacobian.
+        """
 
         data_for_fit = np.nan_to_num(self.data, nan=-np.inf)
-        weights = np.isfinite(self.data)
+        weights = np.isfinite(self.data).astype(int)
 
         p = least_squares(
             self.residuals,
@@ -591,16 +666,34 @@ class Beam1D(object):
     # Main beam fit
     # ------------------------------------------------------------------
     def beam_fit(self, mask_pf = False):
+        """
+        Main function to fit one or more 2D Gaussian beams to a 2D map.
+
+        Parameters
+        ----------
+        mask_pf : bool or array-like, optional
+            Initial mask to exclude regions during peak finding. Default is False (no mask).
+
+        Returns
+        -------
+        fit_data : 2D array
+            The fitted Gaussian map (sum of all fitted Gaussians).
+        fit_param : array
+            Fitted parameters for all Gaussians [amp, xo, yo, sigma_x, sigma_y, theta,...].
+        var : 2D array
+            Covariance matrix of the fitted parameters.
+            If the fit did not converge, returns a message and zeros.
+        """
 
         if self.param is not None: 
             #self.param = self.estimate_initial_guess()
-            peak_number_ini = np.size(self.param) / 4
+            peak_number_ini = np.size(self.param) / 3
             force_fit = True
 
         else: 
 
             self.peak_finder(map_data=self.data, mask_pf = mask_pf)
-            peak_number_ini = np.size(self.param) / 4
+            peak_number_ini = np.size(self.param) / 3
             peak_found = peak_number_ini
             force_fit = False
 
@@ -622,7 +715,7 @@ class Beam1D(object):
                     res = self.data - fit_data
                     
                     # Look for additional peaks in the residual
-                    self.peak_finder(map_data=res, fact=self.fact)
+                    self.peak_finder(map_data=res)
                     
                     # Update the number of new peaks found
                     peak_number = np.size(self.param) / 4
@@ -640,6 +733,9 @@ class Beam1D(object):
             # Successful fit → return fitted map, parameters, and covariance
             #print('PARAM_FIT', fit_param.x)
             return fit_data, fit_param.x, var
+
+
+
         
 if __name__ == "__main__":
 
