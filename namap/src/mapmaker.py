@@ -74,7 +74,9 @@ class maps():
         -------
         '''
         mapmaker = mapmaking(self.data, np.ones(len(self.data)), len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
-        Pow_map = mapmaker.map_Ionly(coadd=self.coadd)
+        Pow_map, crpix = mapmaker.map_Ionly( crpix = self.crpix, pixnum = self.pixnum, coadd=self.coadd,)
+        
+        self.w.wcs.crpix = crpix
 
         if not self.convolution: return Pow_map
         else:
@@ -99,10 +101,8 @@ class maps():
         ctype = self.ctype
         pixnum=self.pixnum
 
-
         xform ='d.ddd'
         yform ='d.ddd'
-        
         
         if ctype == 'RA and DEC':
             xlab = 'RA (deg)'
@@ -323,8 +323,7 @@ class mapmaking(object):
         self.DT = DT
         self.IT = IT
 
-
-    def map_Ionly(self, coadd=False, value=None, noise=None, pixelmap = None):
+    def map_Ionly(self, crpix, pixnum, coadd=False, value=None, noise=None, pixelmap = None):
         
         '''
         Function to create the 2D map
@@ -341,6 +340,7 @@ class mapmaking(object):
         Returns
         -------
         '''
+
         if value is None: value = self.data.copy()
 
         if pixelmap is None: pixelmap = self.pixelmap.copy()
@@ -353,7 +353,8 @@ class mapmaking(object):
         Ymin = np.inf
         Ymax = -np.inf
 
-
+        # --------------------------------------------- 
+        # Compute extrema from your pixel list
         for i in range(self.number):
             idxpixel = self.pixelmap[i]
             
@@ -366,10 +367,48 @@ class mapmaking(object):
             Xmax = max(Xmax, xmax)
             Ymin = min(Ymin, ymin)
             Ymax = max(Ymax, ymax)
+
+        edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
+
+        # ---------------------------------------------
+        # 2) Enforce that the cutout cannot exceed pixnum
+        # --------------------------------------------- 
         
-        edges = np.round((Xmin, Xmax, Ymin, Ymax))
-        X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
-        Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT)        
+        cut_width  = min(edges[1] - edges[0],  pixnum[0])
+        cut_height = min(edges[3] - edges[2],  pixnum[1])
+        
+        # ---------------------------------------------
+        # 3) Center cutout on the extrema
+        # ---------------------------------------------
+        cx = (edges[0] + edges[1]) / 2
+        cy = (edges[2] + edges[3]) / 2
+
+        idx_xmin = int(np.floor(cx - cut_width/2))
+        idx_xmax = idx_xmin + cut_width
+
+        idx_ymin = int(np.floor(cy - cut_height/2))
+        idx_ymax = idx_ymin + cut_height
+                 
+        # ---------------------------------------------
+        # 5) Update WCS: crpix and crval
+        # ---------------------------------------------
+        # Shift crpix into new cutout
+        
+        crpix[0] -= idx_xmin
+        crpix[1] -= idx_ymin
+        
+        # Recompute crval (reference world coordinate)
+        # Using normal WCS linear approximation:
+        
+        # ---------------------------------------------
+        # 6) Build the final edges vectors
+        # ---------------------------------------------
+        X_edges = np.arange(idx_xmin - 0.5, idx_xmax + 1.5, 1).astype(self.DT)
+        Y_edges = np.arange(idx_ymin - 0.5, idx_ymax + 1.5, 1).astype(self.DT)
+        
+        #--------------------
+        #X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
+        #Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT) 
 
         samples = []
         coord1samples = []
@@ -386,17 +425,16 @@ class mapmaking(object):
             coord2samples.append(pix[1])
             hits, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges) )
             flux, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges), weights=val )
-            w = np.where(hits>0)
-            flux[w] /= hits[w]
+            #w = np.where(hits>0)
+            flux /= hits
             individual_maps.append(flux.T)
 
-
-        if not coadd: return individual_maps
+        if not coadd: return individual_maps, crpix
         else: 
             norm, edges = np.histogramdd(sample=(np.concatenate(coord1samples), np.concatenate(coord2samples)), bins= (X_edges, Y_edges)  )
             hist, edges = np.histogramdd(sample=(np.concatenate(coord1samples), np.concatenate(coord2samples)),  bins= (X_edges, Y_edges), weights=np.concatenate(samples))
             hist /= norm
-            return hist.T
+            return hist.T, crpix
 
     def convolution(self, std, map_value):
 
