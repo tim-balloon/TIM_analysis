@@ -92,9 +92,9 @@ class data_value():
         self.IT=IT #Int precision required 
 
         if self.startframe < 100:
-            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
-            self.bufferframe = int(100)
+            self.bufferframe = int(0)
 
     def loadspf(file, field, IT):
         """
@@ -210,14 +210,29 @@ class data_value():
             # Assume all the data have the same spf       
 
         spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
+        
+        
+        #--------------------------
+        #For debbuging purpose only
+        ras = []
+        decs = []
+        for kid in kid_num: 
+            H = h5py.File(self.det_path, "a")
+            f = H[f'kid_{kid}_roach']
+            ras.append( f['RA_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
+            decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
+            H.close()
+        #--------------------------
+        
+        
         #acqfreq_data = data_value.load_acquisition_frequency(self.det_path, f'kid_{kid}_roach')
         #---------------------------------------------------------------------------------
 
-        coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) 
+        coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) #!!
         if self.coord1_name.lower() == 'xel': 
             coord1_data = data_value.loaddata(self.det_path, 'EL', self.DT, num, first_frame) 
             coord1_data *= np.cos(np.radians(coord2_data)) 
-        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) 
+        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) #!!
 
         spf_coord = data_value.loadspf(self.det_path, self.coord2_name, self.DT)
         #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
@@ -228,7 +243,21 @@ class data_value():
         lst_lat_spf = data_value.loadspf(self.det_path, 'lst',self.DT)
         #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        #---
+        '''
+        coord2_data= data_value.loaddata(self.det_path, 'data_'+f'{self.coord2_name}', self.DT, num, first_frame) #!!
+        coord1_data = data_value.loaddata(self.det_path, 'data_'+f'{self.coord1_name}', self.DT, num, first_frame) #!!
+        spf_coord = data_value.loadspf(self.det_path, 'data_'+self.coord2_name, self.DT)
+        #acqfreq_coord = data_value.load_acquisition_frequency(self.det_path, self.coord2_name, )
+        #---------------------------------------------------------------------------------
+        lat = data_value.loaddata(self.det_path, 'data_lat',self.DT, num, first_frame)
+        lst = data_value.loaddata(self.det_path, 'data_lst',self.DT, num, first_frame)
+        lst_lat_spf = data_value.loadspf(self.det_path, 'data_lst',self.DT)
+        #acqfreq_lstlat = data_value.load_acquisition_frequency(self.det_path, 'lst')
+        '''
+        #---
+
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf, ras, decs #, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """
@@ -625,9 +654,9 @@ class frame_zoom_sync():
         self.freq_target = freq_target                           #Frequency to downsample the data to. 
 
         if self.startframe < 100:
-            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
-            self.bufferframe = int(100)
+            self.bufferframe = int(0)
   
     def resampling(self, X, spf_start, spf_end, DT):
 
@@ -693,8 +722,8 @@ class frame_zoom_sync():
         coord2_int: array
             the coordinates 2 interpolated.
         '''
-        coord1_int = interp1d(time_acs, coord1, kind='linear')
-        coord2_int = interp1d(time_acs, coord2, kind= 'linear')
+        coord1_int = interp1d(time_acs, coord1, kind='linear',bounds_error=False,fill_value="extrapolate")
+        coord2_int = interp1d(time_acs, coord2, kind= 'linear',bounds_error=False,fill_value="extrapolate")
 
         return coord1_int(time_det), coord2_int(time_det)
 
@@ -723,7 +752,7 @@ class frame_zoom_sync():
         lat_data: array
             latitude TOD.
         '''
-        
+    
         num = self.numframes+self.bufferframe
         first_frame = self.startframe+self.bufferframe
         #---------------------------------------------------------------
@@ -825,6 +854,8 @@ class frame_zoom_sync():
         #Keep only the previous samples
         for i in range(len(self.det_data)):
             self.det_data[i] = self.det_data[i][i_d_start:i_d_end]
+
+
         ctime   = ctime[i_c_start:i_c_end]
         self.coord1_data = self.coord1_data[i_c_start:i_c_end]
         self.coord2_data = self.coord2_data[i_c_start:i_c_end]
@@ -832,12 +863,12 @@ class frame_zoom_sync():
         self.lat_data = self.lat_data[i_c_start:i_c_end]
         turnaround_flags = turnaround_flags[i_c_start:i_c_end]
         #---------------------------------------------------------------
-
+        
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
         self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
         self.lst_data, self.lat_data       = self.coord_int(self.lst_data, self.lat_data, ctime, dettime)
-        f = interp1d(ctime, turnaround_flags, kind='linear')
+        f = interp1d(ctime, turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
         turnaround_flags_interp = np.round(f(dettime)).astype(self.IT)
         #---------------------------------------------------------------
 
