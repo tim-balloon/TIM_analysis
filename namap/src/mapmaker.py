@@ -231,10 +231,10 @@ class wcs_world():
         -------
         '''
 
-        self.ctype = ctype    #ctype of the map, which projection is used to convert coordinates to pixel numbers
+        self.ctype = ctype  #ctype of the map, which projection is used to convert coordinates to pixel numbers
         self.cdelt = cdelt  #cdelt of the map, distance in deg between two close pixels
-        self.crpix = crpix    #crpix of the map, central pixel of the map in pixel coordinates
-        self.crval = crval    #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
+        self.crpix = crpix  #crpix of the map, central pixel of the map in pixel coordinates
+        self.crval = crval  #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
         #self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
         self.DT = DT #Float precision required
         self.IT = IT #Integer precision required
@@ -347,33 +347,36 @@ class mapmaking(object):
         
         if noise is None: noise = self.weight**2
 
-        Xmin = np.inf
-        Xmax = -np.inf
-        Ymin = np.inf
-        Ymax = -np.inf
 
-        # --------------------------------------------- 
-        # Compute extrema from your pixel list
-        for i in range(self.number):
-            
-            idxpixel = self.pixelmap[i]
-            
-            # Extract min and max for x and y
-            xmin, xmax = idxpixel[0].min(), idxpixel[0].max()
-            ymin, ymax = idxpixel[1].min(), idxpixel[1].max()
-            
-            # Update global min and max
-            Xmin = min(Xmin, xmin)
-            Xmax = max(Xmax, xmax)
-            Ymin = min(Ymin, ymin)
-            Ymax = max(Ymax, ymax)
+        if(False):
 
-        edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
+            Xmin = np.inf
+            Xmax = -np.inf
+            Ymin = np.inf
+            Ymax = -np.inf
+
+            # --------------------------------------------- 
+            # Compute extrema from your pixel list
+            for i in range(self.number):
+                
+                idxpixel = self.pixelmap[i]
+                
+                # Extract min and max for x and y
+                xmin, xmax = idxpixel[0].min(), idxpixel[0].max()
+                ymin, ymax = idxpixel[1].min(), idxpixel[1].max()
+                
+                # Update global min and max
+                Xmin = min(Xmin, xmin)
+                Xmax = max(Xmax, xmax)
+                Ymin = min(Ymin, ymin)
+                Ymax = max(Ymax, ymax)
+
+            edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
 
         # ---------------------------------------------
         # 2) Enforce that the cutout cannot exceed pixnum
         # --------------------------------------------- 
-        
+        '''
         cut_width  = min(edges[1] - edges[0],  pixnum[0])
         cut_height = min(edges[3] - edges[2],  pixnum[1])
         
@@ -405,10 +408,10 @@ class mapmaking(object):
         # ---------------------------------------------
         X_edges = np.arange(idx_xmin - 0.5, idx_xmax + 1.5, 1).astype(self.DT)
         Y_edges = np.arange(idx_ymin - 0.5, idx_ymax + 1.5, 1).astype(self.DT)
-        
+        '''
         #--------------------
-        #X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
-        #Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT) 
+        X_edges = np.arange(0.5, crpix[0]*2+0.5,1).astype(self.DT)        
+        Y_edges = np.arange(0.5, crpix[1]*2+0.5,1).astype(self.DT) 
 
         samples = []
         coord1samples = []
@@ -425,7 +428,6 @@ class mapmaking(object):
             coord2samples.append(pix[1])
             hits, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges) )
             flux, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges), weights=val )
-            #w = np.where(hits>0)
             flux /= hits
             individual_maps.append(flux.T)
 

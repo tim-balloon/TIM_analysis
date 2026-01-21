@@ -3,10 +3,10 @@ precision = 'float64'
 
 #--- Data Paths Parameters --
 #Path for TOD data
-hdf5_file = 'fits_and_hdf5/TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5' 
+hdf5_file = 'fits_and_hdf5/TOD_1source_test3dets_1h.hdf5' 
             
 #Table with name of detectors, response, white noise level and offsets. 
-detector_table = 'TIM_kid_table_reduced_number_of_dets.tsv'
+detector_table = '/home/mvancuyck/Desktop/TIM_kid_table.tsv'
 
 #if you want to use preselected good detectors list
 detectors_to_use = None 
@@ -16,7 +16,7 @@ frequencies = (715.0,) #GHz
  
 Chose the data in the time dimension 
 num_frames=1500 #integration time in seconds to be loaded. 
-first_frame=110 #Starting time in second to loaded
+first_frame=0 #Starting time in second to loaded
 #----------------------------
 
 #--- Astrometry Parameters ---
@@ -35,7 +35,7 @@ ctype = 'RA and DEC' #['RA and DEC', 'AZ and EL', CROSS-EL and EL,'XY Stage'],
 lat=True
 lst=True
 
-crpix = 126, 127
+crpix = 126, 126
 cdelt = 0.004187799348395014, 0.004187799348395014 #Pixel resolution along the two axis in degree. 
 crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. Default value is np.asarray([230.  , -55.79])
 pixnum = 1000., 1000. #Number of pixels along the two axis. The input needs to be written as XX YY. Not implement so far. 

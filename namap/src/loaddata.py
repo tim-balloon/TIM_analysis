@@ -92,7 +92,7 @@ class data_value():
         self.IT=IT #Int precision required 
 
         if self.startframe < 100:
-            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
             self.bufferframe = int(0)
 
@@ -654,7 +654,7 @@ class frame_zoom_sync():
         self.freq_target = freq_target                           #Frequency to downsample the data to. 
 
         if self.startframe < 100:
-            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
             self.bufferframe = int(0)
   
