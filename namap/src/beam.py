@@ -5,6 +5,7 @@ from photutils import find_peaks
 from scipy.signal import find_peaks as fp
 from astropy.stats import sigma_clipped_stats
 from IPython import embed
+from astropy.wcs import WCS
 
 class beam(object):
     """
@@ -648,6 +649,61 @@ if __name__ == "__main__":
     from astropy.visualization import ZScaleInterval
     from astropy.wcs import WCS
     from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+    file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_1source_with_1xbigger_sigma_PSF.fits'
+    map_value = fits.getdata(file)[0]
+    hdr = fits.getheader(file)
+    wcs = WCS(hdr, naxis=2) 
+    valid = ~np.isnan(map_value)
+    # find rows & columns containing at least one valid pixel
+    rows = np.where(valid.any(axis=1))[0]
+    cols = np.where(valid.any(axis=0))[0]
+    # crop
+    map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
+
+    zscale = ZScaleInterval()
+    vmin, vmax = zscale.get_limits(map_value)
+
+    fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
+    ax.set_title('extension')
+    im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+    fig.colorbar(im, ax=ax, orientation='vertical',)
+    ax.set_xlabel('X pixel')
+    ax.set_ylabel('Y pixel')
+    plt.show()
+                            
+    beam_value = beam(map_value, )#param = self.beamparam
+    beam_map = beam_value.beam_fit()
+    param = beam_map[1]
+
+    if isinstance(beam_map[0], str): print(beam_map[0])
+    else: 
+
+        fig, ax = plt.subplots(1,2,figsize=(9, 3), )
+        ax[0].set_title('Data')
+        im = ax[0].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        divider = make_axes_locatable(ax[0])
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+        fig.colorbar(im, cax=cax, label='Jy/sr')         
+        ax[0].set_xlabel('X pixel')
+        ax[0].set_ylabel('Y pixel')           
+
+        ax[1].contour(beam_map[0], levels=2, colors='red')
+        ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+        divider = make_axes_locatable(ax[1])
+        cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+        fig.colorbar(im, cax=cax, label='Jy/sr')         
+        ax[1].set_title('2D Gaussian Fit')
+        ax[1].set_xlabel('X pixel')
+        ax[1].set_ylabel('Y pixel')
+        fig.tight_layout()
+
+    print('')
+    
+    plt.show()
+        
+
     '''
     BS = 14; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
     figi, axs = plt.subplots(4,1,figsize=(4,6), )
@@ -669,8 +725,6 @@ if __name__ == "__main__":
         figi.colorbar(im, cax=cax, label='Jy/sr')            
         axs[i].set_xlabel('X pixel')
         axs[i].set_ylabel('Y pixel')
-    
-
     
 
     BS = 14; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
@@ -736,74 +790,76 @@ if __name__ == "__main__":
     
     '''
     
-    for extension in (0,1):
 
-        #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
-        map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
-        hdr = fits.getheader('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)
-        wcs3d = WCS(hdr) 
-        wcs = wcs3d.slice((extension, slice(None), slice(None)))
-        valid = ~np.isnan(map_value)
-        # find rows & columns containing at least one valid pixel
-        rows = np.where(valid.any(axis=1))[0]
-        cols = np.where(valid.any(axis=0))[0]
-        # crop
-        map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
+    if(False):
+        for extension in (0,1):
 
-        zscale = ZScaleInterval()
-        vmin, vmax = zscale.get_limits(map_value)
+            #map_value = fits.getdata('/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/cube_2sources_separated_by_150.8arcsecs_with_1xbigger_sigma_PSF.fits', )[0]#ext=0)[0]
+            map_value = fits.getdata('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)[0] 
+            hdr = fits.getheader('../fits_and_hdf5/scanned_map_TOD_on_2_sources_separated_by_150.8_with_2xbigger_sigma_PSF_LW.fits', ext=extension)
+            wcs3d = WCS(hdr) 
+            wcs = wcs3d.slice((extension, slice(None), slice(None)))
+            valid = ~np.isnan(map_value)
+            # find rows & columns containing at least one valid pixel
+            rows = np.where(valid.any(axis=1))[0]
+            cols = np.where(valid.any(axis=0))[0]
+            # crop
+            map_value = map_value[rows.min():rows.max(), cols.min():cols.max()]
 
-        '''
-        fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
-        ax.set_title('extension')
-        im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-        fig.colorbar(im, ax=ax, orientation='vertical',)
-        ax.set_xlabel('X pixel')
-        ax.set_ylabel('Y pixel')
-        '''
-                         
-        beam_value = beam(map_value, )#param = self.beamparam
-        beam_map = beam_value.beam_fit()
-        param = beam_map[1]
-        if isinstance(beam_map[0], str): print(beam_map[0])
-        else: 
+            zscale = ZScaleInterval()
+            vmin, vmax = zscale.get_limits(map_value)
 
-            fig, ax = plt.subplots(1,2,figsize=(9, 3), )
-            ax[0].set_title('Data')
-            im = ax[0].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-            divider = make_axes_locatable(ax[0])
-            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-            fig.colorbar(im, cax=cax, label='Jy/sr')         
-            ax[0].set_xlabel('X pixel')
-            ax[0].set_ylabel('Y pixel')           
+            '''
+            fig, ax = plt.subplots(figsize=(8, 6), subplot_kw={'projection': wcs})
+            ax.set_title('extension')
+            im = ax.imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            fig.colorbar(im, ax=ax, orientation='vertical',)
+            ax.set_xlabel('X pixel')
+            ax.set_ylabel('Y pixel')
+            '''
+                            
+            beam_value = beam(map_value, )#param = self.beamparam
+            beam_map = beam_value.beam_fit()
+            param = beam_map[1]
+            if isinstance(beam_map[0], str): print(beam_map[0])
+            else: 
 
-            ax[1].contour(beam_map[0], levels=2, colors='red')
-            ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-            divider = make_axes_locatable(ax[1])
-            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-            fig.colorbar(im, cax=cax, label='Jy/sr')         
-            ax[1].set_title('2D Gaussian Fit')
-            ax[1].set_xlabel('X pixel')
-            ax[1].set_ylabel('Y pixel')
-            fig.tight_layout()
+                fig, ax = plt.subplots(1,2,figsize=(9, 3), )
+                ax[0].set_title('Data')
+                im = ax[0].imshow(map_value, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                divider = make_axes_locatable(ax[0])
+                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                fig.colorbar(im, cax=cax, label='Jy/sr')         
+                ax[0].set_xlabel('X pixel')
+                ax[0].set_ylabel('Y pixel')           
 
-        print('')
+                ax[1].contour(beam_map[0], levels=2, colors='red')
+                ax[1].imshow(beam_map[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                divider = make_axes_locatable(ax[1])
+                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                fig.colorbar(im, cax=cax, label='Jy/sr')         
+                ax[1].set_title('2D Gaussian Fit')
+                ax[1].set_xlabel('X pixel')
+                ax[1].set_ylabel('Y pixel')
+                fig.tight_layout()
+
+            print('')
+            
+            '''
+            collapsed_map = np.mean(np.nan_to_num(map_value, nan=0.0), axis=0)
+            #collapsed_map = np.nan_to_num(map_value[map_value.shape[0]//2, :], nan=0.0)
+            plt.figure()
+            plt.plot(collapsed_map, label='data')
+            b = Beam1D(collapsed_map)
+            fit_profile, params, cov = b.beam_fit()
+            print("Amplitude =", params[0])
+            print("Center x0 =", params[1])
+            print("Sigma =", params[2])
+            plt.plot(fit_profile, ':',label='fit')
+
+            #diag_mean = np.mean(np.nan_to_num(np.diag(map_value), nan=0.0))       
+            plt.legend()
+            '''
+                    
+        plt.show()
         
-        '''
-        collapsed_map = np.mean(np.nan_to_num(map_value, nan=0.0), axis=0)
-        #collapsed_map = np.nan_to_num(map_value[map_value.shape[0]//2, :], nan=0.0)
-        plt.figure()
-        plt.plot(collapsed_map, label='data')
-        b = Beam1D(collapsed_map)
-        fit_profile, params, cov = b.beam_fit()
-        print("Amplitude =", params[0])
-        print("Center x0 =", params[1])
-        print("Sigma =", params[2])
-        plt.plot(fit_profile, ':',label='fit')
-
-        #diag_mean = np.mean(np.nan_to_num(np.diag(map_value), nan=0.0))       
-        plt.legend()
-        '''
-                
-    plt.show()
-    
