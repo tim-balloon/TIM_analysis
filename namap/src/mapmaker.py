@@ -347,7 +347,6 @@ class mapmaking(object):
         
         if noise is None: noise = self.weight**2
 
-
         Xmin = np.inf
         Xmax = -np.inf
         Ymin = np.inf
@@ -356,6 +355,7 @@ class mapmaking(object):
         # --------------------------------------------- 
         # Compute extrema from your pixel list
         for i in range(self.number):
+            
             idxpixel = self.pixelmap[i]
             
             # Extract min and max for x and y

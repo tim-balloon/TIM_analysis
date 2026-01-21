@@ -260,8 +260,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.array([[0.,0.]]),\
-                 lst = None, lat = None):
+    def __init__(self, input_ctype, coord1, coord2, ctype, DT, IT, xsc_offset = (0., 0.), det_offset = np.array([[0., 0.]]), lst = None, lat = None):
         
         """
         Return an instance of the apply_offset class
@@ -346,11 +345,10 @@ class apply_offset(object):
             return ra_corrected, dec_corrected
         
         elif self.ctype.lower() == 'az and el':
-                
-            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
+            if(self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
-            elif(self.input_ctype ==self.input_ctype.lower() == 'az and el'):
+            elif(self.input_ctype.lower() == 'az and el'):
                 az, el = self.coord1, self.coord2
             else: 
                 el = self.coord2
@@ -361,14 +359,11 @@ class apply_offset(object):
             el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2))).astype(self.DT)
             az_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1))).astype(self.DT)
 
-            self.det_offset = np.array([0.,0.])
-
             for i in range(int(np.size(self.det_offset)/2)):
                 
                 #xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
                 #det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
-
-                el_corrected[i, :] = el+self.xsc_offset[1]+self.det_offset[i, 1]
+                el_corrected[i, :] = np.asarray(el)+self.xsc_offset[1]+self.det_offset[i, 1]
 
                 az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
 
