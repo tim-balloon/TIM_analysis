@@ -299,13 +299,16 @@ def main(P, nbdets=None):
             corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
             azi_ref, alt_ref = corr.correction()
 
+            '''
             dettable = ld.det_table(kid_num, P['detector_table'])     
             det_off, _,_ = dettable.loadtable() 
             XEL = det_off[:,0] 
             EL = det_off[:,1] 
+            '''
             
-            x_peaks = []
-            y_peaks = []
+            file = P['detectors_output_file']    
+            f = open(file, 'w')
+            f.write("Name\tEL\tXEL\n")  # Column headers
 
             for i_det, name_kid in enumerate(kid_num):
    
@@ -313,7 +316,9 @@ def main(P, nbdets=None):
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
 
-                if isinstance(beam_map[0], str): print(name_kid, beam_map[0])
+                if isinstance(beam_map[0], str): 
+                    print(name_kid, beam_map[0])
+                    f.write(f"{name_kid}\t None \t None \n") 
                 else: 
                     params = beam_map[1]
                     cov = beam_map[2]
@@ -321,14 +326,16 @@ def main(P, nbdets=None):
                     print(f'yo={params[2]:.2f} pm {uncertainties[2]:.2f} | xo={params[1]:.2f} pm {uncertainties[1]:.2f}' )
                     x_peak = params[1]; y_peak = params[2]
                     ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)                         
-                    conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) #hour, deg, hour, deg
+                    conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) 
                     AZ_dets, EL_dets = conv2azel.radec2azel()
                     daz = AZ_dets - azi_ref
                     xel = daz * np.cos(alt_ref)
                     delv = EL_dets - alt_ref
 
-            #! --> Need to implement how to modify the kids file with offset results here. 
-                      
+                    f.write(f"{name_kid}\t{delv:3f}\t{xel:3f}\n")  # Tab-separated values
+            f.close()                      
+
+
     return 0
 
 if __name__ == "__main__":
