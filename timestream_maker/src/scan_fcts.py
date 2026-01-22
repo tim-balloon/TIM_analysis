@@ -7,6 +7,135 @@ from specutils import Spectrum1D
 from specutils.manipulation import LinearInterpolatedResampler
 from scipy import interpolate
 
+def genLocalPath_dither(az_size=1, vertical_steps=3, alt_step=0.25, acc=0.05, scan_v=0.05, dt=0.01, N=0):
+    
+    # Compute Time for Scan and Turns  
+    scan_time = az_size/scan_v  
+    turn_time = 2*scan_v/acc  
+
+    # Generate base azimuth and altitude patterns
+    az_acc = np.concatenate((np.ones(int(turn_time/dt))*acc, np.zeros(int(scan_time/dt))))  
+    az_acc = np.concatenate((az_acc, -1*az_acc))  
+
+    acc_alt_value = alt_step/(turn_time/2)**2     
+
+    oscillation = np.tile(  
+        np.concatenate([  
+            np.ones(int(turn_time / dt / 2)) * acc_alt_value,  
+            np.ones(int(turn_time / dt / 2)) * -acc_alt_value      
+        ]), 1
+    )  
+
+    acc_alt_base = np.concatenate((oscillation, np.zeros(int(scan_time / dt))))  
+    acc_alt_base = np.concatenate((acc_alt_base, np.zeros_like(acc_alt_base)))
+
+    # Add N extra left-right scans without altitude step  
+    extra_az_acc = np.concatenate((  
+        np.ones(int(turn_time/dt))*acc,  
+        np.zeros(int(scan_time/dt))  
+    ))  
+    extra_az_acc = np.concatenate((extra_az_acc, -1*extra_az_acc))  
+    extra_az_acc = np.tile(extra_az_acc, N)  
+
+    az_acc_base = np.concatenate((az_acc, extra_az_acc))  
+    extra_acc_alt = np.zeros_like(extra_az_acc)  
+    acc_alt_base = np.concatenate((acc_alt_base, extra_acc_alt))  
+
+    # UPWARD SCAN
+    az_acc_up = np.tile(az_acc_base, vertical_steps)
+    acc_alt_up = np.tile(acc_alt_base, vertical_steps)
+    acc_alt_up[:int(turn_time/dt)] = 0
+    
+    # DOWNWARD SCAN:
+    az_acc_down = np.tile(az_acc_base, vertical_steps)
+    acc_alt_down = np.tile(acc_alt_base, vertical_steps)
+    acc_alt_down[:int(turn_time/dt)] = 0
+    acc_alt_down = -acc_alt_down
+    
+    # Concatenate: up + down
+    az_acc = np.concatenate([az_acc_up, az_acc_down])
+    acc_alt = np.concatenate([acc_alt_up, acc_alt_down])
+
+    # Compute positions from accelerations
+    az_v = np.cumsum(az_acc)*dt - scan_v  
+    az = np.cumsum(az_v)*dt  
+    alt_v = np.cumsum(acc_alt)*dt  
+    alt = np.cumsum(alt_v)*dt  
+    flag = np.where(az_acc==0, 1, 0)
+    
+    return az, alt, flag
+
+
+def genScanPath_dither(T, dt, alt, az, flag, dither_offset=0.05,acc=0.05, scan_v=0.1):
+    N_total = len(T)
+    N_pattern = len(az)
+    pattern_time = N_pattern * dt
+
+    turn_time = 2 * scan_v / acc
+    N_dither = int(turn_time / dt)
+
+    az_list = []
+    alt_list = []
+    flag_list = []
+
+    current_idx = 0
+    cycle = 0
+    
+    #Generate Dither
+    while current_idx < N_total:
+        remaining = N_total - current_idx
+        n = min(N_pattern, remaining)
+
+        az_list.append(az[:n])
+        alt_list.append(alt[:n] + cycle * dither_offset)
+        flag_list.append(flag[:n])
+
+        current_idx += n
+        if current_idx >= N_total:
+            break
+
+        remaining = N_total - current_idx
+        n_d = min(N_dither, remaining)
+
+        half = n_d // 2
+        t_half = half * dt
+
+        acc_alt = dither_offset / (t_half**2)
+
+        acc_alt_profile = np.concatenate([
+            np.ones(half) * acc_alt,
+            np.ones(n_d - half) * -acc_alt
+        ])
+
+        alt_v = np.cumsum(acc_alt_profile) * dt
+        alt_start = alt[-1] + cycle * dither_offset
+        dither_alt = alt_start + np.cumsum(alt_v) * dt
+
+        if n_d <= len(az):
+            dither_az = az[:n_d]
+        else:
+            dither_az = np.tile(az, n_d // len(az) + 1)[:n_d]
+
+        dither_flag = np.zeros(n_d)
+
+        az_list.append(dither_az)
+        alt_list.append(dither_alt)
+        flag_list.append(dither_flag)
+
+        current_idx += n_d
+        cycle += 1
+
+    az_full = np.concatenate(az_list)[:N_total]
+    alt_full = np.concatenate(alt_list)[:N_total]
+    flag_full = np.concatenate(flag_list)[:N_total]
+
+    coor = np.vstack((az_full, alt_full)).T
+    coor[:, 0] -= np.mean(az_full)
+    coor[:, 1] -= np.mean(alt_full)
+
+    return coor, flag_full
+
+
 def hitsPerSqdeg(total_hits, area):
     """
     hits per sqare degree 
@@ -231,7 +360,6 @@ def genLocalPath_gittering(az_size = 1, vertical_steps=2, alt_step=0.02, acc = 0
     # Add N extra left-right scans without altitude step
     #------------------------------------------------------------
 
-
     # Define one full azimuth oscillation (right + left)
     extra_az_acc = np.concatenate((
         np.ones(int(turn_time/dt))*acc,
@@ -335,7 +463,6 @@ def genLocalPath(az_size = 1, alt_size = 1, alt_step=0.02, acc = 0.05, scan_v=0.
     return az,alt,flag  
 
 def genScanPath(T, dt, alt, az, flag ):
-
     N_total = len(T)
     # Number of points in one pattern
     N_pattern = len(az)
@@ -363,7 +490,6 @@ def genScanPath(T, dt, alt, az, flag ):
     # Time array centered on 0
 
     return coor, flag_full
-
 
 def genScanPath_original(T, alt, az, flag, plot=False):
     """    
@@ -396,7 +522,6 @@ def genScanPath_original(T, alt, az, flag, plot=False):
     flag      = flag[idx]
     
     return coor,flag
-
 
 def pixelOffset(pixel_num, pixel_pitch, pixel_array_separation):
     """
