@@ -5,27 +5,46 @@ from src.astrometry_fcts import *
 from src.hdf5_fcts import *
 from astropy.io import fits 
 import os
+from astropy.wcs import WCS
+from gen_timestreams import gen_tod
+from scipy.interpolate import PchipInterpolator
 
-if __name__ == "__main__":
+def resampling(X, spf_start, spf_end):
+
     '''
+    Interpolates an array with a sample per frame to a different sample per frame 
+    Parameters
+    ----------
+    X: array
+        The arrray to be interpolated. 
+    spf_start: int
+        the sample per frame of X
+    spf_end: int
+        the final sample per frame wanted. 
+    DT: type
+        Float precision required
+    Returns
+    -------
+    x: array
+        the array with the new sample per frame. 
     '''
-    #------------------------------------------------------------------------------------------
-    #load the .par file parameters
-    parser = argparse.ArgumentParser(description="strategy parameters",
-                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
-    #options
-    parser.add_argument('params', help=".par file with params", default = None)
-    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
 
-    args = parser.parse_args()
+    # Compute ratio in DT
+    ratio = spf_start/spf_end
 
-    if(args.non_iteractive): 
-        import matplotlib
-        matplotlib.use("Agg")
+    # Create interpolator
+    interper = PchipInterpolator(np.arange(0, len(X)), X)
 
-    P = load_params(args.params)
-    #------------------------------------------------------------------------------------------
+    # New sample points
+    new_points = np.arange(0, len(X), ratio)
 
+    # Interpolated values
+    x = interper(new_points)
+
+    return x
+
+def main_1det(P):
+    
     #Initiate the parameters
 
     #The coordinates of the field
@@ -51,18 +70,29 @@ if __name__ == "__main__":
         hdr = fits.getheader(P['path']+P['file'])
         res = (hdr['CDELT1'] * u.Unit(hdr['CUNIT1'])).to(u.deg).value
 
+    print(f'res={res*3600:.2f}arcsecs')
+
     #Angle of the rotation to apply to the detector array. 
     theta = np.radians(P['theta'])
 
     #Load the scan duration and generate the time coordinates with the desired acquisition rate. 
     T_duration = P['T_duration'] 
-    dt = P['dt']*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
-    spf = int(1/np.round(dt*3600,3)) #sample per frame defined here as the acquisition rate in Hz. 
-    T = np.arange(0,T_duration,dt) * 3600 #s
-    #local sideral time
-    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    acquisition_frequency = P['acquisition_frequency']  #sample per frame defined here as the acquisition rate in Hz. 
+    dt = 1/acquisition_frequency/3600*np.pi/3.14 #Make the timestep non rational to avoid some stripes in the hitmap. 
+    spf = np.round(acquisition_frequency).astype(int)
 
-    tod_file=P['path']+f'TOD_{format_duration(T_duration)}.hdf5' #os.getcwd()+'/'+'+P['file'][:-5]+'
+    #---
+    #local sideral time
+    #LST = []
+    #times = np.arange(-T_duration/2,T_duration/2,6/60)
+    #for t in times: LST = np.concatenate((LST, np.arange(t-T_integration/2,t+T_integration/2,dt)))
+    LST = np.arange(-T_duration/2,T_duration/2,dt) #hours
+    T = LST*3600 #s
+    pps = np.floor(T).astype(int)
+    subsecond_ps = T-pps
+    #---
+
+    tod_file=P['output_path']+P['output_name']
     #------------------------------------------------------------------------------------------
 
     #------------------------------------------------------------------------------------------    
@@ -70,28 +100,34 @@ if __name__ == "__main__":
     if(P['scan']=='loop'):   az, alt, flag = genLocalPath(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='raster'): az, alt, flag = genLocalPath_cst_el_scan(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
     if(P['scan']=='crisscross'): az, alt, flag = genLocalPath_cst_el_scan_crisscross(az_size=P['az_size'], alt_size=P['alt_size'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3))
+    if(P['scan']=='gittering'): az, alt, flag = genLocalPath_gittering(az_size=P['az_size'], vertical_steps=P['vertical_steps'], alt_step=P['alt_step'], acc=P['acc'], scan_v=P['scan_v'], dt=np.round(dt*3600,3), N=P['N_scans'])
+    
+    scan_path, scan_flag = genScanPath(T,dt, alt, az, flag)
 
-    scan_path, scan_flag = genScanPath(T, alt, az, flag)
-    scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
-    T_trim = T[scan_flag==1]
-    LST_trim = LST[scan_flag==1]
+    if(P['cut_turnarounds']):
+        scan_path = scan_path[scan_flag==1] #Use the scan flag to keep only the constant scan speed part of the pointing. 
+        T = T[scan_flag==1]
+        LST = LST[scan_flag==1]
 
     #Generate the pointing on the sky for the center of the arrays
-    scan_path_sky, azel = genPointingPath(T_trim, scan_path, LST_trim, lat, dec, ra, azel=True) 
+    scan_path_sky, azel = genPointingPath(T, scan_path, LST, lat, dec, azel=True) 
+
     #----------------------------------------
 
     #----------------------------------------
     #Plot a scan route
     BS = 10; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
     fig, axs = plt.subplots(2,2,figsize=(7,7), dpi=160,)# sharey=True, sharex=True)
+
     axradec, ax, axr, axc = axs[0,0], axs[1,1], axs[0,1], axs[1,0]
     #---
-    axc.scatter(scan_path_sky[:,0], scan_path_sky[:,1], s=0.1,c='k')
+    axc.scatter(scan_path_sky[:,0], scan_path_sky[:,1], s=0.1,c='r')
     axc.set_xlabel('RA [deg]')
     axc.set_ylabel('Dec [deg]')
     axc.set_aspect('auto')
     #---
-    axradec.plot(az-az.max()/2,alt-alt.max()/2,'cyan')
+    axradec.plot(az-az.max()/2,alt-alt.max()/2,'k', )
+    axradec.set_aspect('auto')
     axradec.set_xlabel('RA [deg]')
     axradec.set_ylabel('Dec [deg]')
     #---
@@ -111,24 +147,32 @@ if __name__ == "__main__":
     axr.set_xlabel('Az [deg]')
     axr.set_ylabel('El [deg]')
     #-----
+    if(True): 
+        coords = SkyCoord(alt=np.degrees(az_unwrapped)*u.deg, az=azel[:,1]*u.deg, frame='altaz')
+        separations = coords[:-1].separation(coords[1:])
+        total_length = np.sum(separations)
+        title = f'{total_length:.1f} scanned.'
+    else: title = ''
+    fig.suptitle(title)
     patchs = []
     fig.tight_layout()
-    plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(T_duration)}.png")
+    plt.savefig(os.getcwd()+'/plot/'+f"scan_route_1det_{P['scan']}_{format_duration(P['T_duration'])}.png")
     plt.close()
     #----------------------------------------
 
     #latitude  timestream
-    lat = np.ones(len(LST_trim)) * lat
+    lat = np.ones(len(LST)) * lat
     #Generate the telescope coordinates and parallactic angle. 
 
     #RA and Dec
+    '''
     coord1 = np.radians(scan_path_sky[:,0])
     coord2 = np.radians(scan_path_sky[:,1])
 
     cos_lat = np.cos(np.radians(lat))
     sin_lat = np.sin(np.radians(lat))
 
-    hour_angle = (LST_trim - ra / 15)*np.pi/12
+    hour_angle = (LST - ra / 15)*np.pi/12
     index, = np.where(hour_angle<0)
     hour_angle[index] += 2*np.pi
     
@@ -140,15 +184,70 @@ if __name__ == "__main__":
     #Telescope coordinates
     x_tel = coord1*np.cos(pa)-coord2*np.sin(pa)
     y_tel = coord2*np.cos(pa)+coord1*np.sin(pa)
+    '''
     #----------------------------------------
 
     #----------------------------------------
     #Save timestreams in a .hdf5 file 
-    save_PA(tod_file, np.degrees(pa), spf)
-    save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
-    save_lst_lat(tod_file, LST_trim, lat, spf)
-    save_az_el(tod_file, azel[:,0], azel[:,1], spf)
-    save_time_tod(tod_file, T_trim, spf)
-    save_scan_path(tod_file, scan_path_sky, spf, ('RA', 'DEC'))
-    save_scan_path(tod_file, scan_path, spf, ('RA_path', 'DEC_path'))
+    #save_PA(tod_file, np.degrees(pa), spf)
+    #save_telescope_coord(tod_file, np.degrees(x_tel), np.degrees(y_tel), spf)
+    save_scan_path(tod_file, np.array((LST, lat)).T, spf,acquisition_frequency, ('data_lst', 'data_lat'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, azel, spf,acquisition_frequency,('data_AZ', 'data_EL'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, scan_path_sky, spf, acquisition_frequency,('data_RA', 'data_DEC'), save=P['format'], compression=P['compression'])
+    save_scan_path(tod_file, scan_path,     spf, acquisition_frequency,('data_RA_path', 'data_DEC_path'), save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, T, spf, acquisition_frequency,'data_time', save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, pps, spf, acquisition_frequency,'data_pps',save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, subsecond_ps, spf, acquisition_frequency,'data_subsecond_ps',save=P['format'], compression=P['compression'])
+    save_timestamps(tod_file, scan_flag, spf, acquisition_frequency,'data_turnaround_flags', save=P['format'], compression=P['compression'])
     #-------------------------------------------
+
+    #----------------------------------------
+    #Create the coordinates sampled differently, to test the synchronization with data in Namap.
+    
+    acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
+    spf_prime = np.round(P['acquisition_frequency_coords'] ).astype(int)
+
+    LST_prime = resampling(LST, acquisition_frequency, acquisition_frequency_prime)
+    T_prime = resampling(T, acquisition_frequency, acquisition_frequency_prime)
+    pps_prime = np.floor(T_prime).astype(int)
+    subsecond_ps_prime = T_prime-pps_prime
+    lat_prime = P['latitude'] * np.ones(len(LST_prime))
+
+    az_prime = resampling(azel[:,0], acquisition_frequency, acquisition_frequency_prime)
+    el_prime = resampling(azel[:,1], acquisition_frequency, acquisition_frequency_prime)
+    azelprime = np.vstack((az_prime,el_prime)).T
+    ra_prime = resampling(scan_path_sky[:,0], acquisition_frequency, acquisition_frequency_prime)
+    dec_prime = resampling(scan_path_sky[:,1], acquisition_frequency, acquisition_frequency_prime)
+    scan_path_sky_prime = np.vstack((ra_prime,dec_prime)).T
+
+    save_scan_path(tod_file, np.array((LST_prime, lat_prime)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'],compression=P['compression'])
+    save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'],compression=P['compression'])
+    #save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, pps_prime, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, subsecond_ps_prime, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
+    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'],compression=P['compression'])
+
+    
+if __name__ == "__main__":
+    '''
+    '''
+    #------------------------------------------------------------------------------------------
+    #load the .par file parameters
+    parser = argparse.ArgumentParser(description="strategy parameters",
+                                     formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    #options
+    parser.add_argument('params', help=".par file with params", default = None)
+    parser.add_argument('--non_iteractive', help = "deactivate matplotlib", action="store_true")
+
+    args = parser.parse_args()
+
+    if(args.non_iteractive): 
+        import matplotlib
+        matplotlib.use("Agg")
+
+    P = load_params(args.params)
+    #------------------------------------------------------------------------------------------
+
+    main_1det(P)

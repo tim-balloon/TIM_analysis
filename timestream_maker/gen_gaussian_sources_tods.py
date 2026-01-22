@@ -1,3 +1,9 @@
+import astropy.units as u
+import scipy.constants as cst
+from astropy.stats import gaussian_fwhm_to_sigma
+import astropy.convolution as conv
+import datetime
+import matplotlib.pyplot as plt
 from hitmap_1detector import main_1det
 from hitmap_array import main_arrays
 from gen_timestreams import main_tod, gen_tod
