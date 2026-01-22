@@ -259,7 +259,7 @@ class wcs_world():
         w: wcs object
             the world coordinate system object of Astropy
         '''        
-
+        from astropy import wcs
         w = wcs.WCS(naxis=2)
         w.wcs.crpix = self.crpix #wo.wcs.crpix
         w.wcs.cdelt = self.cdelt
@@ -274,13 +274,14 @@ class wcs_world():
         for c1,c2 in zip(coord1, coord2):
             #world.append( w.world_to_pixel_values(c1,c2) )
 
-            x_pix, y_pix = w.world_to_pixel_values(c1, c2)
+            x_pix, y_pix = w.world_to_pixel_values(c1, c2) #Always uses NumPy / 0-based pixel coordinates
             
             # Convert both arrays to DT
             x_pix = np.array(x_pix, dtype=self.DT)
             y_pix = np.array(y_pix, dtype=self.DT)
             
-            world.append((x_pix, y_pix))        
+            world.append((x_pix, y_pix)) 
+                   
         return world, w
 
 class mapmaking(object):
@@ -348,35 +349,34 @@ class mapmaking(object):
         if noise is None: noise = self.weight**2
 
 
-        if(False):
 
-            Xmin = np.inf
-            Xmax = -np.inf
-            Ymin = np.inf
-            Ymax = -np.inf
+        Xmin = np.inf
+        Xmax = -np.inf
+        Ymin = np.inf
+        Ymax = -np.inf
 
-            # --------------------------------------------- 
-            # Compute extrema from your pixel list
-            for i in range(self.number):
-                
-                idxpixel = self.pixelmap[i]
-                
-                # Extract min and max for x and y
-                xmin, xmax = idxpixel[0].min(), idxpixel[0].max()
-                ymin, ymax = idxpixel[1].min(), idxpixel[1].max()
-                
-                # Update global min and max
-                Xmin = min(Xmin, xmin)
-                Xmax = max(Xmax, xmax)
-                Ymin = min(Ymin, ymin)
-                Ymax = max(Ymax, ymax)
+        # --------------------------------------------- 
+        # Compute extrema from your pixel list
+        for i in range(self.number):
+            
+            idxpixel = self.pixelmap[i]
+            
+            # Extract min and max for x and y
+            xmin, xmax = idxpixel[0].min(), idxpixel[0].max()
+            ymin, ymax = idxpixel[1].min(), idxpixel[1].max()
+            
+            # Update global min and max
+            Xmin = min(Xmin, xmin)
+            Xmax = max(Xmax, xmax)
+            Ymin = min(Ymin, ymin)
+            Ymax = max(Ymax, ymax)
 
-            edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
+        edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
 
         # ---------------------------------------------
         # 2) Enforce that the cutout cannot exceed pixnum
         # --------------------------------------------- 
-        '''
+        
         cut_width  = min(edges[1] - edges[0],  pixnum[0])
         cut_height = min(edges[3] - edges[2],  pixnum[1])
         
@@ -397,8 +397,8 @@ class mapmaking(object):
         # ---------------------------------------------
         # Shift crpix into new cutout
         
-        crpix[0] -= idx_xmin
-        crpix[1] -= idx_ymin
+        crpix[0] -= idx_xmin-1
+        crpix[1] -= idx_ymin-1
         
         # Recompute crval (reference world coordinate)
         # Using normal WCS linear approximation:
@@ -408,10 +408,10 @@ class mapmaking(object):
         # ---------------------------------------------
         X_edges = np.arange(idx_xmin - 0.5, idx_xmax + 1.5, 1).astype(self.DT)
         Y_edges = np.arange(idx_ymin - 0.5, idx_ymax + 1.5, 1).astype(self.DT)
-        '''
+        
         #--------------------
-        X_edges = np.arange(0.5, crpix[0]*2+0.5,1).astype(self.DT)        
-        Y_edges = np.arange(0.5, crpix[1]*2+0.5,1).astype(self.DT) 
+        #X_edges = np.arange(0.5, crpix[0]*2+0.5,1).astype(self.DT)        
+        #Y_edges = np.arange(0.5, crpix[1]*2+0.5,1).astype(self.DT) 
 
         samples = []
         coord1samples = []

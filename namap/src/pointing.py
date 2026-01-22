@@ -33,14 +33,14 @@ class utils(object):
         Returns
         -------
         '''
+        
+        self.coord1 = np.radians(coord1)
+        self.coord2 = np.radians(coord2)
 
+        self.lst = None if lst is None else np.asarray(lst) * np.pi / 12.0
+        self.lat = None if lat is None else np.radians(lat)
 
-        self.coord1 = np.radians(coord1)  #Array of coord 1 converted in degrees   
-        self.coord2 = coord2  #Array of coord 2 converted in degrees   
-        self.lst = lst        #Local Sideral Time in hours
-        self.lat = lat        #Latitude converted in degrees
-
-    def zenithAngle(self,HA):
+    def zenithAngle(self,ha):
         """
         source zenith angle (rad)
         latitutde and coord2 need to be in degrees.
@@ -54,12 +54,9 @@ class utils(object):
         za: array
             zenith angle in radians
         """
+        return np.arccos( np.sin(self.lat) * np.sin(self.coord2) + np.cos(self.lat) * np.cos(self.coord2) * np.cos(ha) )
 
-        za = np.arccos(np.sin(np.radians(self.lat)) * np.sin(np.radians(self.coord2)) + np.cos(np.radians(self.lat)) * np.cos(np.radians(self.coord2)) * np.cos(np.radians(HA)))
-
-        return za
-
-    def azimuthAngle(self, HA):
+    def azimuthAngle(self, ha):
         """
         source azimuth angle (rad)
         latitude and coord2 need to be in degrees.
@@ -75,10 +72,14 @@ class utils(object):
             source azimuth angle (rad)
         """ 
 
-        za = self.zenithAngle(HA)
-        cosAz = (np.sin(np.radians(self.coord2)) - np.sin(np.radians(self.lat)) * np.cos(za))/(np.cos(np.radians(self.lat)) * np.sin(za))
-        sinAz = - np.sin(np.radians(HA)) * np.cos(np.radians(self.coord2)) / np.sin(za)
-        return np.arctan2(sinAz,cosAz)
+        za = self.zenithAngle(ha)
+
+        cosA = ( np.sin(self.coord2) - np.sin(self.lat) * np.cos(za) ) / (np.cos(self.lat) * np.sin(za))
+
+        sinA = ( -np.sin(ha) * np.cos(self.coord2) / np.sin(za) )
+
+        return np.arctan2(sinA, cosA)
+
 
     def declinationAngle(self):
         """
@@ -133,9 +134,10 @@ class utils(object):
             hour angle in hour
         ''' 
 
-        return self.lst*np.pi/12 - self.coord1
-
-    def ha2ra(self, hour_angle):
+        if self.lst is None: raise ValueError("LST must be provided for RA→HA conversion")
+        return self.lst - self.coord1
+    
+    def ha2ra(self, ha):
 
         '''
         Return the right ascension in radians given the lst in hours and the hour angle in radians
@@ -149,8 +151,10 @@ class utils(object):
         ra: array
             Right Ascension angle in hour
         '''
-        return self.lst*np.pi/12 - hour_angle
 
+        if self.lst is None: raise ValueError("LST must be provided for HA→RA conversion")
+        return self.lst - ha
+    
     def radec2azel(self):
 
         '''
@@ -164,10 +168,17 @@ class utils(object):
         el: array
             Elevation angle in degree.
         '''
+        ha = self.ra2ha()
 
-        hour_angle = self.ra2ha()
-        el = np.pi/2 - self.zenithAngle(np.degrees(hour_angle))
-        az = self.azimuthAngle(np.degrees(hour_angle))     
+        za = self.zenithAngle(ha)
+        el = np.pi / 2.0 - za
+        az = self.azimuthAngle(ha)
+
+        print('hour angle in wrong [rad]: ', ha)
+        print('zenith angle in wrong [rad]: ', za)
+        print('elevation in wrong [deg]: ', np.degrees(el))
+        print('RA in wrong [deg]: ', np.degrees(az))
+
         return np.degrees(az), np.degrees(el)
 
     def azel2radec(self):
@@ -184,9 +195,15 @@ class utils(object):
             Declination angle in degree.
         '''
 
-        dec = self.declinationAngle()
-        hour_angle  = self.azeltoha()
-        ra = self.ha2ra(hour_angle)
+        az = self.coord1
+        el = self.coord2
+
+        sin_dec = ( np.sin(el) * np.sin(self.lat) + np.cos(el) * np.cos(self.lat) * np.cos(az) )
+        dec = np.arcsin(sin_dec)
+
+        ha = np.arctan2( -np.sin(az), np.tan(el) * np.cos(self.lat) - np.cos(az) * np.sin(self.lat) )
+
+        ra = self.ha2ra(ha)
 
         return np.degrees(ra), np.degrees(dec)
 
