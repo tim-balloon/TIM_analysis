@@ -289,13 +289,51 @@ def main(P, nbdets=None):
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
                     hdu.writeto( 'fits_and_hdf5/'+P['beam_output'], overwrite=True)
                     print('save fits_and_hdf5/'+P['beam_output'])
-                    hdu.close()    
+                    hdu.close()  
+
+
+        if P['check_offsets'] and not P['coadd']:
+
+            LST_mean = lst_data.mean()
+            lat_value = lat_data.mean()
+            corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
+            azi_ref, alt_ref = corr.correction()
+
+            dettable = ld.det_table(kid_num, P['detector_table'])     
+            det_off, _,_ = dettable.loadtable() 
+            XEL = det_off[:,0] 
+            EL = det_off[:,1] 
+            
+            x_peaks = []
+            y_peaks = []
+
+            for i_det, name_kid in enumerate(kid_num):
+   
+                beam_value = bm.beam(map_values[i_det] )
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
+
+                if isinstance(beam_map[0], str): print(name_kid, beam_map[0])
+                else: 
+                    params = beam_map[1]
+                    cov = beam_map[2]
+                    uncertainties = np.sqrt(np.diag(cov))
+                    print(f'yo={params[2]:.2f} pm {uncertainties[2]:.2f} | xo={params[1]:.2f} pm {uncertainties[1]:.2f}' )
+                    x_peak = params[1]; y_peak = params[2]
+                    ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)                         
+                    conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) #hour, deg, hour, deg
+                    AZ_dets, EL_dets = conv2azel.radec2azel()
+                    daz = AZ_dets - azi_ref
+                    xel = daz * np.cos(alt_ref)
+                    delv = EL_dets - alt_ref
+
+            #! --> Need to implement how to modify the kids file with offset results here. 
+                      
     return 0
 
 if __name__ == "__main__":
 
     #Repogroup.add_argument('-te', '--telemetry', action='store_true', help='For BLAST-TNG, specify if the data are coming from \
-
 
     '''
     If you want to modify this code, please create your own branch. 
