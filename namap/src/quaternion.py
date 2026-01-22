@@ -3,7 +3,7 @@ import numpy as np
 class quaternions(object):
 
     '''
-    Class to handle quaterions operations. These are specific for the coordinate system chosen for BLAST.
+    Class to handle quaterions operations. 
     In particular, the euler angles are defined as:
     - pitch is a rotation around the x axis
     - yaw is a rotation around the z axis
@@ -55,8 +55,10 @@ class quaternions(object):
         '''
 
         pitch = np.arcsin(2*q[0]*q[1]-2*q[2]*q[3])
-        roll = np.arctan2(2*q[0]*q[2]+2*q[1]*q[3], q[0]**2-q[1]**2-q[2]**2-q[3]**2)
-        yaw = np.arctan2(2*q[0]*q[3]+2*q[1]*q[2], q[0]**2-q[1]**2-q[2]**2-q[3]**2)
+
+        roll = np.arctan2(2*q[0]*q[2]+2*q[1]*q[3], (1 - 2*(q[1]**2 + q[2]**2)) )
+
+        yaw = np.arctan2(2*q[0]*q[3]+2*q[1]*q[2], (1 - 2*(q[1]**2 + q[3]**2)) )
 
         return np.degrees(yaw), np.degrees(pitch), np.degrees(roll)
 

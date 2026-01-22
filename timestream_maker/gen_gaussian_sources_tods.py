@@ -20,51 +20,38 @@ import shutil
 from astropy.io import fits
 from astropy.wcs import WCS
 
-P = load_params('PAR_files/params_strategy.par')    
+if __name__ == "__main__":
 
-P['detectors_name_file'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/TIM_kid_table_reduced_number_of_dets.tsv'
-P['nb_pixel_SW'] = 3  #Number of pixel per frequency band in the SW array.
-P['nb_pixel_LW'] = 3 #Number of pixel per frequency band in the LW array.
-P['offset_SW'] = 3 * 15/3600 #[deg] separation in angle between 2 consecutive pixels for the SW array
-P['offset_LW'] = 3 * 15/3600 #[deg] separation in angle between 2 consecutive pixels for the LW array
-P['arrays_separation'] = 3 * 15/3600  #[deg]
+    P = load_params('PAR_files/params_strategy.par')    
 
-P['nb_channels_per_array'] = 1
-P['T_duration'] = 10/60
-P['output_path'] = f'fits_and_hdf5/'
-P['scan'] ='raster'
-P['az_size'] = 0.1
-P['alt_step'] = 5/3600
-P['alt_size'] = 120/3600
-P['acquisition_frequency'] = 100
-P['acquisition_frequency_coords'] = 100
-P['vertical_steps'] = 60
-P['N_scans'] = 1
+    P['detectors_name_file'] = 'TIM_kid_table_reduced.tsv'
+    P['nb_pixel_SW'] = 20 #Number of pixel per frequency band in the SW array.
+    P['nb_pixel_LW'] = 20 #Number of pixel per frequency band in the LW array.
 
-P['output_path'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
-P['path']        = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+    if( not os.path.isfile(P['detectors_name_file']) ): gen_detectors_main(P)
 
-P['output_name'] = f'TOD_on_1_source_with_1xbigger_sigma_PSF.hdf5'
-P['file'] = f"cube_1source_with_1xbigger_sigma_PSF.fits" 
+    for factor_on_Sigma in (2,1,5): 
 
-gen_detectors_main(P)
+        P['T_duration'] = 1
 
-if( not os.path.isfile(P['output_path']+P['output_name']) or True ):
-    print('')
-    main_1det(P)
-    #main_arrays(P)
-    main_tod(P)
-    
-if(False):
+        for separation_in_arcsecs in (  150.8, 90.5, 301.5,30.2, 45.2, 60.3, 30.2, 45.2, 75.4, 60.3, 211.1,): 
 
-    for factor_on_Sigma in (1,1.5,2,2.5): 
-
-        for separation_in_arcsecs in (150.8, 226.1, 301.5, 376.9):
-
-            P['output_name'] = f'TOD_on_2_sources_separated_by_{separation_in_arcsecs}_with_{factor_on_Sigma}xbigger_sigma_PSF.hdf5' 
+            P['output_path'] = f'/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+            P['output_name'] = f'TOD_on_2_sources_separated_by_{separation_in_arcsecs}arcsecs_with_{factor_on_Sigma}xbigger_sigma_PSF.hdf5' 
             P['file'] = f"cube_2sources_separated_by_{separation_in_arcsecs}arcsecs_with_{factor_on_Sigma}xbigger_sigma_PSF.fits" 
+            P['path'] = '/home/mvancuyck/Desktop/TIM_analysis/namap/fits_and_hdf5/'
+            P['scan']='gittering'
+            P['az_size'] = 0.3
+            P['acquisition_frequency'] = 100
+            P['acquisition_frequency_coords'] = 100
+            P['scan']='raster' #'loop', 'raster', 'crisscross', 'gittering'
+            P['alt_step']= 40/3600*1/3
+            P['vertical_steps'] = 6
+            P['N_scans'] = 10
 
-            if( not os.path.isfile(P['output_path']+P['output_name']) or True):
+            if( not os.path.isfile(P['output_path']+P['output_name']) ):
                 main_1det(P)
                 #main_arrays(P)
                 main_tod(P)
+
+
