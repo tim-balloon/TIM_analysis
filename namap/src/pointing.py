@@ -174,11 +174,6 @@ class utils(object):
         el = np.pi / 2.0 - za
         az = self.azimuthAngle(ha)
 
-        print('hour angle in wrong [rad]: ', ha)
-        print('zenith angle in wrong [rad]: ', za)
-        print('elevation in wrong [deg]: ', np.degrees(el))
-        print('RA in wrong [deg]: ', np.degrees(az))
-
         return np.degrees(az), np.degrees(el)
 
     def azel2radec(self):
