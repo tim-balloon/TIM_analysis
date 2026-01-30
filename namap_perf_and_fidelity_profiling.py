@@ -78,7 +78,7 @@ def test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file, load_directl
                     zscale = ZScaleInterval()
                     from mpl_toolkits.axes_grid1 import make_axes_locatable
                     vmin, vmax = zscale.get_limits(created_map)
-                    fig, (ax, axp) = plt.subplots(1,2,figsize=(4,4))
+                    fig, (ax, axp) = plt.subplots(1,2,figsize=(6,6))
                     im = ax.imshow(created_map, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
                     divider = make_axes_locatable(ax)
                     cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
@@ -89,7 +89,11 @@ def test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file, load_directl
                     axp.step(k, pk_mes, where='mid', c='k')
                     axp.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
                     axp.set_xlabel('k [$\\rm arcmin^{-1}$]')
+                    axp.set_yscale('log')
+                    axp.set_xscale('log')
+                    fig.tight_layout()
                     plt.show()
+
                     embed()
     return 0
 

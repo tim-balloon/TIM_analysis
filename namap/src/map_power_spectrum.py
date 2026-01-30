@@ -165,8 +165,11 @@ class angular_power_spectrum:
         k_map = self.k_map
 
         # FFTs
-        ft = np.fft.fft2(self.map)
-        embed()
+        #-------------------------
+        map0 = np.nan_to_num(self.map, nan=0.0)
+
+        #-------------------------
+        ft = np.fft.fft2(map0)#* mask_apo)
 
         if self.map2 is None:
             ft2 = ft
@@ -174,8 +177,7 @@ class angular_power_spectrum:
             ft2 = np.fft.fft2(self.map2)
 
         norm = (res**2) / (nx * ny)
-        p2map = (ft * np.conj(ft2)).real * norm
-
+        p2map = (ft * np.conj(ft2)).real * norm 
         # Compute radial average
         hist_w, _ = np.histogram(k_map, bins=self.k_bin_tab, weights=p2map)
         hist_n, _ = np.histogram(k_map, bins=self.k_bin_tab)
