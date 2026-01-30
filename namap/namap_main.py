@@ -56,7 +56,7 @@ def load_par_file(filepath):
                 params[key] = val
     return params
 
-def main(P, nbdets=None):
+def namap_main(P, nbdets=None):
     """
     Main script to call Namap. 
     
@@ -96,11 +96,12 @@ def main(P, nbdets=None):
     #---------------------------------
     num_frames, first_frame = P['num_frames'], P['first_frame']
 
-    #Also need to be implemented. 
+    filepath = P['hdf5_file']
+
+    #Also need to be implemented ?
     telemetry = P['telemetry']
 
-    #So far, only 'RA and DEC' is implemented and working.   
-
+    #----------------------------------------------------------------
     if P['input_ctype'] == 'RA and DEC':
         coord1 = str('RA')
         coord2 = str('DEC')
@@ -117,9 +118,9 @@ def main(P, nbdets=None):
         coord1 = str('X')
         coord2 = str('Y')
         xystage = True
-
     #----------------------------------------------------------------
-    filepath = P['hdf5_file']
+    
+    #----------------------------------------------------------------
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
     if P['frequencies'] is not None:
         filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
@@ -129,10 +130,9 @@ def main(P, nbdets=None):
         filtered = btable[np.isin(btable['Name'], good_kid_table['Name'])]
     if P['frequencies'] is None and P['detectors_to_use'] is None:
         filtered = btable
-    #option in the par file to good kids list
+    #----------------------------------------------------------------
 
     #-------- for profiling purpose only -------------
-    
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
@@ -147,9 +147,11 @@ def main(P, nbdets=None):
     else: kid_num = filtered['Name']
     #-------------------------------------------------
 
+    #-------------------------------------------------
     print('Nb dets: ', len(kid_num))
     #----------------------------------------------------------------
 
+    #-------------------------------------------------
     #Cleaning data parameters
     highpassfreq = P['highpassfreq']
     polynomialorder = P['polynomialorder']
@@ -161,28 +163,31 @@ def main(P, nbdets=None):
     convolution, std = P['gaussian_convolution'], P['std'] 
     #---------------------------------
 
-    #----------------------------------
+    #--------------------------------
     #Load the data
     dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT)
-    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, ra_list, dec_list = dataload.values()
+    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #-------------------------------
 
     #---------------------------------
     #First remove noise peaks and discard TODs with large & low variance. 
-    #det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
-    #cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
-    #P['rejected detectors list'] = rejected_detetectors_list
+    #Commented out for profiling
+    '''
+    det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
+    cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
+    P['rejected detectors list'] = rejected_detetectors_list
+    '''
     cleaned_data=det_data.copy()
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data) ): #<-- for testing purpose only
+    if(len(cleaned_data[0]) != len(coord1_data) ): #<-- for debugging purpose only
 
         zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
                                             lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
-        
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data() 
         P['bypass_synch'] = False
+
     else: 
         print('Bypass Synch')
         P['bypass_synch'] = True
@@ -220,7 +225,6 @@ def main(P, nbdets=None):
 
     else:
         
-
         #load the table
         dettable = ld.det_table(kid_num, P['detector_table']) 
         det_off, _,_ = dettable.loadtable() #noise_det, resp
@@ -248,6 +252,7 @@ def main(P, nbdets=None):
         #---------------------------------
 
         #--------------------
+        
         #Create the maps
         maps = mp.maps(P['ctype'], 
                     np.asarray([P['crpix'][0],P['crpix'][1]]), 
@@ -391,7 +396,7 @@ if __name__ == "__main__":
     # Step 5: Convert Namespace to dictionary
     P = vars(args)
 
-    main(P)
+    namap_main(P)
 
 
 

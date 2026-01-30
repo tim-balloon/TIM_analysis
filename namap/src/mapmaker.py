@@ -157,8 +157,9 @@ class maps():
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
             hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
-            hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
+            hdu.writeto(self.output_file, overwrite=True) # os.getcwd()+'/fits_and_hdf5/'+
             hdu.close()
+            print(f'Saved the coadded map {self.output_file}')
 
         else: 
             filename = self.output_file

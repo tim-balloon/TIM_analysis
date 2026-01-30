@@ -72,7 +72,6 @@ class angular_power_spectrum:
         k_map = np.sqrt(KX**2 + KY**2)
         return k_map
 
-    
     # ------------------------------------------------------------
     # Make k bins
     # ------------------------------------------------------------
@@ -167,6 +166,7 @@ class angular_power_spectrum:
 
         # FFTs
         ft = np.fft.fft2(self.map)
+        embed()
 
         if self.map2 is None:
             ft2 = ft

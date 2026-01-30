@@ -1,18 +1,13 @@
 #import pygetdata as gd
 import numpy as np
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, PchipInterpolator
+from scipy.signal import resample_poly, resample
 import os
 import astropy.table as tb
 from IPython import embed
 import src.detector as det 
 import h5py
 import matplotlib.pyplot as plt
-from scipy.interpolate import PchipInterpolator
-from scipy.signal import resample_poly
-from fractions import Fraction
-from scipy.signal import resample
-import h5py
-import os
 import shutil
 
 def load_params(path):
@@ -92,7 +87,7 @@ class data_value():
         self.IT=IT #Int precision required 
 
         if self.startframe < 100:
-            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
             self.bufferframe = int(0)
 
@@ -204,15 +199,17 @@ class data_value():
         kid_num  = self.det_name
         det_data = []
 
+
         for kid in kid_num: 
+
             kidutils = det.kidsutils()
             det_data.append(data_value.loaddata(self.det_path, f'kid_{kid}_roach', self.DT, num, first_frame) ) #kidutils.KIDmag(I_data, Q_data))
             # Assume all the data have the same spf       
-
-        spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
+            spf_data = data_value.loadspf(self.det_path, f'kid_{kid}_roach', self.DT)
         
         
         #--------------------------
+        '''
         #For debbuging purpose only
         ras = []
         decs = []
@@ -222,6 +219,7 @@ class data_value():
             ras.append( f['RA_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             decs.append( f['DEC_roach'][int(first_frame*spf_data):int((first_frame+num)*spf_data)] )
             H.close()
+        '''
         #--------------------------
         
         
@@ -257,7 +255,7 @@ class data_value():
         '''
         #---
 
-        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf, ras, decs #, ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+        return det_data, coord1_data, coord2_data, lst, lat, spf_data, spf_coord, lst_lat_spf #ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
 
 class xsc_offset():
     """
@@ -486,7 +484,6 @@ class compress_tods():
         return 0
     
     def save_array_to_hdf5(self, grp_name, data, list_names, spf=None, min=None, max=None):
-
             
         '''
         Save an array in .hdf5
@@ -654,52 +651,10 @@ class frame_zoom_sync():
         self.freq_target = freq_target                           #Frequency to downsample the data to. 
 
         if self.startframe < 100:
-            self.bufferframe = int(100)  #Buffer frames to be loaded before and after the starting and ending frame
+            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
         else:
             self.bufferframe = int(0)
   
-    def resampling(self, X, spf_start, spf_end, DT):
-
-        '''
-        Interpolates an array with a sample per frame to a different sample per frame 
-        Parameters
-        ----------
-        X: array
-            The arrray to be interpolated. 
-        spf_start: int
-            the sample per frame of X
-        spf_end: int
-            the final sample per frame wanted. 
-        DT: type
-            Float precision required
-        Returns
-        -------
-        x: array
-            the array with the new sample per frame. 
-        '''
-        """
-        ratio = spf_start / spf_end
-        interper = PchipInterpolator(np.arange(0, len(X)), X)
-        x = interper(np.arange(0, len(X), ratio)) # t -= t[0]
-        """
-
-        # Ensure X is in DT
-        X = np.array(X, dtype=DT)
-
-        # Compute ratio in DT
-        ratio = DT(spf_start) / DT(spf_end)
-
-        # Create interpolator
-        interper = PchipInterpolator(np.arange(0, len(X)), X)
-
-        # New sample points
-        new_points = np.arange(0, len(X), ratio)
-
-        # Interpolated values
-        x = interper(new_points)
-
-        return x.astype(DT)
-
     def coord_int(self, coord1, coord2, time_acs, time_det):
 
         '''
@@ -755,11 +710,11 @@ class frame_zoom_sync():
     
         num = self.numframes+self.bufferframe
         first_frame = self.startframe+self.bufferframe
+
         #---------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst. 
         # PPS is the pulse per second (pps). It indicates when, more precisely at which second, an element has been recorded. 
         pps = data_value.loaddata(self.det_path, f'coords_pps',self.IT, num, first_frame) 
-        #pps -= pps.min()
         subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps',self.DT, num, first_frame) 
         ctime  = pps.astype(self.DT)+subsec
         turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.DT, num, first_frame) 
@@ -790,26 +745,23 @@ class frame_zoom_sync():
             turnaround_flags = turnaround_flags[:-pps_bins[-1]]
         #---------------------
 
-        #---------------------
-        #_, bn = np.unique(pps, return_counts=True)
-        #pps_bins = bn[bn>0]
-        #---------------------
-
         #--------------------------------------------------------------
         # Resample the coordinates and their timestamps from their acquisition frequency to the freq_target.
-        ctime= self.resampling(ctime, spf_ctime, self.freq_target, self.DT)
-        self.coord1_data = self.resampling(self.coord1_data, spf_ctime, self.freq_target, self.DT)
-        self.coord2_data = self.resampling(self.coord2_data, spf_ctime, self.freq_target, self.DT)
-        self.lst_data = self.resampling(self.lst_data, spf_ctime, self.freq_target, self.DT)
-        self.lat_data = self.resampling(self.lat_data, spf_ctime, self.freq_target, self.DT)
-        turnaround_flags = np.round(self.resampling(turnaround_flags, spf_ctime, self.freq_target, self.DT)).astype(self.IT)
+        if(spf_ctime != self.freq_target): 
+            aaf = det.AntiAliasingFilter( fs_in=spf_ctime, fs_out=self.freq_target, fc=self.freq_target/2-5, window='hann')
+            ctime= aaf.downsample(ctime)
+            self.coord1_data = aaf.downsample(self.coord1_data)
+            self.coord2_data = aaf.downsample(self.coord2_data)
+            self.lst_data = aaf.downsample(self.lst_data)
+            self.lat_data = aaf.downsample(self.lat_data)
+            turnaround_flags = aaf.downsample(turnaround_flags)
         #---------------------------------------------------------------
 
         #--------------------------------------------------------------
         #Load the timestamps and pulse per second of the data. 
         spf_time = data_value.loadspf(self.det_path,  f'data_time', self.DT)
         pps = data_value.loaddata(self.det_path, f'data_pps', self.DT,num, first_frame) 
-        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, num, first_frame) 
+        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, num, first_frame)
         dettime = pps+subsec
         #--------------------------------------------------------------
 
@@ -830,16 +782,17 @@ class frame_zoom_sync():
             for i in range(len(self.det_data)):
                 self.det_data[i] = self.det_data[i][:-pps_bins[-1]]
 
+        aaf = det.AntiAliasingFilter( fs_in=spf_time, fs_out=self.freq_target, fc=self.freq_target/2-5, window='hann')
         for i in range(len(self.det_data)):
-            self.det_data[i] = self.resampling(self.det_data[i], spf_time, self.freq_target, self.DT)
-        dettime = self.resampling(dettime, spf_time, self.freq_target, self.DT)
+            self.det_data[i] =  aaf.process(self.det_data[i])
+        dettime = aaf.downsample(dettime)
         #---------------------------------------------------------------
-
+        
         #---------------------------------------------------------------
         #Get the data samples whose timestamps are shared with the coordinates timestamps
 
         # Determine common time interval (overlap)
-        start_time = max(ctime[0], dettime[0])   # latest starting time
+        start_time = max(ctime[0], dettime[0]  )   # latest starting time
         end_time   = min(ctime[-1], dettime[-1]) # earliest ending time
 
         # Get indices (right for start, right for end)
@@ -855,7 +808,6 @@ class frame_zoom_sync():
         for i in range(len(self.det_data)):
             self.det_data[i] = self.det_data[i][i_d_start:i_d_end]
 
-
         ctime   = ctime[i_c_start:i_c_end]
         self.coord1_data = self.coord1_data[i_c_start:i_c_end]
         self.coord2_data = self.coord2_data[i_c_start:i_c_end]
@@ -866,11 +818,69 @@ class frame_zoom_sync():
         
         #---------------------------------------------------------------
         #Match the number of coordinates samples (coord1, coord2, lat, lst and the turnaround flags) to data samples.
-        self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
-        self.lst_data, self.lat_data       = self.coord_int(self.lst_data, self.lat_data, ctime, dettime)
-        f = interp1d(ctime, turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
-        turnaround_flags_interp = np.round(f(dettime)).astype(self.IT)
+        if(len(ctime) != len(dettime)):
+            self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
+            self.lst_data, self.lat_data       = self.coord_int(self.lst_data, self.lat_data, ctime, dettime)
+            f = interp1d(ctime, turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
+            turnaround_flags= np.round(f(dettime)).astype(self.IT)
         #---------------------------------------------------------------
 
-        return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data, turnaround_flags_interp
+        return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data, turnaround_flags
     
+
+"""
+        if(TEST): 
+            T = dettime.copy()
+            D = self.det_data.copy()
+            data_flags = data_value.loaddata(self.det_path, f'data_turnaround_flags', self.DT,num, first_frame) 
+            flags_downsampled =  aaf.downsample(data_flags)
+
+            timestamps = T[data_flags==1].copy()
+            det_data = np.asarray(D)[:, data_flags==1].copy()
+            dt = np.diff(timestamps)
+            breaks = np.where(np.abs(np.diff(dt)) > 1)[0] + 1 #np.where(dt != dt[0])[0] + 1
+            timestamp_chunks = np.split(timestamps, breaks)
+            det_chunks =np.split(det_data, breaks, axis=1)
+            acq_freq = spf_time #Hz
+
+            timestamps = dettime[turnaround_flags_interp==1].copy()
+            det_data = np.asarray(self.det_data)[:, turnaround_flags_interp==1].copy()
+            dt = np.diff(timestamps)
+            breaks = np.where(np.abs(np.diff(dt)) > 1)[0] + 1 #np.where(dt != dt[0])[0] + 1
+            timestamp_chunks = np.split(timestamps, breaks)
+            det_chunks_downsampled = np.split(det_data, breaks, axis=1)
+            acq_freq_downsampled = 100 #Hz
+
+            for i, (chunk, chunk_downsampled) in enumerate(zip(det_chunks,det_chunks_downsampled)):
+                for det_id, (det_tod, det_tod_downsampled) in enumerate(zip(chunk, chunk_downsampled)):
+                    if(len(det_tod) <= 1): continue
+                    freq_fft = np.fft.fftfreq(len(det_tod), 1/acq_freq) #TOD frequencies.
+                    inds = np.where(freq_fft>0) 
+                    tod_psd = ( np.fft.fft(det_tod) * (1/acq_freq) * np.conj( np.fft.fft(det_tod) * (1/acq_freq) ) / len(det_tod)  ).real
+                    plt.step(freq_fft[inds], tod_psd[inds], where='mid', alpha=0.1, c='k')
+
+                    freq_fft = np.fft.fftfreq(len(det_tod_downsampled), 1/acq_freq_downsampled) #TOD frequencies.
+                    inds = np.where(freq_fft>0) 
+                    tod_psd = ( np.fft.fft(det_tod_downsampled) * (1/acq_freq_downsampled) * np.conj( np.fft.fft(det_tod_downsampled) * (1/acq_freq_downsampled) ) / len(det_tod_downsampled)  ).real
+                    plt.step(freq_fft[inds], tod_psd[inds] /( len(det_tod) / len(det_tod_downsampled) ), where='mid', alpha=0.1, c='r')
+
+                    '''
+                    aaf = det.AntiAliasingFilter( fs_in=488.3, fs_out=100.0, fc=45.0, numtaps=257, window='hann'  )
+                    tod_resampled = aaf.process(det_tod)
+                    freq_fft = np.fft.fftfreq(len(tod_resampled), 1/100) #TOD frequencies.
+                    inds = np.where(freq_fft>0) 
+                    tod_psd = ( np.fft.fft(tod_resampled) * (1/100) * np.conj( np.fft.fft(tod_resampled) * (1/100) ) / len(tod_resampled)  ).real
+                    plt.step(freq_fft[inds], tod_psd[inds] /( len(det_tod) / len(tod_resampled) ), where='mid', alpha=0.1, c='r')
+                    '''
+            plt.axvline(100/2, ymin=1e-20, ymax=1e10, color='k', label=f'{100:.1f}Hz Nyquist frequency')
+            plt.axvline(acq_freq, ymin=1e-20, ymax=1e10, color='grey', ls=':' , label=f'{acq_freq:.1f}Hz sampling frequency')
+            plt.axvline(acq_freq/2, ymin=1e-20, ymax=1e10, color='grey', label=f'{acq_freq:.1f}Hz Nyquist frequency')
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlabel('f [Hz]')
+            plt.ylabel('PSD [$\\rm Jy^2/beam.s^2$]')
+            plt.legend()
+            plt.show()
+
+
+"""

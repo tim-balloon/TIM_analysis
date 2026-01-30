@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from astropy.wcs import WCS
 import datetime
 from IPython import embed
+from scipy.signal import resample_poly
 
 def group_detectors(det_names_dict, array):
 
@@ -291,6 +292,46 @@ def main_tod(P):
             save_tod_in_hdf5(tod_file, names, samples, el, xel, P['detectors_name_file'], freq, spf, acquisition_frequency, pointing_paths_to_save, save=P['format'], compression=P['compression'])
             bar.next()
         #------------------------------------------------------------------
+
+
+        #-------------------------------------------------------------------------------------
+        #Example for taking the PSD of downsampled timestreams
+        if(False):
+            H = h5py.File(tod_file, "a")
+            flags = H['data_turnaround_flags']['data'][()]
+            H.close()
+            timestamps = T[flags==1]
+            det_data = np.asarray(samples)[:, flags==1]
+            dt = np.diff(timestamps)
+            breaks = np.where(np.abs(np.diff(dt)) > 1)[0] + 1 #np.where(dt != dt[0])[0] + 1
+            timestamp_chunks = np.split(timestamps, breaks)
+            det_chunks = np.split(det_data, breaks, axis=1)
+            acq_freq = P['acquisition_frequency'] #Hz
+            for i, chunk in enumerate(det_chunks):
+                for det_id, det_tod in enumerate(chunk):
+                    if(len(det_tod) <= 1): continue
+                    freq_fft = np.fft.fftfreq(len(det_tod), 1/acq_freq) #TOD frequencies.
+                    inds = np.where(freq_fft>0) 
+                    tod_psd = ( np.fft.fft(det_tod) * (1/acq_freq) * np.conj( np.fft.fft(det_tod) * (1/acq_freq) ) / len(det_tod)  ).real
+                    plt.step(freq_fft[inds], tod_psd[inds], where='mid', alpha=0.1, c='k')
+
+                    tod_resampled = resample_poly( det_tod, up=100, down=int(round(acq_freq)), window=('kaiser', 8.6))
+                    freq_fft = np.fft.fftfreq(len(tod_resampled), 1/100) #TOD frequencies.
+                    inds = np.where(freq_fft>0) 
+                    tod_psd = ( np.fft.fft(tod_resampled) * (1/100) * np.conj( np.fft.fft(tod_resampled) * (1/100) ) / len(tod_resampled)  ).real
+                    plt.step(freq_fft[inds], tod_psd[inds] /( len(det_tod) / len(tod_resampled) ), where='mid', alpha=0.1, c='r')
+
+            plt.axvline(acq_freq, ymin=1e-20, ymax=1e10, color='grey', ls=':' , label=f'{acq_freq:.1f}Hz sampling frequency')
+            plt.axvline(acq_freq/2, ymin=1e-20, ymax=1e10, color='grey', label=f'{acq_freq:.1f}Hz Nyquist frequency')
+            plt.axvline(100/2, ymin=1e-20, ymax=1e10, color='k', label=f'{100:.1f}Hz Nyquist frequency')
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlabel('f [Hz]')
+            plt.ylabel('PSD [$\\rm Jy^2/beam.s^2$]')
+            plt.legend()
+            plt.show()
+        #-------------------------------------------------------------------------------------
+   
 
         # ------------------ Save FITS --------------------
         hdr_out = hdr

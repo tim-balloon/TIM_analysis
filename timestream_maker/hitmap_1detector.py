@@ -203,7 +203,6 @@ def main_1det(P):
 
     #----------------------------------------
     #Create the coordinates sampled differently, to test the synchronization with data in Namap.
-    
     acquisition_frequency_prime = P['acquisition_frequency_coords']  #sample per frame defined here as the acquisition rate in Hz. 
     spf_prime = np.round(P['acquisition_frequency_coords'] ).astype(int)
 
@@ -219,16 +218,16 @@ def main_1det(P):
     ra_prime = resampling(scan_path_sky[:,0], acquisition_frequency, acquisition_frequency_prime)
     dec_prime = resampling(scan_path_sky[:,1], acquisition_frequency, acquisition_frequency_prime)
     scan_path_sky_prime = np.vstack((ra_prime,dec_prime)).T
+    
+    scan_flag_prime = resampling(scan_flag, acquisition_frequency, acquisition_frequency_prime)
 
     save_scan_path(tod_file, np.array((LST_prime, lat_prime)).T, spf_prime, acquisition_frequency_prime,('lst', 'lat'), save=P['format'],compression=P['compression'])
     save_scan_path(tod_file, azelprime, spf_prime,acquisition_frequency_prime,('AZ', 'EL'), save=P['format'],compression=P['compression'])
     save_scan_path(tod_file, scan_path_sky_prime, spf_prime,acquisition_frequency_prime, ('RA', 'DEC'), save=P['format'],compression=P['compression'])
-    #save_scan_path(tod_file, scan_path_prime,     spf_prime,acquisition_frequency_prime, ('RA_path', 'DEC_path'), save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, T_prime, spf_prime, acquisition_frequency_prime,'coords_time', save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, pps_prime, spf_prime, acquisition_frequency_prime,'coords_pps', save=P['format'],compression=P['compression'])
     save_timestamps(tod_file, subsecond_ps_prime, spf_prime, acquisition_frequency_prime,'coords_subsecond_ps', save=P['format'],compression=P['compression'])
-    save_timestamps(tod_file, scan_flag, spf_prime,acquisition_frequency_prime, ('turnaround_flags'), save=P['format'],compression=P['compression'])
-
+    save_timestamps(tod_file, scan_flag_prime, spf_prime, acquisition_frequency_prime, 'turnaround_flags', save=P['format'],compression=P['compression'])
     
 if __name__ == "__main__":
     '''

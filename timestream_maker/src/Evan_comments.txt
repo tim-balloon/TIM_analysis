@@ -1,0 +1,31 @@
+I believe the expressions for yaw, pitch, roll in this function are wrong. The correct expressions for this convention should be:
+
+yaw = np.arctan2(2*q[0]*q[3] + 2*q[2]*q[1], (1 - 2*(q[1]**2 + q[3]**2)))
+pitch = np.arcsin(2*q[0]*q[1] - 2*q[2]*q[3])
+roll = np.arctan2(2*q[0]*q[2] + 2*q[1]*q[3], (1 - 2*(q[2]**2 + q[1]**2)))
+
+The quaternion -> Euler angle -> quaternion conversion is not self-consistent:
+
+Before:
+
+q = np.random.normal(size=4)
+qnorm = q / np.sqrt(np.sum(q**2))
+
+y, p, r = quat2eul(qnorm)
+qres = eul2quat(y, p, r)
+print(qnorm, qres)
+>>> [-0.25422022 -0.6759056  -0.67202325 -0.16403797] [0.1705130
+                                                       
+After:
+
+q = np.random.normal(size=4)
+qnorm = q / np.sqrt(np.sum(q**2))
+
+y, p, r = quat2eul(qnorm)
+qres = eul2quat(y, p, r)
+print(qnorm, qres)
+>>> [ 0.3331128  -0.63116599  0.67952291  0.17004105] [ 0.3331128  -0.63116599  0.67952291  0.17004105]
+
+IMO, these routines should all be handed off to scipy.spatial.transform.Rotation though. This would require us to align our convention with theirs however (roll = x, pitch = y, yaw = z, sequence intrinsic ZYX), which might be a pain. I will note that the scipy convention is shared amongst most in the aerospace industry, though.
+
+I haven't checked product() yet, but maybe it's worth a look.

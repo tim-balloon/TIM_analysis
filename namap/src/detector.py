@@ -459,7 +459,7 @@ class filterdata():
         ifft_data = np.fft.irfft(self.fft_filter(window=window), len(self.data))
 
         return self.DT(ifft_data)
-
+    
 class detector_trend():
 
     '''
@@ -757,3 +757,69 @@ class kidsutils():
 
         return np.asarray(ctime_roach_renormed), np.asarray(bins_list)
     
+import numpy as np
+
+class AntiAliasingFilter():
+    """
+    NumPy-only anti-aliasing filter for downsampling TODs.
+    """
+
+    def __init__(self, fs_in, fs_out, fc=None, numtaps=257, window='hann'):
+        """
+        Parameters
+        ----------
+        fs_in : float
+            Input sampling frequency [Hz]
+        fs_out : float
+            Output sampling frequency [Hz]
+        fc : float or None
+            Cutoff frequency [Hz]. If None, uses 0.45 * fs_out
+        numtaps : int
+            Length of FIR filter (odd recommended)
+        window : str
+            'hann' or 'hamming'
+        """
+        self.fs_in = fs_in
+        self.fs_out = fs_out
+        self.fc = fc if fc is not None else 0.45 * fs_out
+        self.numtaps = numtaps
+        self.window = window
+
+        self.h = self._design_filter()
+
+    def _design_filter(self):
+        """Design linear-phase FIR low-pass filter"""
+        n = np.arange(self.numtaps) - (self.numtaps - 1) / 2
+
+        h = 2 * self.fc / self.fs_in * np.sinc(2 * self.fc * n / self.fs_in)
+
+        if self.window == 'hann':
+            h *= np.hanning(self.numtaps)
+        elif self.window == 'hamming':
+            h *= np.hamming(self.numtaps)
+        else:
+            raise ValueError("window must be 'hann' or 'hamming'")
+
+        # Unity DC gain
+        h /= np.sum(h)
+
+        return h
+
+    def filter(self, x):
+        """Apply anti-aliasing filter"""
+        return np.convolve(x, self.h, mode='same')
+
+    def downsample(self, x):
+        """
+        Downsample filtered signal.
+        Uses nearest-neighbor time picking (safe after LPF).
+        """
+        ratio = self.fs_in / self.fs_out
+        n_out = int(len(x) / ratio)
+        idx = (np.arange(n_out) * ratio).astype(int)
+        return x[idx]
+
+    def process(self, x):
+        """Filter + downsample"""
+        x_filt = self.filter(x)
+        return self.downsample(x_filt)
