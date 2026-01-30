@@ -142,52 +142,69 @@ class angular_power_spectrum:
     # ------------------------------------------------------------
     # Main P(k) estimator
     # ------------------------------------------------------------
-    def p2(self):
-        """
-        Estimates the angular power spectrum in Jy**2/sr of an 2D angular map in Jy/sr
+    def p2(self,mask_correction=False):
+            
+            """
+            Estimates the angular power spectrum in Jy**2/sr of an 2D angular map in Jy/sr
 
-        Parameters
-        ----------
+            Parameters
+            ----------
 
-        Returns
-        -------
-        pk: array
-            the Fourier amplitudes in Jy**2/sr
-        k_out: array
-            the center of the wavenumber k bins in rad-1        
-        """
+            Returns
+            -------
+            pk: array
+                the Fourier amplitudes in Jy**2/sr
+            k_bin_tab: array
+                the k bins in rad-1        
+            """
 
-        ny, nx = self.ny, self.nx
-        res = self.res
+            ny, nx = self.ny, self.nx
+            res = self.res
 
-        self.set_k_infos()
+            norm = (res**2) / (nx * ny)
 
-        k_map = self.k_map
+            self.set_k_infos()
 
-        # FFTs
-        #-------------------------
-        map0 = np.nan_to_num(self.map, nan=0.0)
+            k_map = self.k_map
 
-        #-------------------------
-        ft = np.fft.fft2(map0)#* mask_apo)
+            # FFTs
+            pk_list = []
+            for i, map in enumerate(self.maps):
 
-        if self.map2 is None:
-            ft2 = ft
-        else:
-            ft2 = np.fft.fft2(self.map2)
+                # Create a mask (1 where valid, 0 where NaN)
+                mask = np.isfinite(map).astype(float)
 
-        norm = (res**2) / (nx * ny)
-        p2map = (ft * np.conj(ft2)).real * norm 
-        # Compute radial average
-        hist_w, _ = np.histogram(k_map, bins=self.k_bin_tab, weights=p2map)
-        hist_n, _ = np.histogram(k_map, bins=self.k_bin_tab)
+                # Fill NaNs with 0 (or the mean, depending on your normalization)
+                map_filled = np.nan_to_num(map, nan=0.0)
 
-        pk = np.zeros_like(hist_w)
-        mask = hist_n > 0
-        pk[mask] = hist_w[mask] / hist_n[mask]
-        pk[~mask] = np.nan
+                ft = np.fft.fft2(map_filled)
 
-        return pk, self.k_out
+                if self.map2 is None:
+                    ft2 = ft
+                else:
+                    map_filled_2 = np.nan_to_num(self.map2, nan=0.0)
+                    ft2 = np.fft.fft2(map_filled_2)
+                
+                p2map = (ft * np.conj(ft2)).real * norm
+
+                if(mask_correction): 
+                # Corrected power spectrum
+                    ft_mask = np.fft.fft2(mask)
+                    pmask = np.abs(ft_mask)**2 
+                    w = np.where(np.abs(pmask)>0)
+                    p2map[w] /=  np.abs(pmask)[w]
+
+                # Compute radial average
+                hist_w, _ = np.histogram(k_map, bins=self.k_bin_tab, weights=p2map)
+                hist_n, _ = np.histogram(k_map, bins=self.k_bin_tab)
+
+                pk = np.zeros_like(hist_w)
+                mask = hist_n > 0
+                pk[mask] = hist_w[mask] / hist_n[mask]
+                pk[~mask] = np.nan
+                pk_list.append(pk)
+
+            return pk_list, self.k_bin_tab
 
 if __name__ == '__main__':
 
