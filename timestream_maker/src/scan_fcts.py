@@ -67,12 +67,21 @@ def genLocalPath_dither(az_size=1, vertical_steps=3, alt_step=0.25, acc=0.05, sc
 
 
 def genScanPath_dither(T, dt, alt, az, flag, dither_offset=0.05,acc=0.05, scan_v=0.1):
+
     N_total = len(T)
+
+    # --- Pattern properties ---
     N_pattern = len(az)
     pattern_time = N_pattern * dt
 
+    # --- Turn duration (same physics as local path) ---
     turn_time = 2 * scan_v / acc
     N_dither = int(turn_time / dt)
+
+    print(f"Pattern duration: {pattern_time/60:.2f} min")
+    print(f"Dither duration: {turn_time:.2f} s ({N_dither} points)")
+    print(f"Dither offset: {dither_offset:.4f} deg")
+    print(f"Total points: {N_total}")
 
     az_list = []
     alt_list = []
@@ -80,8 +89,7 @@ def genScanPath_dither(T, dt, alt, az, flag, dither_offset=0.05,acc=0.05, scan_v
 
     current_idx = 0
     cycle = 0
-    
-    #Generate Dither
+
     while current_idx < N_total:
         remaining = N_total - current_idx
         n = min(N_pattern, remaining)
@@ -134,6 +142,89 @@ def genScanPath_dither(T, dt, alt, az, flag, dither_offset=0.05,acc=0.05, scan_v
     coor[:, 1] -= np.mean(alt_full)
 
     return coor, flag_full
+
+def genScanPath_dither_v2(T, dt, alt, az, flag, dither_offset,acc=0.05, scan_v=0.1):
+    N_pattern = len(az)
+    turn_time = 2*scan_v/acc  
+
+    acc_dither_value = dither_offset / (turn_time/2)**2
+
+    dither_oscillation = np.concatenate([
+        np.ones(int(turn_time / dt / 2)) * acc_dither_value,
+        np.ones(int(turn_time / dt / 2)) * -acc_dither_value
+    ])
+
+    acc_dither_alt_up = dither_oscillation
+    acc_dither_alt_down = -dither_oscillation
+
+
+    az_acc_dither = np.ones(int(turn_time/dt)) * acc
+    N_dither = len(acc_dither_alt_up)
+
+    az_dither_v = np.cumsum(az_acc_dither) * dt - scan_v
+    az_dither = np.cumsum(az_dither_v) * dt
+
+    # Altitude motion UP
+    alt_dither_up_v = np.cumsum(acc_dither_alt_up) * dt
+    alt_dither_up = np.cumsum(alt_dither_up_v) * dt
+
+    # Altitude motion DOWN
+    alt_dither_down_v = np.cumsum(acc_dither_alt_down) * dt
+    alt_dither_down = np.cumsum(alt_dither_down_v) * dt
+
+    flag_dither = np.zeros(N_dither)  # Not scanning during dither
+
+    # Calculate the azimuth drift from one dither step
+    az_drift_per_dither = az_dither[-1]
+    N_total = len(T)
+
+    az_full = np.zeros(N_total)
+    alt_full = np.zeros(N_total)
+    flag_full = np.zeros(N_total)
+
+    base_az = 0
+    base_alt = 0
+    current_idx = 0
+
+    while current_idx < N_total:
+        #scan pattern at base
+        n = min(N_pattern, N_total - current_idx)
+        az_full[current_idx:current_idx+n] = az[:n] + base_az - az[0]
+        alt_full[current_idx:current_idx+n] = alt[:n] + base_alt - alt[0]
+        flag_full[current_idx:current_idx+n] = flag[:n]
+        current_idx += n
+        if current_idx >= N_total: break
+        
+        #dither up
+        n_d = min(N_dither, N_total - current_idx)
+        az_full[current_idx:current_idx+n_d] = az_dither[:n_d] + base_az + az[-1] - az[0]
+        alt_full[current_idx:current_idx+n_d] = alt_dither_up[:n_d] + base_alt + alt[-1] - alt[0]
+        flag_full[current_idx:current_idx+n_d] = flag_dither[:n_d]
+        current_idx += n_d
+        if current_idx >= N_total: break
+        
+        #scan pattern at dither_offset
+        n = min(N_pattern, N_total - current_idx)
+        az_full[current_idx:current_idx+n] = az[:n] + base_az + az_drift_per_dither - az[0]
+        alt_full[current_idx:current_idx+n] = alt[:n] + base_alt + dither_offset - alt[0]
+        flag_full[current_idx:current_idx+n] = flag[:n]
+        current_idx += n
+        if current_idx >= N_total: break
+        
+        #dither down
+        n_d = min(N_dither, N_total - current_idx)
+        az_full[current_idx:current_idx+n_d] = az_dither[:n_d] + base_az + az_drift_per_dither + az[-1] - az[0]
+        alt_full[current_idx:current_idx+n_d] = alt_dither_down[:n_d] + base_alt + dither_offset + alt[-1] - alt[0]
+        flag_full[current_idx:current_idx+n_d] = flag_dither[:n_d]
+        current_idx += n_d
+
+    coor = np.vstack((az_full, alt_full)).T
+
+    coor[:, 0] -= np.mean(az_full)
+    coor[:, 1] -= np.mean(alt_full)
+            
+    return coor, flag_full
+
 
 
 def hitsPerSqdeg(total_hits, area):
