@@ -17,11 +17,46 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False,  parang=None, params=None): #noise=1., telcoord=False,
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, variance_weigthing=False, parang=None, params=None): #telcoord=False,
         '''
         Create an instance of maps
         Parameters
         ----------
+        ctype: str
+            coordinates type (RA-DEC, AZ-EL, ect...)
+        crpix: (float, float)
+            coordinates of the reference pixel, usually the center of the map. 
+        cdelt: (float, float)
+            the pixel size in the y and x direction
+        crval: (float, float)
+            Sky coordinates at the reference pixel
+        pixnum: (int, int)
+            the maximum pixel sizes in the y and x direction allowed for the maps. 
+        data: list
+            list of the detector data
+        coord1: list
+            coordinate 1 for each detector data
+        coord2: list
+            coordinate 2 for each detector data
+        convolution: bool
+            If True, convolve the maps
+        std: float
+            std of the beam to convolve the maps
+        output_file: str
+            the path, name and format to save the maps. 
+        DT: type
+            Float precision required
+        IT: type
+            Int precision required
+        coadd: bool
+            If True, coadd all the detectors provided.
+        variance_weigthing: bool
+            If True, compute the variance of each detector and weight its data by it in the map. 
+        parang: 1d array
+            The paralactic angle
+        params: dictionnary
+            The parameter dictionnary will be saved in 'COMMENTS' of the header
+        
         Returns
         -------
         '''
@@ -42,7 +77,7 @@ class maps():
         self.DT = DT                    #Float precision required
         self.IT = IT                    #Integer precision required
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
-        #self.noise = noise             #white level noise of detector(s)
+        self.variance_weigthing = variance_weigthing
         if parang is not None:
             self.parang = [np.radians(p) for p in parang ] #Parallactic Angle. This is used to compute the pixel indices in telescopes coordinates
         else:
@@ -73,7 +108,11 @@ class maps():
         Returns
         -------
         '''
-        mapmaker = mapmaking(self.data, np.ones(len(self.data)), len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
+        
+        if(self.variance_weigthing): weights = [np.std(d) for d in self.data] 
+        else:                        weights = np.ones(len(self.data))
+        
+        mapmaker = mapmaking(self.data, weights, len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
         Pow_map, crpix = mapmaker.map_Ionly( crpix = self.crpix, pixnum = self.pixnum, coadd=self.coadd,)
         
         self.w.wcs.crpix = crpix
@@ -86,7 +125,7 @@ class maps():
     def map_plot(self, data_maps, kid_num):
 
         """
-        Plot the map out of the data timestreams.     
+        Save the map out of the data timestreams.     
         Parameters
         ---------- 
         data_maps: list
@@ -197,7 +236,8 @@ class maps():
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
 
-                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                hdu.writeto(name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                print(f"Saved individual map {name_before_fits+'_'+name+fits_and_after}")
                 hdu.close()
 
 class wcs_world():
@@ -281,7 +321,8 @@ class wcs_world():
             x_pix = np.array(x_pix, dtype=self.DT)
             y_pix = np.array(y_pix, dtype=self.DT)
             
-            world.append((x_pix, y_pix))        
+            world.append((x_pix, y_pix))   
+
         return world, w
 
 class mapmaking(object):
@@ -334,7 +375,7 @@ class mapmaking(object):
         coadd: bool
             to return the coadd map between all detectors or the individual maps. 
         value: list
-            amplitude timestreams of the detectors
+            list of the detector data
         noise: array
             list of the noise in the detectors
         pixelmap: list
@@ -392,26 +433,19 @@ class mapmaking(object):
         idx_ymax = idx_ymin + cut_height
                  
         # ---------------------------------------------
-        # 5) Update WCS: crpix and crval
+        # 5) Update WCS: crpix 
         # ---------------------------------------------
         # Shift crpix into new cutout
         
         crpix[0] -= idx_xmin
         crpix[1] -= idx_ymin
-        
-        # Recompute crval (reference world coordinate)
-        # Using normal WCS linear approximation:
-        
+                
         # ---------------------------------------------
         # 6) Build the final edges vectors
         # ---------------------------------------------
         X_edges = np.arange(idx_xmin - 0.5, idx_xmax + 1.5, 1).astype(self.DT)
         Y_edges = np.arange(idx_ymin - 0.5, idx_ymax + 1.5, 1).astype(self.DT)
         
-        #--------------------
-        #X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
-        #Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT) 
-
         samples = []
         coord1samples = []
         coord2samples = []
@@ -421,10 +455,10 @@ class mapmaking(object):
             #------
             if n !=0: sigma = 1/n**2
             else: sigma = 1
-            #val *= sigma
-            samples.append(val)
-            coord1samples.append(pix[0])
-            coord2samples.append(pix[1])
+            val *= sigma
+            if(coadd): samples.append(val)
+            if(coadd): coord1samples.append(pix[0])
+            if(coadd): coord2samples.append(pix[1])
             hits, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges) )
             flux, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges), weights=val )
             flux /= hits
@@ -450,6 +484,8 @@ class mapmaking(object):
             the map to be convolved
         Returns
         -------
+        convolved_map: 2d array
+            the convolved map
         '''
 
         kernel = Gaussian2DKernel(x_stddev=std)

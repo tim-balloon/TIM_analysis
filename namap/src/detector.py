@@ -17,7 +17,12 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, detlist, det_offsets, fs, cutoff, polynomialorder, despike, sigma, prominence, sigma_clipping, low_thresh, high_thresh, DT):
+    def __init__(self, data, detlist, det_offsets, fs, 
+                 cutoff, 
+                 polynomialorder, 
+                 despike, sigma, prominence, 
+                 sigma_clipping, low_thresh, high_thresh,
+                 DT):
         """
         create an instance of the class to clean the detector TODs.
         Parameters
@@ -30,13 +35,14 @@ class data_cleaned():
             cutoff frequency of the highpass filter     
         polynomialorder: int
             polynomial order for fitting
+        despike: bool
+            if True despikes the data using scipy.signal
         sigma: float
-            height in std value to look for spikes
+            height in std value to look for spikes 
         prominence: float
             prominence in std value to look for spikes
-        despike: bool
-            if True despikes the data 
-        
+        DT: type
+        Float precision required
         Returns
         -------
         """
@@ -78,11 +84,10 @@ class data_cleaned():
             accepted_offsets_list = self.det_offsets
 
         for i, (data, det_name, offset) in enumerate(zip(self.data, self.detlist, self.det_offsets)):
-            det_data = detector_trend(data)
+            det_data = detector_trend(data, self.DT)
 
             if self.polynomialorder != 0: 
                 residual_data = det_data.fit_residual(order=self.polynomialorder)
-                residual_data = self.DT(residual_data)
             else: residual_data = data.copy()
 
             if self.despike:
@@ -101,11 +106,14 @@ class data_cleaned():
                     accepted_offsets_list.append(offset)
                     accepted_detectors_list.append(det_name)
                     data_clipped = data_despiked
+
             else: data_clipped = data_despiked.copy()
             
             if self.cutoff != 0:
+
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs, self.DT)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
+                
             else: cleaned_data.append( data_despiked )
         
         return cleaned_data, accepted_detectors_list, np.asarray(accepted_offsets_list), rejected_detetectors_list
@@ -470,7 +478,7 @@ class detector_trend():
     -------
     '''
 
-    def __init__(self, data):
+    def __init__(self, data, DT):
         '''
         create an instance of the class to detrend a TOD
         Parameters
@@ -482,6 +490,7 @@ class detector_trend():
         '''
 
         self.data = data
+        self.DT = DT
 
     def polyfit(self, edge = 0, order=6):
 
@@ -506,9 +515,10 @@ class detector_trend():
         index_exclude = np.array([], dtype=int)
 
         if np.size(edge) == 1:
-            p = np.polyfit(x, np.float32(self.data), order)
+            if(self.DT == np.float16): p = np.polyfit(x, np.float32(self.data), order)
+            else: p = np.polyfit(x, self.data, order)
             poly = np.poly1d(p)
-            y_fin = poly(x)
+            y_fin = poly(x).astype(self.DT)
 
         return y_fin, index_exclude.astype(int)
     
@@ -527,7 +537,6 @@ class detector_trend():
             the residual between the timestream and the fit of the timestream. 
         -------
         '''
-
         polyres = self.polyfit(edge=edge, order=order)
         fitteddata = polyres[0]
         index = polyres[1]
@@ -540,7 +549,7 @@ class detector_trend():
 class sigma_clipping():
 
     '''
-    Class to measure the variance in a timestream
+    Class to measure the variance in a timestream, and remove it from further analysis if its variance is too low or too high. 
     Parameters
     ----------
     Returns
@@ -573,7 +582,7 @@ class sigma_clipping():
         Returns
         -------
         reject: bool
-            if the timestream variance is inside the thresholds or not. 
+            If True, the timestream variance is inside the thresholds
         '''        
 
         # mean in sliding window
@@ -639,7 +648,7 @@ class kidsutils():
         '''
 
         phibar = np.arctan2(np.mean(Q),np.mean(I))
-        I_rot, Q_rot = self.rotatePhase(I, Q)
+        #I_rot, Q_rot = self.rotatePhase(I, Q)
         phi = np.arctan2(Q,I)
 
         return phi-phibar
@@ -663,6 +672,7 @@ class kidsutils():
 
         return np.sqrt(I**2+Q**2 )
 
+    """
     def interpolation_roach(self, data, bins, sampling, DT, IT):
 
         '''
@@ -674,14 +684,14 @@ class kidsutils():
         Returns
         -------
         '''
-        """
+        '''
         start = np.append(0, np.cumsum(bins[:-1]))
         end = np.cumsum(bins)
         ln = np.linspace(start, end-1, int(sampling))
         idx = np.reshape(np.transpose(ln), np.size(ln))
         idx_plus = np.append(idx[:-1]+1, idx[-1])
         return (data[idx_plus.astype(int)]-data[idx.astype(int)])*(idx-idx.astype(int))+data[idx.astype(int)]
-        """
+        '''
         # Ensure bins are in DT
         bins = np.array(bins, dtype=DT)
         
@@ -706,7 +716,9 @@ class kidsutils():
         result = (data[idx_plus.astype(IT)] - data[idx_int.astype(IT)]) * (idx - idx_int) + data[idx_int.astype(IT)]
 
         return result.astype(DT)
-     
+    """
+
+    """
     def det_time(self, path, roach_number, frames, ctime_start, ctime_end, sampling):
         '''
         get the time timestreams. 
@@ -756,15 +768,14 @@ class kidsutils():
             ctime_roach_renormed.append(ctime_roach)
 
         return np.asarray(ctime_roach_renormed), np.asarray(bins_list)
-    
-import numpy as np
+    """
 
 class AntiAliasingFilter():
     """
-    NumPy-only anti-aliasing filter for downsampling TODs.
+    Anti-aliasing filter for downsampling TODs.
     """
 
-    def __init__(self, fs_in, fs_out, fc=None, numtaps=257, window='hann'):
+    def __init__(self, fs_in, fs_out, DT, fc=None, numtaps=257, window='hann'):
         """
         Parameters
         ----------
@@ -778,17 +789,26 @@ class AntiAliasingFilter():
             Length of FIR filter (odd recommended)
         window : str
             'hann' or 'hamming'
+        Returns
+        ----------
         """
         self.fs_in = fs_in
         self.fs_out = fs_out
         self.fc = fc if fc is not None else 0.45 * fs_out
         self.numtaps = numtaps
         self.window = window
+        self.DT=DT
 
         self.h = self._design_filter()
 
     def _design_filter(self):
-        """Design linear-phase FIR low-pass filter"""
+        """
+        Design linear-phase FIR low-pass filter
+        Parameters
+        ----------
+        Returns
+        ----------
+        """
         n = np.arange(self.numtaps) - (self.numtaps - 1) / 2
 
         h = 2 * self.fc / self.fs_in * np.sinc(2 * self.fc * n / self.fs_in)
@@ -806,20 +826,50 @@ class AntiAliasingFilter():
         return h
 
     def filter(self, x):
-        """Apply anti-aliasing filter"""
-        return np.convolve(x, self.h, mode='same')
+        """
+        Apply anti-aliasing filter
+        Parameters
+        ----------
+        x: 1D array
+            the detector data to be filtered
+        Returns
+        ----------
+        filtered: 1D array
+            the low-pass filtered data
+        """
+        filtered = np.convolve(x, self.h, mode='same').astype(self.DT)
+        return filtered
 
     def downsample(self, x):
         """
         Downsample filtered signal.
         Uses nearest-neighbor time picking (safe after LPF).
+        Parameters
+        ----------
+        x: 1D array
+            the data to be decimated
+        Returns
+        ----------
+        decimated_data: 1D array
+            the downsampled data
         """
         ratio = self.fs_in / self.fs_out
         n_out = int(len(x) / ratio)
         idx = (np.arange(n_out) * ratio).astype(int)
-        return x[idx]
+        decimated_data = x[idx]
+        return decimated_data
 
     def process(self, x):
-        """Filter + downsample"""
+        """
+        Filter + downsample
+        Parameters
+        ----------
+        x: 1D array
+            the detector data to be filtered
+        Returns
+        ----------
+        filtered: 1D array
+            the low-pass filtered data
+        """
         x_filt = self.filter(x)
         return self.downsample(x_filt)
