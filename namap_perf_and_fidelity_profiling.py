@@ -1,22 +1,26 @@
 import time
 import tracemalloc
-import pickle
 import cProfile
 import pstats
 import matplotlib.pyplot as plt
-import sysconfig, sys, site, os, io, copy
+import sysconfig, sys, site, os, io, copy, glob, pickle, psutil, platform
 from astropy.io import fits
-import platform
-import psutil
 from unittest import mock
-import pickle
 from collections import namedtuple
-import glob
 from pathlib import Path
 import scipy.constants as cst
 import numpy as np
 import astropy.table as tb
 from matplotlib.pyplot import cm
+
+#--------------------------------------------------------------
+# --- Intel Celeron 4305UE Specs ---
+SIM_CPU = "Intel(R) Celeron(R) 4305UE @ 2.00GHz"
+SIM_CORES = 2
+SIM_THREADS = 2
+SIM_MEMORY_GB = 64 # realistic config (max supported = 64 GB)
+SIM_MEMORY_BYTES = SIM_MEMORY_GB * 1024**3
+#--------------------------------------------------------------
 
 DESKTOP = Path.home() / "/home/mvancuyck/Desktop/TIM_analysis/"
 
@@ -29,72 +33,815 @@ from hitmap_1detector import *
 from gen_detectors_arrays import *
 import namap.src.loaddata as ld
 import namap.src.detector as det
-import namap.src.map_power_spectrum as aps
+import namap.src.psd_analysis as aps
 
+def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profiling_vs_nb_bands=True, load_directly = False):
+
+    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
+    else: 
+        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
+        else: results = {}
+
+    if(profiling_vs_tod_time):
+
+            key = 'profiling vs tod time'
+            results.setdefault(key, {})
+
+            results[key]["t_int"] = t_int_list
+            map_compression_list = ('coadd.fits','coadd.fits.gz')
+
+            for precision in precision_list: 
+
+                results[key].setdefault(precision, {})
+
+                for map_compression in map_compression_list:
+                    
+                    results[key][precision].setdefault(map_compression, {}) 
+                    results[key][precision][map_compression]['peak memory [MB]'] = []
+                    results[key][precision][map_compression]['time [s]'] = []
+                    results[key][precision][map_compression]['output size [MB]'] = []
+
+                    for t in results[key]["t_int"]: #Nbdets 51
+
+                        P_namap['cdelt'] = 40/3600, 40/3600
+                        P_namap['frequencies'] = (715.0,) #GHz        
+                        P_namap['precision'] = precision                        
+                        P_namap['num_frames']  = int(t*60) #integration time in seconds to be loaded. 
+                        P_namap['first_frame'] = 0 #Starting time in second to loaded
+                        P_namap['output_map'] = P['output_path']+map_compression
+                        P_namap['coadd'] = True
+                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['remove_turnarounds'] = True
+                        P_namap['downsample_frequency'] = 100
+
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        namap_main(P_namap)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
+                       
+                        if os.path.exists(P_namap['output_map']): file_size_mb = os.path.getsize(P_namap['output_map'] ) / 1e6
+                        else: file_size_mb = float('nan')  
+
+                        print(f"time {t}min| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+
+                        # Store results
+                        results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision][map_compression]['time [s]'].append(timing)
+                        results[key][precision][map_compression]['output size [MB]'].append(file_size_mb)
+
+    if(profiling_vs_nb_bands):
+
+        key = 'profiling vs nb bands'
+        results.setdefault(key, {})
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+            for map_compression in ('coadd.fits','coadd.fits.gz'):
+
+                results[key][precision].setdefault(map_compression, {})
+                results[key][precision][map_compression]['peak memory [MB]'] = []
+                results[key][precision][map_compression]['time [s]'] = []
+                results[key][precision][map_compression]['output size [MB]'] = []
+
+                results[key]["nb dets"] = []
+
+                for nband in nb_bands:
+                    for npix in nb_pixels:
+                        val = int(nband * npix)
+                        if val in results[key]["nb dets"]: continue
+                                    
+                        # Skip if val is smaller than max so far
+                        if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+                        results[key]["nb dets"].append(val)
+
+                        freq_list = 715.0 + 4.0 * np.arange(nband)
+                        P_namap['cdelt'] = 40/3600, 40/3600
+                        P_namap['frequencies'] = freq_list     
+                        P_namap['precision'] = precision                        
+                        P_namap['num_frames']  = int(5*60) #integration time in seconds to be loaded. 
+                        P_namap['first_frame'] = 0 #Starting time in second to loaded
+                        P_namap['output_map'] = P['output_path']+map_compression
+                        P_namap['coadd'] = True
+                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['remove_turnarounds'] = True
+                        P_namap['downsample_frequency'] = 100
+                        print('')
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        namap_main(P_namap, npix)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
+
+                        # Measure output file size (adapt this path!)
+                        if os.path.exists(P_namap['output_map'] ): file_size_mb = os.path.getsize(P_namap['output_map'] ) / 1e6
+                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                        print(f"Nb bands {nband*npix}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print('')
+
+                        # Store results
+                        results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision][map_compression]['time [s]'].append(timing)
+                        results[key][precision][map_compression]['output size [MB]'].append(file_size_mb)
+
+    with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
+    
+    return 0
+
+def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profiling_vs_nb_bands=True, load_directly=False):
+
+    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
+    else: 
+        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
+        else: results = {}
+
+    if(profiling_vs_tod_time):
+
+        key = 'profiling vs tod time'
+        results.setdefault(key, {})
+
+        results[key]["t_int"] = t_int_list
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+
+            for map_compression in ('individual.fits.gz', ): #'individual.fits'
+                
+                results[key][precision].setdefault(map_compression, {})
+                results[key][precision][map_compression]['peak memory [MB]'] = []
+                results[key][precision][map_compression]['time [s]'] = []
+                results[key][precision][map_compression]['output size [MB]'] = []
+
+                for t in results[key]["t_int"]:
+                    
+                    P_namap['cdelt'] = 40/3600, 40/3600
+                    P_namap['frequencies'] = (715.0,) #GHz       
+                    P_namap['precision'] = precision                        
+                    P_namap['num_frames']  = t * 60 #seconds 
+                    P_namap['first_frame'] = 0 #Starting time in second to loaded
+                    P_namap['output_map'] = P['output_path']+map_compression
+                    P_namap['coadd'] = False
+                    P_namap['save_downsampled_TODS'] = False
+
+                    #------------------------------------------------------
+                    tracemalloc.start()
+                    start = time.time()
+                    namap_main(P_namap)
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    end = time.time()
+                    timing = end - start
+                    #------------------------------------------------------
+
+                    # Store results
+                    results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
+                    results[key][precision][map_compression]['time [s]'].append(timing)
+
+                    # Path to your files (adjust if needed)
+                    folder = P['output_path']  # current directory
+                    filename = map_compression
+                    name_before_fits = filename.rsplit('.fits', 1)[0]
+                    fits_and_after = filename[filename.find('.fits'):]  
+                    pattern = f'{name_before_fits}_*{fits_and_after}'
+
+                    # Get all matching files
+                    files = glob.glob(os.path.join(folder, pattern))
+                    # Sum their sizes in bytes
+                    total_size_bytes = sum(os.path.getsize(f) for f in files)
+                    # Optionally, convert to MB
+                    total_size_mb = total_size_bytes / (1024**2)
+                    results[key][precision][map_compression]['output size [MB]'].append(total_size_mb)
+                    print(f"time {t}min| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
+
+                    # Delete them
+                    for f in files:
+                        try:
+                            os.remove(f)
+                        except OSError as e:
+                            print(f"Error deleting {f}: {e}")
+
+    if(profiling_vs_nb_bands):
+
+        key = 'profiling vs nb bands'
+        results.setdefault(key, {})
+
+        for precision in precision_list: 
+                results[key].setdefault(precision, {})
+
+                for map_compression in ('individual.fits.gz',): #'individual.fits',
+
+                    results[key][precision].setdefault(map_compression, {})
+                    results[key][precision][map_compression]['peak memory [MB]'] = []
+                    results[key][precision][map_compression]['time [s]'] = []
+                    results[key][precision][map_compression]['output size [MB]'] = []
+
+                    results[key]["nb dets"] = []
+
+                    for nband in nb_bands:
+                        for npix in nb_pixels:
+                            val = int(nband * npix)
+                            if val in results[key]["nb dets"]: continue         
+                            # Skip if val is smaller than max so far
+                            if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+                            results[key]["nb dets"].append(val)
+                            freq_list = 715.0 + 4.0 * np.arange(nband)
+
+                            P_namap['cdelt'] = 40/3600, 40/3600
+                            P_namap['frequencies'] = freq_list    
+                            P_namap['precision'] = precision                        
+                            P_namap['num_frames']  = 5 * 60 #seconds 
+                            P_namap['first_frame'] = 0 #Starting time in second to loaded
+                            P_namap['output_map'] = P['output_path']+map_compression
+                            P_namap['coadd'] = False
+                            P_namap['save_downsampled_TODS'] = False
+
+                            #------------------------------------------------------
+                            tracemalloc.start()
+                            start = time.time()
+                            namap_main(P_namap, npix)
+                            current, peak = tracemalloc.get_traced_memory()
+                            tracemalloc.stop()
+                            end = time.time()
+                            timing = end - start
+                            #------------------------------------------------------
+
+                            # Store results
+                            results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
+                            results[key][precision][map_compression]['time [s]'].append(timing)
+
+                            folder = P['output_path']  # current directory
+                            filename = map_compression
+                            name_before_fits = filename.rsplit('.fits', 1)[0]
+                            fits_and_after = filename[filename.find('.fits'):]  
+                            pattern = f'{name_before_fits}_*{fits_and_after}'
+
+                            # Get all matching files
+                            files = glob.glob(os.path.join(folder, pattern))
+                            # Sum their sizes in bytes
+                            total_size_bytes = sum(os.path.getsize(f) for f in files)
+                            # Optionally, convert to MB
+                            total_size_mb = total_size_bytes / (1024**2)
+                            results[key][precision][map_compression]['output size [MB]'].append(total_size_mb)
+                            print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
+
+                            # Delete them
+                            for f in files:
+                                try:
+                                    os.remove(f)
+                                except OSError as e:
+                                    print(f"Error deleting {f}: {e}")
+
+    with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
+
+    return 0
+
+def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
+
+    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
+    else: 
+        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
+        else: results = {}
+
+    if(profiling_vs_tod_time):
+
+        key = 'profiling vs tod time'
+        results.setdefault(key, {})
+
+        results[key]["t_int"] = t_int_list
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+            for compression in ('','.hdf5'):
+            
+                results[key][precision].setdefault(compression, {})
+                results[key][precision][compression]['peak memory [MB]'] = []
+                results[key][precision][compression]['time [s]'] = []
+                results[key][precision][compression]['output size [MB]'] = []
+
+                for t in results[key]["t_int"]:
+
+                    P_namap['cdelt'] = 40/3600, 40/3600
+                    P_namap['frequencies'] = (715.0,) #GHz       
+                    P_namap['precision'] = precision                        
+                    P_namap['num_frames']  = t * 60 #seconds 
+                    P_namap['first_frame'] = 0 #Starting time in second to loaded
+                    P_namap['save_downsampled_TODS'] = True
+                    P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
+                    P_namap['remove_turnarounds'] = False
+
+                    #------------------------------------------------------
+                    tracemalloc.start()
+                    start = time.time()
+                    namap_main(P_namap)
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    end = time.time()
+                    timing = end - start
+                    #------------------------------------------------------
+
+                    # Store results
+                    output_file = P_namap['output_tods'] 
+                    if(compression == ''): output_file += '.zip'
+                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                    results[key][precision][compression]['output size [MB]'].append(file_size_mb)
+                    results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
+                    results[key][precision][compression]['time [s]'].append(timing)
+
+                    try:
+                        os.remove(output_file)
+                    except OSError as e:
+                        print(f"Error deleting {output_file}: {e}")
+
+    if(profiling_vs_nb_bands):
+
+        key = 'profiling vs nb bands'
+        results.setdefault(key, {})
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+            for compression in ('','.hdf5'):
+            
+                results[key][precision].setdefault(compression, {})
+                results[key][precision][compression]['peak memory [MB]'] = []
+                results[key][precision][compression]['time [s]'] = []
+                results[key][precision][compression]['output size [MB]'] = []
+                
+                results[key]["nb dets"] = []
+
+                for nband in nb_bands:
+                    for npix in nb_pixels:
+                        val = int(nband * npix)
+                        if val in results[key]["nb dets"]: continue
+                                    
+                        # Skip if val is smaller than max so far
+                        if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+                        results[key]["nb dets"].append(val)
+                        
+                        freq_list = 715.0 + 4.0 * np.arange(nband)
+
+                        P_namap['cdelt'] = 40/3600, 40/3600
+                        P_namap['frequencies'] = freq_list    
+                        P_namap['precision'] = precision                        
+                        P_namap['num_frames']  = 5 * 60 #seconds 
+                        P_namap['first_frame'] = 0 #Starting time in second to loaded
+                        P_namap['save_downsampled_TODS'] = True
+                        P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
+                        P_namap['remove_turnarounds'] = False
+
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        namap_main(P_namap, npix)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
+
+                        # Measure output file size (adapt this path!)
+                        output_file = P_namap['output_tods']
+                        if(compression == ''): output_file += '.zip'
+                        if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                        print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+
+                        # Store results
+                        results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision][compression]['time [s]'].append(timing)
+                        results[key][precision][compression]['output size [MB]'].append(file_size_mb)
+
+                        try:
+                            os.remove(output_file)
+                        except OSError as e:
+                            print(f"Error deleting {output_file}: {e}")
+
+        with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
+        return 0
+
+def profiling_raw_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
+
+    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
+    else: 
+        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
+        else: results = {}
+
+    if(profiling_vs_tod_time):
+
+        key = 'profiling vs tod time'
+        results.setdefault(key, {})
+
+        results[key]["t_int"] = t_int_list
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+            for compression, frequency in zip(('100Hz','no_compression'), (100,None)):
+            
+                results[key][precision].setdefault(compression, {})
+                results[key][precision][compression]['peak memory [MB]'] = []
+                results[key][precision][compression]['time [s]'] = []
+                results[key][precision][compression]['output size [MB]'] = []
+
+                for t in results[key]["t_int"]:
+
+                    P_namap['cdelt'] = 40/3600, 40/3600
+                    P_namap['frequencies'] = (715.0,) #GHz       
+                    P_namap['precision'] = precision                        
+                    P_namap['num_frames']  = t * 60 #seconds 
+                    P_namap['first_frame'] = 0 #Starting time in second to loaded
+                    P_namap['output_tods'] = P['output_path']+f'tods_{precision}_{compression}'
+                    P_namap['remove_turnarounds'] = False
+                    P_namap['downsample_frequency'] = frequency
+                    P_namap['save_raw_TODS'] = True
+
+                    #------------------------------------------------------
+                    tracemalloc.start()
+                    start = time.time()
+                    namap_main(P_namap)
+                    current, peak = tracemalloc.get_traced_memory()
+                    tracemalloc.stop()
+                    end = time.time()
+                    timing = end - start
+                    #------------------------------------------------------
+
+                    # Store results
+                    output_file = P_namap['output_tods'] + '.zip'
+                    
+                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                    results[key][precision][compression]['output size [MB]'].append(file_size_mb)
+                    results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
+                    results[key][precision][compression]['time [s]'].append(timing)
+
+                    try:
+                        os.remove(output_file)
+                    except OSError as e:
+                        print(f"Error deleting {output_file}: {e}")
+
+    if(profiling_vs_nb_bands):
+
+        key = 'profiling vs nb bands'
+        results.setdefault(key, {})
+
+        for precision in precision_list: 
+
+            results[key].setdefault(precision, {})
+
+            for compression, frequency in zip(('100Hz','no_compression'), (100,None)):
+            
+                results[key][precision].setdefault(compression, {})
+                results[key][precision][compression]['peak memory [MB]'] = []
+                results[key][precision][compression]['time [s]'] = []
+                results[key][precision][compression]['output size [MB]'] = []
+                
+                results[key]["nb dets"] = []
+
+                for nband in nb_bands:
+                    for npix in nb_pixels:
+                        val = int(nband * npix)
+                        if val in results[key]["nb dets"]: continue
+                                    
+                        # Skip if val is smaller than max so far
+                        if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+                        results[key]["nb dets"].append(val)
+                        
+                        freq_list = 715.0 + 4.0 * np.arange(nband)
+
+                        P_namap['cdelt'] = 40/3600, 40/3600
+                        P_namap['frequencies'] = freq_list    
+                        P_namap['precision'] = precision                        
+                        P_namap['num_frames']  = 5 * 60 #seconds 
+                        P_namap['first_frame'] = 0 #Starting time in second to loaded
+                        P_namap['save_downsampled_TODS'] = True
+                        P_namap['output_tods'] = P['output_path']+f'tods_{precision}'
+                        P_namap['remove_turnarounds'] = False
+                        P_namap['downsample_frequency'] = frequency
+                        P_namap['save_raw_TODS'] = True
+
+                        #------------------------------------------------------
+                        tracemalloc.start()
+                        start = time.time()
+                        namap_main(P_namap, npix)
+                        current, peak = tracemalloc.get_traced_memory()
+                        tracemalloc.stop()
+                        end = time.time()
+                        timing = end - start
+                        #------------------------------------------------------
+
+                        # Measure output file size (adapt this path!)
+                        output_file = P_namap['output_tods'] + '.zip'
+                        if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
+
+                        print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+
+                        # Store results
+                        results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
+                        results[key][precision][compression]['time [s]'].append(timing)
+                        results[key][precision][compression]['output size [MB]'].append(file_size_mb)
+
+                        try:
+                            os.remove(output_file)
+                        except OSError as e:
+                            print(f"Error deleting {output_file}: {e}")
+
+        with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
+        return 0
+
+def profiling_fcts(dict_file_path, load_directly = False):
+
+    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
+    else: 
+        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
+        else: results = {}
+
+    key = 'profiling fcts'
+    results.setdefault(key, {})
+
+    results[key]["t_int"] = 5
+    results[key]['#Nbdets'] = 51
+    map_compression = 'coadd.fits'
+    nrep = 20
+
+    for precision in precision_list: 
+
+        results[key].setdefault(precision, {})
+
+        P_namap['cdelt'] = 40/3600, 40/3600
+        P_namap['frequencies'] = (715.0,) #GHz        
+        P_namap['precision'] = precision                        
+        P_namap['num_frames']  = int(results[key]["t_int"]*60) #integration time in seconds to be loaded. 
+        P_namap['first_frame'] = 0 #Starting time in second to loaded
+        P_namap['output_map'] = P['output_path']+map_compression
+        P_namap['coadd'] = True
+        P_namap['save_downsampled_TODS'] = False
+        P_namap['remove_turnarounds'] = True
+        P_namap['downsample_frequency'] = 100
+
+        results[key][precision]['peak memory [MB] loaddata'] = np.zeros(nrep)
+        results[key][precision]['time [s] loaddata'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] clean'] = np.zeros(nrep)
+        results[key][precision]['time [s] clean'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] sync'] = np.zeros(nrep)
+        results[key][precision]['time [s] sync'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] turns'] = np.zeros(nrep)
+        results[key][precision]['time [s] turns'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] corr'] = np.zeros(nrep)
+        results[key][precision]['time [s] corr'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] maps'] = np.zeros(nrep)
+        results[key][precision]['time [s] maps'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] savemap'] = np.zeros(nrep)
+        results[key][precision]['time [s] savemap'] = np.zeros(nrep)
+        results[key][precision]['peak memory [MB] savetods'] = np.zeros(nrep)
+        results[key][precision]['time [s] savetods'] = np.zeros(nrep)
+
+        for i in range(nrep):
+            results[key][precision][map_compression]['peak memory [MB] loaddata'][i],results[key][precision][map_compression]['time [s] loaddata'][i],results[key][precision][map_compression]['peak memory [MB] clean'][i], results[key][precision][map_compression]['time [s] clean'][i], results[key][precision][map_compression]['peak memory [MB] sync'][i], results[key][precision][map_compression]['time [s] sync'][i], results[key][precision][map_compression]['peak memory [MB] turns'][i], results[key][precision][map_compression]['time [s] turns'][i], results[key][precision][map_compression]['peak memory [MB] corr'][i], results[key][precision][map_compression]['time [s] corr'][i], results[key][precision][map_compression]['peak memory [MB] maps'][i], results[key][precision][map_compression]['time [s] maps'][i], results[key][precision][map_compression]['peak memory [MB] savemap'][i], results[key][precision][map_compression]['time [s] savemap'][i] = namap_main(P_namap)
+
+        P_namap['save_downsampled_TODS'] = True
+        P_namap['output_tods'] = 'tods'
+
+        for i in range(nrep):
+            _,_,_, _, _, _, _, _, results[key][precision][map_compression]['peak memory [MB] savetods'][i], results[key][precision][map_compression]['time [s] savetods'][i] = namap_main(P_namap)
+
+        results[key][precision]['peak memory [MB] loaddata mean'] = np.mean(results[key][precision]['peak memory [MB] loaddata'])
+        results[key][precision]['peak memory [MB] loaddata std'] = np.std(results[key][precision]['peak memory [MB] loaddata'])
+        results[key][precision]['time [s] loaddata mean'] = np.mean(results[key][precision]['time [s] loaddata'])
+        results[key][precision]['time [s] loaddata std'] = np.std(results[key][precision]['time [s] loaddata'])
+        results[key][precision]['peak memory [MB] clean mean'] = np.mean(results[key][precision]['peak memory [MB] clean'])
+        results[key][precision]['peak memory [MB] clean std'] = np.std(results[key][precision]['peak memory [MB] clean'])
+        results[key][precision]['time [s] clean mean'] = np.mean(results[key][precision]['time [s] clean'])
+        results[key][precision]['time [s] clean std'] = np.std(results[key][precision]['time [s] clean'])
+        results[key][precision]['peak memory [MB] sync mean'] = np.mean(results[key][precision]['peak memory [MB] sync'])
+        results[key][precision]['peak memory [MB] sync std'] = np.std(results[key][precision]['peak memory [MB] sync'])
+        results[key][precision]['time [s] sync mean'] = np.mean(results[key][precision]['time [s] sync'])
+        results[key][precision]['time [s] sync std'] = np.std(results[key][precision]['time [s] sync'])
+        results[key][precision]['peak memory [MB] turns mean'] = np.mean(results[key][precision]['peak memory [MB] turns'])
+        results[key][precision]['peak memory [MB] turns std'] = np.std(results[key][precision]['peak memory [MB] turns'])
+        results[key][precision]['time [s] turns mean'] = np.mean(results[key][precision]['time [s] turns'])
+        results[key][precision]['time [s] turns std'] = np.std(results[key][precision]['time [s] turns'])
+        results[key][precision]['peak memory [MB] corr mean'] = np.mean(results[key][precision]['peak memory [MB] corr'])
+        results[key][precision]['peak memory [MB] corr std'] = np.std(results[key][precision]['peak memory [MB] corr'])
+        results[key][precision]['time [s] corr mean'] = np.mean(results[key][precision]['time [s] corr'])
+        results[key][precision]['time [s] corr std'] = np.std(results[key][precision]['time [s] corr'])
+        results[key][precision]['peak memory [MB] maps mean'] = np.mean(results[key][precision]['peak memory [MB] maps'])
+        results[key][precision]['peak memory [MB] maps std'] = np.std(results[key][precision]['peak memory [MB] maps'])
+        results[key][precision]['time [s] maps mean'] = np.mean(results[key][precision]['time [s] maps'])
+        results[key][precision]['time [s] maps std'] = np.std(results[key][precision]['time [s] maps'])
+        results[key][precision]['peak memory [MB] savemap mean'] = np.mean(results[key][precision]['peak memory [MB] savemap'])
+        results[key][precision]['peak memory [MB] savemap std'] = np.std(results[key][precision]['peak memory [MB] savemap'])
+        results[key][precision]['time [s] savemap mean'] = np.mean(results[key][precision]['time [s] savemap'])
+        results[key][precision]['time [s] savemap std'] = np.std(results[key][precision]['time [s] savemap'])
+        results[key][precision]['peak memory [MB] savetods mean'] = np.mean(results[key][precision]['peak memory [MB] savetods'])
+        results[key][precision]['peak memory [MB] savetods std'] = np.std(results[key][precision]['peak memory [MB] savetods'])
+        results[key][precision]['time [s] savetods mean'] = np.mean(results[key][precision]['time [s] savetods'])
+        results[key][precision]['time [s] savetods std'] = np.std(results[key][precision]['time [s] savetods'])
+
+    with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
+    
+    return 0
 
 def test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file, load_directly = False):
 
-    if(load_directly): dict_tods_fidelity = pickle.load( open(dict_tods_fidelity_file, 'rb'))
+    if(load_directly): dict_maps_fidelity = pickle.load( open(dict_coadded_map_fidelity_file, 'rb'))
     else: 
-        if(os.path.isfile(dict_tods_fidelity_file)): dict_tods_fidelity = pickle.load( open(dict_tods_fidelity_file, 'rb'))
-        else: dict_tods_fidelity = {}
+        if(os.path.isfile(dict_coadded_map_fidelity_file)): dict_maps_fidelity = pickle.load( open(dict_coadded_map_fidelity_file, 'rb'))
+        else: dict_maps_fidelity = {}
 
-        dict_tods_fidelity['fft_freq_bounds'] = (freq_min_for_psd, freq_max_for_psd )
+        dict_maps_fidelity['k_bounds'] = (k_min_for_aps, freq_max_for_aps )
 
         for t_int in t_int_list:
 
             T_key = f'T = {t_int:.1f} min'
-            dict_tods_fidelity.setdefault(T_key, {})  
+            dict_maps_fidelity.setdefault(T_key, {})  
 
             for downsample_frequency in downsampled_freq_list:
 
                 df_key = f'downsample_frequency = {downsample_frequency:.1f} Hz'
-                dict_tods_fidelity[T_key].setdefault(df_key, {})  
+                dict_maps_fidelity[T_key].setdefault(df_key, {})  
 
                 for prec in precision_list:
 
-                    dict_tods_fidelity[T_key][df_key].setdefault(prec, {})  
+                    dict_maps_fidelity[T_key][df_key].setdefault(prec, {})  
 
-                    #-------------------------------------------
-                    P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
-                    P_namap['remove_turnarounds'] = True
-                    P_namap['save_downsampled_TODS'] = False
-                    P_namap['downsample_frequency'] = downsample_frequency
-                    P_namap['output_hdf5'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
-                    P_namap['num_frames']  = int(t_int*60+1) #integration time in seconds to be loaded. 
-                    P_namap['first_frame'] = 0 #Starting time in second to loaded
-                    P_namap['precision'] = prec
-                    P_namap['output_map'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{100:.1f}Hz_{prec}_coadd_map.fits' 
+                    for res_value in resolution_list:
 
-                    if(not os.path.isfile(P_namap['output_map'])): 
-                        print('Run Namap to make maps')
-                        print(f'Run Namap on the {t_int}min timestreams.')
-                        namap_main(P_namap)
+                        res_key = f'res={res_value*3600:.2f} arcsecs'
+                        dict_maps_fidelity[T_key][df_key][prec].setdefault(res_key, {})  
+                        #-------------------------------------------
+                        P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
+                        P_namap['remove_turnarounds'] = True
+                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['downsample_frequency'] = downsample_frequency
+                        #P_namap['output_hdf5'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
+                        P_namap['num_frames']  = int(t_int*60+1) #integration time in seconds to be loaded. 
+                        P_namap['first_frame'] = 0 #Starting time in second to loaded
+                        P_namap['precision'] = prec
+                        P_namap['output_map'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{100:.1f}Hz_{prec}_coadd_map_res{res_value*3600:.2f}arcsecs.fits' 
+                        P_namap['cdelt'] = res, res
 
-                    created_map = fits.getdata(P_namap['output_map'])
-                    hdr = fits.getheader(P_namap['output_map'])
+                        if(not os.path.isfile(P_namap['output_map'])): namap_main(P_namap)
 
-                    from astropy.visualization import ZScaleInterval
-                    zscale = ZScaleInterval()
-                    from mpl_toolkits.axes_grid1 import make_axes_locatable
-                    vmin, vmax = zscale.get_limits(created_map)
-                    fig, (ax, axp) = plt.subplots(1,2,figsize=(6,6))
-                    im = ax.imshow(created_map, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                    divider = make_axes_locatable(ax)
-                    cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-                    fig.colorbar(im, cax=cax, label='Amplitude')
+                        created_map = fits.getdata(P_namap['output_map'])
+                        hdr = fits.getheader(P_namap['output_map'])
+                        pk = aps.angular_power_spectrum((created_map,),hdr['CDELT1']*60, delta_k_over_k=delta_k_over_k)
+                        pk_mes, k = pk.p2()
 
-                    pk = aps.angular_power_spectrum(created_map,hdr['CDELT1']*60, delta_k_over_k=0.1)
-                    pk_mes, k = pk.p2()
-                    axp.step(k, pk_mes, where='mid', c='k')
-                    axp.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
-                    axp.set_xlabel('k [$\\rm arcmin^{-1}$]')
-                    axp.set_yscale('log')
-                    axp.set_xscale('log')
-                    fig.tight_layout()
-                    plt.show()
+                        dict_maps_fidelity[T_key][df_key][prec][res_key]['coadd map'] = created_map
+                        dict_maps_fidelity[T_key][df_key][prec][res_key]['hdr'] = hdr
+                        dict_maps_fidelity[T_key][df_key][prec][res_key]['k'] = k
+                        dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes'] = pk_mes[0]
+                        band = (k >= k_min_for_aps) & (k <= freq_max_for_aps)
+                        dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes_avg'] = np.mean(pk_mes[0][band])
 
-                    embed()
+                        pickle.dump(dict_maps_fidelity, open(dict_coadded_map_fidelity_file, 'wb'))
+
+                        #print(T_key,df_key,prec,res_key)
+
+                        if(False):
+
+                            from astropy.visualization import ZScaleInterval
+                            zscale = ZScaleInterval()
+                            from mpl_toolkits.axes_grid1 import make_axes_locatable
+                            vmin, vmax = zscale.get_limits(created_map)
+                            fig, (ax, axp) = plt.subplots(1,2,figsize=(6,6))
+                            im = ax.imshow(created_map, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                            divider = make_axes_locatable(ax)
+                            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                            fig.colorbar(im, cax=cax, label='Amplitude')
+
+                            pk = aps.angular_power_spectrum((created_map,),hdr['CDELT1']*60, delta_k_over_k=delta_k_over_k)
+                            pk_mes, k = pk.p2()
+
+                            axp.step(k, pk_mes[0], where='mid', c='k')
+                            axp.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
+                            axp.set_xlabel('k [$\\rm arcmin^{-1}$]')
+                            axp.set_yscale('log')
+                            axp.set_xscale('log')
+                            fig.tight_layout()
+                        
+
+    
+    #-----------------------------------------------------------------------------------
+
+    BS = 12; plt.rc('font', size=BS); plt.rc('axes', titlesize=BS); plt.rc('axes', labelsize=BS)
+
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(6,3), dpi=200)
+    res_key = 'res=19.94 arcsecs'; prec='float64'
+    for downsample_frequency, c in zip(downsampled_freq_list, cm.rainbow(np.linspace(0.,1,len(downsampled_freq_list)))):
+        df_key = f'downsample_frequency = {downsample_frequency:.1f} Hz'    
+        y_points = []
+        for t_int in t_int_list:
+            T_key = f'T = {t_int:.1f} min'
+            y_points.append(dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes_avg'])
+
+            k = dict_maps_fidelity[T_key][df_key][prec][res_key]['k'] 
+            pk = dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes']
+            ax2.loglog(k, pk, alpha=0.1, c=c)
+
+        ax1.errorbar(t_int_list, y_points, fmt='o', color = c, ecolor=c, label=f'{downsample_frequency:.1f}Hz')
+    ax1.set_xlabel('Integration time [min]')
+    ax1.set_ylabel(f"P(k={dict_maps_fidelity['k_bounds'][0]:.1f}-{dict_maps_fidelity['k_bounds'][1]:.1f}"+"$\\rm arcmin^{-1}$)")
+    ax1.set_yscale('log')
+    ax1.legend(fontsize=BS-4)
+    ax2.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
+    ax2.set_xlabel('k [$\\rm arcmin^{-1}$]')
+    fig.tight_layout()
+
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(6,3), dpi=200)
+    df_key = f'downsample_frequency = {100:.1f} Hz'; res_key = 'res=19.94 arcsecs'
+    for prec,c in zip(precision_list, cm.viridis(np.linspace(0.,1,len(precision_list)))):
+        y_points = []
+        for t_int in t_int_list:
+            T_key = f'T = {t_int:.1f} min'
+            y_points.append(dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes_avg'])
+
+            k = dict_maps_fidelity[T_key][df_key][prec][res_key]['k'] 
+            pk = dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes']
+            ax2.loglog(k, pk, alpha=0.1, c=c)
+
+        ax1.errorbar(t_int_list, y_points, fmt='o', color = c, ecolor=c, label=prec)
+    ax1.set_xlabel('Integration time [min]')
+    ax1.set_ylabel(f"P(k={dict_maps_fidelity['k_bounds'][0]:.1f}-{dict_maps_fidelity['k_bounds'][1]:.1f}"+"$\\rm arcmin^{-1}$)")
+    ax1.set_yscale('log')
+    ax1.legend(fontsize=BS-4)
+    ax2.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
+    ax2.set_xlabel('k [$\\rm arcmin^{-1}$]')
+    fig.tight_layout()
+
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(6,3), dpi=200)
+    df_key = f'downsample_frequency = {100:.1f} Hz'; prec='float64'
+    for res_value, c in zip(resolution_list, cm.viridis(np.linspace(0.,1,len(resolution_list)))):
+        y_points = []
+        res_key = f'res={res_value*3600:.2f} arcsecs'
+        for t_int in t_int_list:
+            T_key = f'T = {t_int:.1f} min'
+            y_points.append(dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes_avg'])
+
+            k = dict_maps_fidelity[T_key][df_key][prec][res_key]['k'] 
+            pk = dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes']
+            ax2.loglog(k, pk, alpha=0.1, c=c)
+        ax1.errorbar(t_int_list, y_points, fmt='o', color = c, ecolor=c, label=f'res={res_value*3600:.2f}arcsecs')
+    ax1.set_xlabel('Integration time [min]')
+    ax1.set_ylabel(f"P(k={dict_maps_fidelity['k_bounds'][0]:.1f}-{dict_maps_fidelity['k_bounds'][1]:.1f}"+" $\\rm arcmin^{-1}$)")
+    ax1.set_yscale('log')
+    ax2.set_ylabel('P(k) [$\\rm Jy^2/sr$]')
+    ax2.set_xlabel('k [$\\rm arcmin^{-1}$]')
+    ax1.legend(fontsize=BS-4)
+    fig.tight_layout()
+
+    plt.show()
+
+
+    
+    """
+    for t_int in t_int_list:
+
+        T_key = f'T = {t_int:.1f} min'
+
+        for downsample_frequency in downsampled_freq_list:
+
+            df_key = f'downsample_frequency = {downsample_frequency:.1f} Hz'
+
+            for prec in precision_list:
+
+                for res_value in resolution_list:
+
+                    res_key = f'res={res_value*3600:.2f} arcsecs'
+                    k = dict_maps_fidelity[T_key][df_key][prec][res_key]['k'] 
+                    pk = dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes']
+                    aps_avg_original = dict_maps_fidelity[T_key][df_key][prec][res_key]['pk_mes_avg']
+                    plt.step(k, pk, where='mid', c='k', alpha=0.1)
+                    plt.plot(2e-1,aps_avg_original, 'ok' )
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.ylabel('P(k) [$\\rm Jy^2/sr$]')
+    plt.xlabel('k [$\\rm arcmin^{-1}$]')    
+    """
+    plt.show()
+
     return 0
 
 def test_namap_tods_fidelity(dict_tods_fidelity_file, load_directly = False):
@@ -317,58 +1064,133 @@ def tod_psd(tod, acq_freq):
 DT = dtype_map['float64']
 IT = int_map['float64']
 
-#------------------------------------------------------
-t_int_list = (5,)#1,2,3,10,15,20,25)# 4, 5, 6, 7, 8, 9, 15, 25) #min
-downsampling_frequency = (100,)#50,150)
-precision_list = ('float64', )#'float32','float16')
-resolution_list = (30,40,50,60) #arcsecs
-#pix_num
-nb_pixels = (1,2,3,5,6,7,8,9,10,20,30,40,50)
-nb_bands = (1,2,3,4,11,21,41,64)
-downsampled_freq_list = (50, 100,150)
+def simulate_celeron_system():
+    """Return mocks for CPU and memory to simulate Intel Celeron 4305UE."""
+    svmem = namedtuple('svmem', [
+        'total', 'available', 'percent', 'used', 'free',
+        'active', 'inactive', 'buffers', 'cached', 'shared', 'slab'
+    ])
+    fake_mem = svmem(
+        total=SIM_MEMORY_BYTES,
+        available=SIM_MEMORY_BYTES,
+        percent=0,
+        used=0,
+        free=SIM_MEMORY_BYTES,
+        active=0,
+        inactive=0,
+        buffers=0,
+        cached=0,
+        shared=0,
+        slab=0
+    )
 
-dict_tods_fidelity_file = 'dict_tods_fidelity.p'
-dict_coadded_map_fidelity_file = 'dict_coadded_map_fidelity.p'
-freq_min_for_psd, freq_max_for_psd = 1,6
-#------------------------------------------------------
+    cpu_mock = mock.patch("os.cpu_count", return_value=SIM_CORES)
+    mem_mock = mock.patch("psutil.virtual_memory", return_value=fake_mem)
+    return cpu_mock, mem_mock
 
-#------------------
-LW_min= 317e-6  # Hz
-D = 2.0             # m
-FWHM = 1.22 * LW_min / D * 180 / np.pi  # degrees
-res = FWHM / 2  
-#------------------
+if __name__ == "__main__":
 
-#----------------------------------------------------------------------------------------
-P = load_params(f'{DESKTOP}/'+'timestream_maker/PAR_files/params_strategy_profiling.par')
-#-----------------------------
-P['nb_channels_per_array'] = 1 #!!
-#P['acquisition_frequency'] = 110
-nbdets = None
-#-----------------------------
-P_namap = load_params(f'{DESKTOP}/'+'namap/PAR_FILES/params_namap_profiling.par')
-P_namap['detector_table'] = P['detectors_name_file']
-P_namap['cdelt'] = res, res
-#crval output_map save_downsampled_TODS output_hdf5
-#----------------------------------------------------------------------------------------
+    # --- Toggle simulation mode ---
+    USE_FAKE_SYSTEM = True  # 🔄 Set False to use your real machine
 
-if(not os.path.isfile( P['detectors_name_file']) ): gen_detectors_main(P)
+    #-----------------------
+    #I: coadded maps
+    perfs_coadded_maps = False
+    #II: individual maps
+    perfs_individual_maps = False
+    #III a TODs 
+    perfs_tods = True
+    #
+    perf_fct = False
+    #III b raw tods
+    perfs_raw_tods = False
+    #IV
+    tod_fidelity = False
+    #V
+    map_fidelity = False
+    #-----------------------
 
-#I) Fidelity tests
+    #------------------
+    LW_min= 317e-6  # Hz
+    D = 2.0             # m
+    FWHM = 1.22 * LW_min / D * 180 / np.pi  # degrees
+    res = FWHM / 2  
+    #------------------
 
-for t_int in t_int_list:
+    #----------------------------------------------------------------------------------------
+    P = load_params(f'{DESKTOP}/'+'timestream_maker/PAR_files/params_strategy_profiling.par')
+    #-----------------------------
+    #P['nb_channels_per_array'] = 64 #!!
+    #P['acquisition_frequency'] = 110
+    #-----------------------------
+    P_namap = load_params(f'{DESKTOP}/'+'namap/PAR_FILES/params_namap_profiling.par')
+    P_namap['detector_table'] = P['detectors_name_file']
+    P_namap['cdelt'] = res, res
+    #----------------------------------------------------------------------------------------
 
-    print(f'Generating {t_int}min timestreams.')
+    #------------------------------------------------------
+    dict_tods_fidelity_file = 'dict_tods_fidelity.p'
+    dict_coadded_map_fidelity_file = 'dict_coadded_map_fidelity.p'
+    dict_coadd_perf = 'namap_perf_profiling_coadded_maps.p'
+    dict_individual_perf = 'namap_perf_profiling_individual_maps.p'
+    dict_tods_perf = 'namap_perf_downsampled_tods.p'
+    dict_tods_raw_perf = 'namap_perf_raw_tods.p'
+    dict_fcts = 'namap_perf_of_fcts.p'
 
-    P['T_duration'] = t_int / 60
-    P['output_name'] = f'TOD_{t_int:.1f}min.hdf5' 
-    P['alt_size'] = 2.5*FWHM
-    P['alt_step'] = FWHM*1/3
+    freq_min_for_psd, freq_max_for_psd = 1,6
+    k_min_for_aps, freq_max_for_aps = 1e-1,3e-1
+    delta_k_over_k = 0.1
 
-    if(not os.path.isfile(P['output_path']+P['output_name'] )):
+    t_int_list = (4, 5, 6, 7, 8, 9,10,15, 25) #min
+    downsampled_freq_list = (100,50,150)
+    precision_list = ('float32', 'float16') #'float64',
+    resolution_list = (res,40/3600,50/3600,60/3600) #deg
+    #pix_num
+    nb_pixels = (1,2,3,5,6,7,8,9,10,20,30,40,50)
+    nb_bands  = (1,2,3,4,11,21, 41,  61,  81, 101, 128)
+    #------------------------------------------------------
+
+    P['output_name'] = f'TOD_25.0min.hdf5' 
+    if(not os.path.isfile(P['output_path']+P['output_name']) ):
+        print(f'Generating {max(t_int_list)}min timestreams.')
+        gen_detectors_main(P)
         main_1det(P)
         main_tod(P)
 
-if(False): test_namap_tods_fidelity(dict_tods_fidelity_file)
-test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file)
+    embed()
+    if USE_FAKE_SYSTEM:
+        print("⚙️  Simulating Intel Celeron 4305UE environment...")
+        os.environ["OMP_NUM_THREADS"] = str(SIM_CORES)  # restrict OpenMP threads
+        os.environ["OPENBLAS_NUM_THREADS"] = str(SIM_CORES)
+        os.environ["MKL_NUM_THREADS"] = str(SIM_CORES)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(SIM_CORES)
+        os.environ["VECLIB_MAXIMUM_THREADS"] = str(SIM_CORES)
 
+        cpu_mock, mem_mock = simulate_celeron_system()
+        with cpu_mock, mem_mock:
+            print("Simulated CPU count:", os.cpu_count())
+            print("Simulated RAM (GB):", psutil.virtual_memory().total / 1024**3)
+            print("Simulated CPU model:", SIM_CPU)
+            print("OpenMP threads limited to:", os.environ["OMP_NUM_THREADS"])
+
+            # Place your performance or profiling code here
+            if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
+            if(perfs_coadded_maps): profiling_coadded_maps(dict_coadd_perf)
+            if(perfs_individual_maps): profiling_individual_maps(dict_individual_perf)
+            if(perfs_tods): profiling_tods(dict_tods_perf)
+            if(perf_fct): profiling_fcts(dict_fcts)
+            if(tod_fidelity): test_namap_tods_fidelity(dict_tods_fidelity_file)
+            if(map_fidelity): test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file)
+    else:
+        print("💻 Using your real system:")
+        print("Real CPU count:", os.cpu_count())
+        print("Real RAM (GB):", psutil.virtual_memory().total / 1024**3)
+        print("Real CPU model:", platform.processor())
+        print("OMP threads (default):", os.environ.get("OMP_NUM_THREADS", "not set"))
+
+        if(perfs_coadded_maps): profiling_coadded_maps('mycomputer_'+dict_coadd_perf)
+        if(perfs_individual_maps): profiling_individual_maps('mycomputer_'+dict_individual_perf)
+        if(perfs_tods): profiling_individual_maps(dict_tods_perf)
+        if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
+        if(tod_fidelity): test_namap_tods_fidelity('mycomputer_'+dict_tods_fidelity_file)
+        if(map_fidelity): test_namap_coadded_map_fidelity('mycomputer_'+dict_coadded_map_fidelity_file)
