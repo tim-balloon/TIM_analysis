@@ -14,7 +14,7 @@ detectors_to_use = None
 frequencies = (715.0,) #GHz
  
 #Chose the data in the time dimension 
-num_frames=25*60+1#integration time in seconds to be loaded. 
+num_frames=60#integration time in seconds to be loaded. 
 first_frame=0 #Starting time in second to loaded
 #----------------------------
 
@@ -103,6 +103,6 @@ std = 0
 
 #--- Output Parameters ---
 output_map =  'coadd.fits' 
-output_tods = 'tods'
+output_tods = 'tods.hdf5'
 beam_output = 'beam.fits'
 #-------------------------
