@@ -12,6 +12,8 @@ import scipy.constants as cst
 import numpy as np
 import astropy.table as tb
 from matplotlib.pyplot import cm
+import pygetdata as gd
+import shutil
 
 #--------------------------------------------------------------
 # --- Intel Celeron 4305UE Specs ---
@@ -310,6 +312,15 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
 
 def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
 
+    def get_dir_size(path):
+        total = 0
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                fp = os.path.join(root, f)
+                if os.path.exists(fp):
+                    total += os.path.getsize(fp)
+        return total
+
     if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
     else: 
         if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
@@ -326,7 +337,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5'):
+            for compression in ('','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -356,18 +367,25 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
                     # Store results
                     output_file = P_namap['output_tods'] 
-                    if(compression == ''): output_file += '.zip'
-                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
+                    if('zip' in compression): output_file += '.zip'
+                    
+                    if os.path.exists(output_file):
+                        if os.path.isfile(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
+                        else: file_size_mb = get_dir_size(output_file) / 1e6
+                    else: file_size_mb = float('nan') 
+                    print(f" time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
 
                     results[key][precision][compression]['output size [MB]'].append(file_size_mb)
                     results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
                     results[key][precision][compression]['time [s]'].append(timing)
 
                     try:
-                        os.remove(output_file)
+                        if os.path.isfile(output_file): os.remove(output_file)
+                        else: shutil.rmtree(output_file)
                     except OSError as e:
                         print(f"Error deleting {output_file}: {e}")
+
+    
 
     if(profiling_vs_nb_bands):
 
@@ -378,7 +396,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5'):
+            for compression in ('','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -394,6 +412,10 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                                     
                         # Skip if val is smaller than max so far
                         if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+
+                        if val > 1000 and len(results[key]["nb dets"]) > 0:
+                            if val < 1.3 * max(results[key]["nb dets"]): continue
+
                         results[key]["nb dets"].append(val)
                         
                         freq_list = 715.0 + 4.0 * np.arange(nband)
@@ -419,10 +441,15 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
                         # Measure output file size (adapt this path!)
                         output_file = P_namap['output_tods']
-                        if(compression == ''): output_file += '.zip'
-                        if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
+                        if('zip' in compression): output_file += '.zip'
 
+                        if os.path.exists(output_file):
+                            if os.path.isfile(output_file):
+                                file_size_mb = os.path.getsize(output_file) / 1e6
+                            else:
+                                file_size_mb = get_dir_size(output_file) / 1e6
+                        else: file_size_mb = float('nan') 
+                        
                         print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
 
                         # Store results
@@ -431,7 +458,8 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         results[key][precision][compression]['output size [MB]'].append(file_size_mb)
 
                         try:
-                            os.remove(output_file)
+                            if os.path.isfile(output_file): os.remove(output_file)
+                            else: shutil.rmtree(output_file)
                         except OSError as e:
                             print(f"Error deleting {output_file}: {e}")
 
@@ -1096,7 +1124,7 @@ if __name__ == "__main__":
     #-----------------------
     #I: coadded maps
     perfs_coadded_maps = False
-    #II: individual maps
+    #II: individual mapscoadd
     perfs_individual_maps = False
     #III a TODs 
     perfs_tods = True
@@ -1157,7 +1185,6 @@ if __name__ == "__main__":
         main_1det(P)
         main_tod(P)
 
-    embed()
     if USE_FAKE_SYSTEM:
         print("⚙️  Simulating Intel Celeron 4305UE environment...")
         os.environ["OMP_NUM_THREADS"] = str(SIM_CORES)  # restrict OpenMP threads
@@ -1174,10 +1201,10 @@ if __name__ == "__main__":
             print("OpenMP threads limited to:", os.environ["OMP_NUM_THREADS"])
 
             # Place your performance or profiling code here
-            if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
             if(perfs_coadded_maps): profiling_coadded_maps(dict_coadd_perf)
             if(perfs_individual_maps): profiling_individual_maps(dict_individual_perf)
             if(perfs_tods): profiling_tods(dict_tods_perf)
+            if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
             if(perf_fct): profiling_fcts(dict_fcts)
             if(tod_fidelity): test_namap_tods_fidelity(dict_tods_fidelity_file)
             if(map_fidelity): test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file)
