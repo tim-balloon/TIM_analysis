@@ -9,7 +9,7 @@ import src.detector as det
 import h5py
 import matplotlib.pyplot as plt
 import shutil
-import shutil
+import pygetdata as gd
 
 def load_params(path):
     """
@@ -350,7 +350,7 @@ class data_value():
 
         #-----------------------------------------------------------------------------------------------
         # Decimate the coordinates (and their timestamps) to freq_target.
-        if(spf_ctime > self.freq_target and self.downsample): 
+        if(self.freq_target is not None and spf_ctime > self.freq_target and self.downsample): 
             aaf = det.AntiAliasingFilter( fs_in=spf_ctime, fs_out=self.freq_target, fc=self.freq_target/2-5, DT=self.DT, window='hann')
             ctime= aaf.downsample(ctime)
             self.coord1_data = aaf.downsample(self.coord1_data)
@@ -762,14 +762,14 @@ class save_tods():
             field_name = f"{self.prefix}KID_{kid}"
 
             if field_name not in df.field_list():
-
+                    
                     entry = gd.entry(
                         gd.RAW_ENTRY,
                         field_name,
                         0,
                         parameters={
                             "type": gd.INT8,
-                            "spf": self.det_sample_frame
+                            "spf": int(self.det_sample_frame)
                         }
                     )
                     df.add(entry)
@@ -808,11 +808,10 @@ class save_tods():
                     0,
                     parameters={
                         "type": gd.FLOAT32,
-                        "spf": self.coords_sample_frame
+                        "spf": int(self.coords_sample_frame)
                     }
                 )
                 df.add(entry)
-
             df.putdata(field_name, coords)
             #-----------------------------------------------------------------------------------------------
 
@@ -830,13 +829,17 @@ class save_tods():
 
         df.close()
 
-        shutil.make_archive(
-            base_name=self.tods_path,   # name of the zip file (no .zip)
-            format="zip",
-            root_dir=self.tods_path
-        )
 
+        if('zip' in self.tods_path):
+
+            shutil.make_archive(
+                base_name=self.tods_path,   # name of the zip file (no .zip)
+                format="zip",
+                root_dir=self.tods_path
+            )
+        
         return 0
+    
 
 class frame_zoom_sync():
 
