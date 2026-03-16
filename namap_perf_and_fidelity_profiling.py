@@ -121,6 +121,11 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                                     
                         # Skip if val is smaller than max so far
                         if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+
+
+                        if val > 1000 and len(results[key]["nb dets"]) > 0:
+                            if val < 1.3 * max(results[key]["nb dets"]): continue
+                            
                         results[key]["nb dets"].append(val)
 
                         freq_list = 715.0 + 4.0 * np.arange(nband)
@@ -258,6 +263,10 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             if val in results[key]["nb dets"]: continue         
                             # Skip if val is smaller than max so far
                             if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
+
+                            if val > 1000 and len(results[key]["nb dets"]) > 0:
+                                if val < 1.3 * max(results[key]["nb dets"]): continue
+
                             results[key]["nb dets"].append(val)
                             freq_list = 715.0 + 4.0 * np.arange(nband)
 
@@ -269,6 +278,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             P_namap['output_map'] = P['output_path']+map_compression
                             P_namap['coadd'] = False
                             P_namap['save_downsampled_TODS'] = False
+                            
 
                             #------------------------------------------------------
                             tracemalloc.start()
@@ -1123,11 +1133,11 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = False
+    perfs_coadded_maps = True
     #II: individual mapscoadd
-    perfs_individual_maps = False
+    perfs_individual_maps = True
     #III a TODs 
-    perfs_tods = True
+    perfs_tods = False
     #
     perf_fct = False
     #III b raw tods
