@@ -11,6 +11,7 @@ class maps():
 
     '''
     Wrapper class for the wcs_word class and the mapmaking class.
+
     Parameters
     ----------
     Returns
@@ -20,6 +21,7 @@ class maps():
     def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False,  parang=None, params=None): #noise=1., telcoord=False,
         '''
         Create an instance of maps
+
         Parameters
         ----------
         Returns
@@ -54,6 +56,7 @@ class maps():
 
         '''
         Function to compute the projection and the pixel coordinates
+
         Parameters
         ----------
         Returns
@@ -68,6 +71,7 @@ class maps():
 
         '''
         Function to generate the maps using the pixel coordinates to bin
+
         Parameters
         ----------
         Returns
@@ -86,7 +90,8 @@ class maps():
     def map_plot(self, data_maps, kid_num):
 
         """
-        Plot the map out of the data timestreams.     
+        Plot the map out of the data timestreams.    
+
         Parameters
         ---------- 
         data_maps: list
@@ -244,6 +249,7 @@ class wcs_world():
         '''
         Function for creating a wcs projection and a pixel coordinates 
         from sky/telescope coordinates
+
         Parameters
         ----------
         coord1: list
@@ -259,7 +265,6 @@ class wcs_world():
         w: wcs object
             the world coordinate system object of Astropy
         '''        
-        from astropy import wcs
         w = wcs.WCS(naxis=2)
         w.wcs.crpix = self.crpix #wo.wcs.crpix
         w.wcs.cdelt = self.cdelt
@@ -288,6 +293,7 @@ class mapmaking(object):
 
     '''
     Class to generate the maps. 
+
     Parameters
     ----------
     Returns
@@ -299,6 +305,7 @@ class mapmaking(object):
 
         '''
         Create an instance of the class to generate the maps. 
+
         Parameters
         ----------
         data: list    
@@ -328,6 +335,7 @@ class mapmaking(object):
         
         '''
         Function to create the 2D map
+
         Parameters
         ----------
         coadd: bool
@@ -442,6 +450,7 @@ class mapmaking(object):
 
         '''
         Function to convolve the maps with a gaussian.
+        
         Parameters
         ----------
         std: float

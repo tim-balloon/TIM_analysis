@@ -48,6 +48,7 @@ class data_value():
     
     '''
     Class for reading the values of the TODs (detectors and coordinates) from a .hdf5 
+
     Parameters
     ----------
     Returns
@@ -59,6 +60,7 @@ class data_value():
 
         """
         Init a instance of the class to load the data from a .hdf5 
+
         Parameters
         ----------
         det_path: string
@@ -99,6 +101,7 @@ class data_value():
     def loadspf(file, field, IT):
         """
         Load the sample per frame of a field from a .hdf5 
+
         Parameters
         ----------
         file: string
@@ -122,6 +125,7 @@ class data_value():
     def load_acquisition_frequency(file, field):
         """
         Load the sample per frame of a field from a .hdf5 
+
         Parameters
         ----------
         file: string
@@ -144,6 +148,7 @@ class data_value():
         """
         Load the data from a .hdf5 
         Equivalent to d.getdata()
+
         Parameters
         ----------
         file: string
@@ -177,6 +182,7 @@ class data_value():
     def values(self):
         """      
         Load the coordinates and amplitudes timestreams for a given list of detectors
+
         Parameters
         ----------
         Returns
@@ -262,6 +268,7 @@ class data_value():
 class xsc_offset():
     """
     class to read star camera offset files
+
     Parameters
     ----------
     Returns
@@ -290,6 +297,7 @@ class xsc_offset():
 
         '''
         Function to read a star camera offset file and return the coordinates 
+
         offset
         Parameters
         ----------
@@ -312,6 +320,7 @@ class det_table():
 
     '''
     Class to read detector tables.
+
     Parameters
     ----------
     Returns
@@ -338,6 +347,7 @@ class det_table():
     def loadtable(self):
         '''
         Function to load the detectors info from the dectector file. 
+
         Parameters
         ----------
         Returns
@@ -373,6 +383,7 @@ class compress_tods():
     
     '''
     Class to compress timestreams and save them into an .hdf5 file. 
+
     Parameters
     ----------
     Returns
@@ -447,6 +458,7 @@ class compress_tods():
 
         '''
         Save the timestreams in an .hdf5 
+
         Parameters
         ----------
         Returns
@@ -490,6 +502,7 @@ class compress_tods():
             
         '''
         Save an array in .hdf5
+
         Parameters
         grp_name: str
             name of the group in which to save the array
@@ -550,6 +563,7 @@ class compress_tods():
 
         '''
         function to save an array in 8bits precision. 
+
         Parameters
         array: ndarray
             array to be downsized
@@ -589,6 +603,7 @@ class frame_zoom_sync():
     '''
     This class is designed to extract the frames of interest from the complete timestream and 
     sync detector and coordinates timestream given a different sampling of the two
+
     Parameters
     ----------
     Returns
@@ -603,9 +618,9 @@ class frame_zoom_sync():
         '''
         Create an instance of the class designed to extract the frames of interest from the complete timestream and 
         sync detector and coordinates timestream given a different sampling of the two
+
         Parameters
         ----------
-
         det_path: str
             Path of the detector dirfile
         det_data: list
@@ -662,6 +677,7 @@ class frame_zoom_sync():
 
         '''
         Interpolates an array with a sample per frame to a different sample per frame 
+
         Parameters
         ----------
         X: array
@@ -704,7 +720,8 @@ class frame_zoom_sync():
 
         '''
         Interpolates the coordinates values to compensate for the smaller frequency sampling
-                Parameters
+
+        Parameters
         ----------
         coord1: array
             Coordinates 1 to be interpolated. 
@@ -714,7 +731,6 @@ class frame_zoom_sync():
             Timesteamps of the coordinates
         time_det: int
             Data timestamps to interpolate the coordinates to. 
-
         Returns
         -------
         coord1_int: array

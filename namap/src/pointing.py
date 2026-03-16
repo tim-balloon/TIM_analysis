@@ -9,6 +9,7 @@ class utils(object):
 
     '''
     class to handle conversion between different coodinates sytem 
+
     Parameters
     ----------
     Returns
@@ -19,6 +20,7 @@ class utils(object):
 
         '''
         class to handle conversion between different coodinates sytem 
+
         Parameters
         ----------
         coord1: 1d array
@@ -126,6 +128,7 @@ class utils(object):
         '''
         Return the hour angle in radians given the lst in hours and RA in radians
         i.e. lst needs to be in hours, ra in needs to be in radians 
+
         Parameters
         ----------
         Returns
@@ -142,6 +145,7 @@ class utils(object):
         '''
         Return the right ascension in radians given the lst in hours and the hour angle in radians
         i.e. lst needs to be in hours, hour angle in needs to be in radians 
+
         Parameters
         ----------
         hour_angle: array
@@ -159,6 +163,7 @@ class utils(object):
 
         '''
         Function to convert RA and DEC to AZ and EL
+
         Parameters
         ----------
         Returns
@@ -180,6 +185,7 @@ class utils(object):
 
         '''
         Function to convert AZ and EL to RA and DEC
+
         Parameters
         ----------
         Returns
@@ -231,6 +237,7 @@ class convert_to_telescope(object):
 
     '''
     Class to convert from sky equatorial coordinates to telescope coordinates
+
     Parameters
     ----------
     Returns
@@ -248,6 +255,7 @@ class convert_to_telescope(object):
 
         '''
         This function rotates the coordinates projected on the plane using the parallactic angle
+
         Parameters
         ----------
         Returns
@@ -310,6 +318,7 @@ class apply_offset(object):
     def correction(self):
         """
         Apply offset
+
         Parameters
         ----------
         Returns
@@ -406,6 +415,7 @@ class apply_offset(object):
         
 class compute_offset(object):
     '''
+
     Parameters
     ----------
     Returns
@@ -430,6 +440,7 @@ class compute_offset(object):
 
         '''
         For more information about centroid calculation see Shariff, PhD Thesis, 2016
+
         Parameters
         ----------
         Returns
@@ -467,6 +478,7 @@ class compute_offset(object):
     
     def value(self):
         '''
+        
         Parameters
         ----------
         Returns
