@@ -1,6 +1,6 @@
 #----- TIM arrays information -----
 #Array parameters used to geenrate the TODs and the KIDs file.
-detectors_name_file = '/home/mvancuyck/Desktop/TIM_kid_table.tsv'
+detectors_name_file = 'TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
 nb_pixel_SW = 63 #Number of pixel per frequency band in the SW array.
 offset_SW = 0.0145  #[deg] separation in angle between 2 consecutive pixels for the SW array
@@ -31,12 +31,17 @@ acquisition_frequency_coords = 100
 #----- Sky simulation -----
 #Fits file containing the mock sky out of which we generates the TOD
 path = 'fits_and_hdf5/'
-file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
+file='pySIDES_from_uchuu_TIM_tophat_tile0_1deg_1deg_res40arcsec_dnu4.0GHz_CII_de_Looze_smoothed_MJy_sr.fits'
 output_path = 'fits_and_hdf5/'
-output_name = 'TOD_30min_example.hdf5' 
+# If the output file name ends with .hdf5, the data are saved as hdf5 file. 
+# Else, save the data as dirfile. 
+output_name = 'TOD_1hmin_example'  
+
+#--- saving parameters for .hdf5 ---
 format = '64bytes' #64,32,16
 compression='gzip' #None, 'gzip'
 f_range = 0.6 #spatial extent for the plots. 
+#-----------------------------------
 
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
