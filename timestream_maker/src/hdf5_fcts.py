@@ -1,7 +1,32 @@
 import h5py
 import pandas as pd
+import os
+import numpy as np
+from IPython import embed
 
-def save_scan_path(tod_file, scan_path, spf, names):
+def to8bit_intprecision(array): 
+
+    float_array = np.array(array, dtype=np.float32)
+    # Assuming the original float range is 0.0-1.0
+
+    min = float_array.min()
+    if(min<0): float_array -= min
+
+    max = np.abs(float_array).max()
+    float_array /= max
+
+    # 1. Scale the values to the 0-255 range
+    scaled_array = float_array * 255
+
+    # 2. Clip the values to ensure they are within the 8-bit range (0-255)
+    clipped_array = np.clip(scaled_array, 0, 255)
+
+    # 3. Convert to unsigned 8-bit integer type
+    downsampled_array = clipped_array.astype(np.uint8)
+
+    return downsampled_array, np.float16(min), np.float16(max)
+
+def save_scan_path(tod_file, scan_path, spf, acquisition_frequency, keys,save="64bytes", compression='gzip'):
     """
     Save the scan path in the .hdf5 format. 
 
@@ -13,23 +38,28 @@ def save_scan_path(tod_file, scan_path, spf, names):
         (ra, dec) coordinates timestreams of the center pixel
     spf: int
         the number of samples per frame
-    lower_spf: bool
-        if save the rad dec with an spf lower than the spf of the data, change the name of the group. 
+    keys: list
+        list of names under which the two coordinates are saved
+    
     Returns
     -------
     """ 
     H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(names, (scan_path[:,0],scan_path[:,1]))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+    for i, (name, coord) in enumerate(zip(keys, (scan_path[:,0],scan_path[:,1]))):
+
+        if name in H: del H[name]   # WARNING: deletes entire detector group
+        grp = H.create_group(name)
+
+        if(save=="32bytes"): coord = (coord).astype(np.float32)
+        elif(save=="16bytes"): coord = (coord).astype(np.float16)
+
+        if(compression is not None): grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
+        else: grp.create_dataset('data', data=coord, compression=compression)
         grp.create_dataset('spf', data=spf)
+        grp.create_dataset('acquisition frequency', data=acquisition_frequency)
     H.close() 
 
-def save_time_tod(tod_file, T, spf):
+def save_timestamps(tod_file, T, spf, acquisition_frequency, key, compression='gzip',save="64bytes"):
     '''
     Save the time tod in the .hdf5 format. 
 
@@ -41,21 +71,27 @@ def save_time_tod(tod_file, T, spf):
         time timestreams
     spf: int
         the number of samples per frame
+    key: string
+        name under which the timestamps are saved
     Returns
     -------
     '''
     H = h5py.File(tod_file, "a")
-    namegrp = f'time'
-    if namegrp not in H: grp = H.create_group(namegrp)
-    else:                grp = H[namegrp]
-    if('data' in grp): del grp['data'] 
-    if('spf' in grp): del grp['spf'] 
-    grp.create_dataset('data', data=T, compression='gzip', compression_opts=9)
+
+    if key in H: del H[key]   # WARNING: deletes entire detector group
+    grp = H.create_group(key)
+
+    if(save=="32bytes"): T = (T).astype(np.float32)
+    elif(save=="16bytes"): T = (T).astype(np.float16)
+    if(compression is not None): grp.create_dataset('data', data=T, compression=compression, compression_opts=9)
+    else: grp.create_dataset('data', data=T, compression=compression)
+
     grp.create_dataset('spf', data=spf)
+    grp.create_dataset('acquisition frequency', data=acquisition_frequency)
 
     H.close()
 
-def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf):
+def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, dect_file, F, spf, acquisition_frequency, pointing_paths_to_save, compression='gzip',save="64bytes"):
     """
     Save the tod for one array of TIM detectors in the .hdf5 format. 
 
@@ -73,10 +109,13 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
         horizontal position of each pixel on the array with respect to the center 
     dect_file: string
         the name of the .csv where the info on each pixel is stored. This function add the frequency band info to the .csv file. 
+    F: float
+        the frequency band seen by the detectors [GHz]
     spf: int
         the number of samples per frame
-    F: astropy quantity
-        the frequency band seen by the detectors
+    acquisition_frequency: float
+        the acquisition frequency of the detectors [Hz]
+
 
     Returns
     -------
@@ -85,135 +124,76 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     H = h5py.File(tod_file, "a")
 
     for detector, (offset, shift, name) in enumerate(zip(pixel_offset, pixel_shift, det_names)):
-        
+            
         namegrp = f'kid_{name}_roach'
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        if('pixel_offset_y' in grp): del grp['pixel_offset_y'] 
-        if('pixel_offset_x' in grp): del grp['pixel_offset_x'] 
-        if('frequency' in grp): del grp['frequency'] 
-        grp.create_dataset('data', data=samples[detector,:],
-                            compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-        grp.create_dataset('pixel_offset_y', data=offset)
-        grp.create_dataset('pixel_offset_x', data=shift)
-        grp.create_dataset('frequency', data=F)
+        if namegrp in H: del H[namegrp]   # WARNING: deletes entire detector group
+        grp = H.create_group(namegrp)
+
+        grp.create_dataset('spf', data=np.float16(spf))
+        grp.create_dataset('pixel_offset_y', data=np.float16(offset))
+        grp.create_dataset('pixel_offset_x', data=np.float16(shift))
+        grp.create_dataset('acquisition frequency', data=np.float16(acquisition_frequency))
+
+        scan_path = pointing_paths_to_save[detector]
+        for i, (name_coord, coord) in enumerate(zip(('RA_roach','DEC_roach'), (scan_path[:,0],scan_path[:,1]))):
+            if(compression is not None): 
+                    grp.create_dataset(name_coord, data=coord, compression=compression, compression_opts=9)
+            else: grp.create_dataset(name_coord, data=coord, compression=compression)
+        
+        if(save=="32bytes"):
+            sample = (samples[detector,:]).astype(np.float32)
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression, compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
+            
+
+        elif(save=="16bytes"):
+
+            sample = (samples[detector,:]).astype(np.float16)
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression,compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
+
+
+        else: 
+            sample = samples[detector,:]
+            if(compression is not None): 
+                grp.create_dataset('data', data=sample, compression=compression, compression_opts=9)
+                grp.create_dataset('data_Q', data=sample, compression=compression,compression_opts=9)
+            else: 
+                grp.create_dataset('data', data=sample, compression=compression)
+                grp.create_dataset('data_Q', data=sample, compression=compression)
 
     H.close()
 
-    #Finally, update the detectors file with the central frequency of the detectors
-    det_names_dict = pd.read_csv(dect_file, sep='\t')
-    mask = det_names_dict["Name"].isin(det_names)
-    det_names_dict.loc[mask, 'Frequency'] = F
-    det_names_dict.to_csv(dect_file, sep='\t', index=False)
+    if( not os.path.isfile(dect_file) ):
 
-def save_lst_lat(tod_file, lst, lat, spf):
-    """
-    Save the scan path in the .hdf5 format. 
+        with open(dect_file, 'w') as f:
+            f.write("Name\tEL\tXEL\tFrequency\n")  # Column headers
+            for detector, (offset, shift, name) in enumerate(zip(pixel_offset, pixel_shift, det_names)):
 
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    lst: array
-        the local sideral time timestream, for the center of the array. 
-    lat: array 
-        the latitudetimestream, for the center of the array. 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
+                f.write(f"{name}\t{offset}\t{shift}\t\t\t\t\n")  # Tab-separated values
+    #---------------------------
 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('lst', 'lat'), (lst,lat))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
+    if(True):
 
-def save_az_el(tod_file, azimuths, elevations, spf):
-    """
-    Save the scan path in the .hdf5 format. 
+        # Load detectors file   
+        det_names_dict = pd.read_csv(dect_file, sep="\t")
 
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    azimuths: array
-        the azimuth timestream of the centre of the array
-    elevations: array 
-        the latitude timestream of the centre of the array
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('AZ', 'EL'), (azimuths,elevations))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
+        # Ensure Frequency column exists and is numeric
+        det_names_dict["Frequency"] = pd.to_numeric(det_names_dict["Frequency"], errors="coerce")
 
-def save_telescope_coord(tod_file, x_tel, y_tel, spf):
-    """
-    Save the scan path in the .hdf5 format. 
+        # Build mask
+        mask = det_names_dict["Name"].isin(det_names)
 
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    azimuths: array
-    elevations: array 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('xEL', 'EL'), (x_tel,y_tel))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
+        # Assign F to all matching detectors
+        det_names_dict.loc[mask, "Frequency"] = float(F)
 
-def save_PA(tod_file, PA, spf):
-    """
-    Save the parallactic angle in the .hdf5 format. 
-
-    Parameters
-    ----------
-    tod_file: string 
-        name of the output hdf5 file  
-    PA: array
-        the parallactic angle timestream 
-    spf: int
-        the number of samples per frame
-    Returns
-    -------
-    """ 
-    H = h5py.File(tod_file, "a")
-    for i, (name, coord) in enumerate(zip(('PA',), (PA,))):
-        namegrp = name
-        if namegrp not in H: grp = H.create_group(namegrp)
-        else:                grp = H[namegrp]
-        if('data' in grp): del grp['data'] 
-        if('spf' in grp): del grp['spf'] 
-        grp.create_dataset('data', data=coord, compression='gzip', compression_opts=9)
-        grp.create_dataset('spf', data=spf)
-    H.close() 
+        # Write back TSV (same columns, same order)
+        det_names_dict.to_csv(dect_file, sep="\t", index=False)

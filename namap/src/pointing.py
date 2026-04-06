@@ -328,7 +328,6 @@ class apply_offset(object):
         dec_corrected: array
             corrected array of coordinates two
         """  
-
         if self.ctype.lower() == 'ra and dec':
 
             if(self.input_ctype.lower() == 'ra and dec'): 
@@ -366,7 +365,9 @@ class apply_offset(object):
             return ra_corrected, dec_corrected
         
         elif self.ctype.lower() == 'az and el':
-            if(self.input_ctype.lower() == 'ra and dec'): 
+
+                
+            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
             elif(self.input_ctype.lower() == 'az and el'):
@@ -393,24 +394,22 @@ class apply_offset(object):
 
         else:
 
-            if(self.input_ctype.lower() == 'ra and dec'): 
+            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
                 xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
-            elif(self.input_ctype.lower() == 'az and el'):
+            elif(self.input_ctype == self.input_ctype.lower() == 'az and el'):
                 az, el = self.coord1, self.coord2
                 xEL = np.degrees(np.radians(az)*np.cos(np.radians(el)))
             else: 
                 el = self.coord2
                 xEL = self.coord1 
-                
 
             el_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord1)))
             xel_corrected = np.zeros((int(np.size(self.det_offset)/2), len(self.coord2)))
             for i in range(int(np.size(self.det_offset)/2)):
                 xel_corrected[i, :] = xEL-self.xsc_offset[0]-self.det_offset[i, 0]
                 el_corrected[i, :]  = el+self.xsc_offset[1]+self.det_offset[i, 1]
-
             return xel_corrected,el_corrected
         
 class compute_offset(object):

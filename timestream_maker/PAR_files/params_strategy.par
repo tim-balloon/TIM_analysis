@@ -1,14 +1,13 @@
 #----- TIM arrays information -----
 #Array parameters used to geenrate the TODs and the KIDs file.
-detectors_name_file = 'TIM_kid_table.tsv'
+detectors_name_file = '/home/mvancuyck/Desktop/TIM_kid_table.tsv'
 nb_channels_per_array = 64 #Number of frequency band per array. 
 nb_pixel_SW = 63 #Number of pixel per frequency band in the SW array.
-offset_SW = 0.0148  #[deg] separation in angle between 2 consecutive pixels for the SW array
+offset_SW = 0.0145  #[deg] separation in angle between 2 consecutive pixels for the SW array
 nb_pixel_LW = 51 #Number of pixel per frequency band in the LW array.
-offset_LW = 0.0186 #[deg] separation in angle between 2 consecutive pixels for the LW array
-arrays_separation = 0.3 #[deg]
+offset_LW = 0.0182 #[deg] separation in angle between 2 consecutive pixels for the LW array
+arrays_separation = 0.066 #[deg]
 theta = 0 #[deg] rotation angle of detectors. 
-f_range = 0.6 #spatial extent for the plots. 
 #---------------------------
 
 #----- Targetted field coordinates -----
@@ -24,17 +23,25 @@ longitude =  166.69 #deg
 #---------------------------
 
 #----- Time parameters -----
-T_duration= 1 #hour , duration of the scan
-dt= 2.7777777777777e-6 #hour , defines the aquisition rate. 
+T_duration = 0.5
+acquisition_frequency = 100
+acquisition_frequency_coords = 100
 #---------------------------
 
 #----- Sky simulation -----
 #Fits file containing the mock sky out of which we generates the TOD
 path = 'fits_and_hdf5/'
 file='pySIDES_from_uchuu_tile_0_1.414deg_x_1.414deg_fir_lines_res20arcsec_dnu4.0GHz_full_de_Looze_smoothed_MJy_sr.fits'
+output_path = 'fits_and_hdf5/'
+output_name = 'TOD_30min_example.hdf5' 
+format = '64bytes' #64,32,16
+compression='gzip' #None, 'gzip'
+f_range = 0.6 #spatial extent for the plots. 
+
 whitenoise = False #if True, generates a cube of white noise from the angular power spectrum of the simulation
 res = None #[deg] if res is None, the res is the resolution of the sky fits file
 wcs_dict = 'wcs.p'
+f_range = 1 #deg
 #---------------------------
 
 #----- Scan parameters -----
@@ -43,14 +50,16 @@ wcs_dict = 'wcs.p'
 #Use old=False to get a map compatible with Namap. 
 old=False
 #Choose the scan to use: 
-scan='raster' #'loop', 'raster', 'crisscross'
+scan='raster' #'loop', 'raster', 'crisscross', 'gittering'
+cut_turnarounds = False #Bool to save the turnarounds
 #Loop scan parameters
-az_size=0.65
-alt_size= 0.017
-alt_step=0.00833
+az_size=1
+alt_size= 180/3600*3
+alt_step= 180/3600*1/3
 acc=0.05
-scan_v=0.05
-dt_scan=0.001
+scan_v=0.1
+vertical_steps = 6
+N_scans = 10
 #---------------------------
 
 #----- Noise ---------------
@@ -62,4 +71,9 @@ tod_noise_level = 5 #in Jy/sqrt(seconds),s units. (Fig. 11 of https://arxiv.org/
 fknee = 5e-2 #Hz (Fig. 11 of https://arxiv.org/pdf/2106.11202).
 alphaknee = 3.
 rho_one_over_f = 0.9 #some level of 1/f correlation between detectors.
+#-------------------
+#When generating a noisy cube 
+number_of_observations = 1
+#-------------------
+
 #---------------------------

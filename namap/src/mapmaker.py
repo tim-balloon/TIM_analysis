@@ -331,6 +331,7 @@ class mapmaking(object):
         self.DT = DT
         self.IT = IT
 
+
     def map_Ionly(self, crpix, pixnum, coadd=False, value=None, noise=None, pixelmap = None):
         
         '''
@@ -438,6 +439,7 @@ class mapmaking(object):
             flux, x_edges, y_edges = np.histogram2d(pix[0], pix[1], bins = (X_edges, Y_edges), weights=val )
             flux /= hits
             individual_maps.append(flux.T)
+
 
         if not coadd: return individual_maps, crpix
         else: 
