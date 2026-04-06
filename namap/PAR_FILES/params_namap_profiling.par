@@ -2,7 +2,7 @@
 
 #--- Input Data Paths and Parameters--
 #Path for TODs data
-input_file = 'timestream_maker/fits_and_hdf5/TOD_25.0min.hdf5' 
+input_file = 'datasets/TOD_25.0min' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
@@ -21,6 +21,7 @@ first_frame=0 #Starting time in second to loaded
 
 
 #--- Astrometry Parameters ---
+
 #Correct for the poiting offset
 correction = True
 
@@ -103,6 +104,6 @@ std = 0
 
 #--- Output Parameters ---
 output_map =  'coadd.fits' 
-output_tods = 'tods.hdf5'
+output_tods = 'tods'
 beam_output = 'beam.fits'
 #-------------------------

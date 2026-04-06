@@ -3,7 +3,7 @@
 #--- Input Data Paths and Parameters--
 
 #Path for TODs data
-input_file = '/home/mvancuyck/Desktop/TIM_analysis/timestream_maker/fits_and_hdf5/TOD_25.0min.hdf5' 
+input_file = 'datasets/TOD_25.0min' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
@@ -15,9 +15,8 @@ detectors_to_use = None
 frequencies = (715.0,) #GHz
  
 #Chose the data in the time dimension 
-num_frames=25*60+1#integration time in seconds to be loaded. 
-first_frame=0 #Starting time in second to loaded
-
+num_frames = 25*60+1 #integration time in seconds to be loaded. 
+first_frame = 0 #Starting time in second to loaded
 #----------------------------
 
 
