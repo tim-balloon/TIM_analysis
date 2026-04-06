@@ -162,7 +162,7 @@ class maps():
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
             hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
-            hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
+            hdu.writeto( os.getcwd()+'/datasets/'+self.output_file, overwrite=True)
             hdu.close()
 
         else: 
@@ -201,7 +201,7 @@ class maps():
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
 
-                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                hdu.writeto(os.getcwd()+'/datasets/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
                 hdu.close()
 
 class wcs_world():

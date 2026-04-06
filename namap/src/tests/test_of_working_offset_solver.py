@@ -48,7 +48,7 @@ alt_scan = center_altaz.alt + alt_offsets
 az_scan  = center_altaz.az  + az_offsets
 
 #---------------------------------------------------------------------------------------------------------------------
-file = '../../fits_and_hdf5/cube_1source_with_1xbigger_sigma_PSF.fits'
+file = '../../datasets/cube_1source_with_1xbigger_sigma_PSF.fits'
 pix = 100
 map_value = fits.getdata(file)[0][pix:-pix, pix:-pix]
 hdr = fits.getheader(file)
