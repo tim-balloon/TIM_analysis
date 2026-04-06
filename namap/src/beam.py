@@ -422,7 +422,6 @@ class beam(object):
             #print('PARAM_FIT', fit_param.x)
             return fit_data, fit_param.x, var
 
-
 class Beam1D(object):
     """
     Fit one or more 1D Gaussians to a collapsed map.

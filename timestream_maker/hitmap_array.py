@@ -45,13 +45,24 @@ def main_arrays(P):
     spf = np.round(aquisition_frequency).astype(int)
 
     tod_file=P['output_path']+P['output_name']
-    H = h5py.File(tod_file, "a")
-    T = H['data_time']['data'][()]
-    LST = H['data_lst']['data'][()]
-    RA_path = H['data_RA_path']['data'][()]
-    DEC_path = H['data_DEC_path']['data'][()]
+
+    if('.hdf5' in tod_file):
+        H = h5py.File(tod_file, "a")
+        T = H['data_time']['data'][()]
+        LST = H['data_lst']['data'][()]
+        RA_path = H['data_RA_path']['data'][()]
+        DEC_path = H['data_DEC_path']['data'][()]
+        H.close()
+    else: 
+        d = gd.dirfile(tod_file, gd.RDONLY)
+        num = d.nframes
+        first_frame = 0
+        T = d.getdata('data_time', gd.FLOAT64, num_frames = num, first_frame=first_frame)
+        LST = d.getdata('data_lst', gd.FLOAT64, num_frames = num, first_frame=first_frame)
+        RA_path = d.getdata('data_RA_path', gd.FLOAT64, num_frames = num, first_frame=first_frame)
+        DEC_path = d.getdata('data_DEC_path', gd.FLOAT64, num_frames = num, first_frame=first_frame)
+        d.close()
     scan_path = np.asarray((RA_path, DEC_path)).T
-    H.close()
     #-----------------------------
 
     #-----------------------------
@@ -130,6 +141,7 @@ def main_arrays(P):
     hdr["BUNIT"] = 'counts'
     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
     hdu.writeto( f'fits_and_hdf5/hit_map_array_{P["az_size"]:.1f}_{P["alt_step"]:.1f}deg2_{format_duration(P["T_duration"])}.fits', overwrite=True)
+    print('save ',f'fits_and_hdf5/hit_map_array_{P["az_size"]:.1f}_{P["alt_step"]:.1f}deg2_{format_duration(P["T_duration"])}.fits')
     hdu.close()
     #-------------------------------
 

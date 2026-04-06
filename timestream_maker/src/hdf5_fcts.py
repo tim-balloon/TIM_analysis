@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 from IPython import embed
+import pygetdata as gd
 
 def to8bit_intprecision(array): 
 
@@ -116,7 +117,6 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
     acquisition_frequency: float
         the acquisition frequency of the detectors [Hz]
 
-
     Returns
     -------
     """ 
@@ -160,7 +160,6 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
                 grp.create_dataset('data', data=sample, compression=compression)
                 grp.create_dataset('data_Q', data=sample, compression=compression)
 
-
         else: 
             sample = samples[detector,:]
             if(compression is not None): 
@@ -180,7 +179,6 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
 
                 f.write(f"{name}\t{offset}\t{shift}\t\t\t\t\n")  # Tab-separated values
     #---------------------------
-
     if(True):
 
         # Load detectors file   
@@ -197,3 +195,116 @@ def save_tod_in_hdf5(tod_file, det_names, samples, pixel_offset, pixel_shift, de
 
         # Write back TSV (same columns, same order)
         det_names_dict.to_csv(dect_file, sep="\t", index=False)
+
+    return 0
+
+def save_tods_dirfile(tod_file, det_names, samples, dect_file, EM_freq, spf, acquisition_frequency, pixel_offset,pixel_shift):
+
+    '''
+    Save the timestreams in a dirfile
+    Parameters
+    ----------
+    Returns
+    -------
+    '''
+
+    df = gd.dirfile(tod_file, gd.RDWR | gd.CREAT )
+    for d, kid in zip(samples, det_names):
+
+        field_name = f"kid_{kid}_roach"
+        entry = gd.entry(gd.RAW_ENTRY, field_name, 0, parameters={"type": gd.FLOAT64, "spf": int(spf)})
+        try:
+            df.add(entry)
+        except gd.DuplicateError:
+            df.delete(field_name)   # remove existing field
+            df.add(entry)           # recreate it
+        df.putdata(field_name, d)
+    df.close()
+    
+    if(True):
+
+        if( not os.path.isfile(dect_file) ):
+            with open(dect_file, 'w') as f:
+                f.write("Name\tEL\tXEL\tFrequency\n")  # Column headers
+                for detector, (offset, shift, name) in enumerate(zip(pixel_offset, pixel_shift, det_names)):
+                    f.write(f"{name}\t{offset}\t{shift}\t\t\t\t\n")  # Tab-separated values
+        # Load detectors file   
+        det_names_dict = pd.read_csv(dect_file, sep="\t")
+        # Ensure Frequency column exists and is numeric
+        det_names_dict["Frequency"] = pd.to_numeric(det_names_dict["Frequency"], errors="coerce")
+        # Build mask
+        mask = det_names_dict["Name"].isin(det_names)
+        # Assign F to all matching detectors
+        det_names_dict.loc[mask, "Frequency"] = float(EM_freq)
+        # Write back TSV (same columns, same order)
+        det_names_dict.to_csv(dect_file, sep="\t", index=False)
+
+    return 0
+
+def save_scan_path_dirfile(tod_file, scan_path, spf, acquisition_frequency, keys, compression='gzip'):
+    """
+    Save the scan path in the .hdf5 format. 
+
+    Parameters
+    ----------
+    tod_file: string 
+        name of the output hdf5 file  
+    scan_path_sky: 2d array
+        (ra, dec) coordinates timestreams of the center pixel
+    spf: int
+        the number of samples per frame
+    keys: list
+        list of names under which the two coordinates are saved
+    
+    Returns
+    -------
+    """ 
+
+    df = gd.dirfile(tod_file, gd.RDWR | gd.CREAT )
+
+    for i, (field_name, coord) in enumerate(zip(keys, (scan_path[:,0],scan_path[:,1]))):
+
+        entry = gd.entry(gd.RAW_ENTRY, field_name, 0, parameters={"type": gd.FLOAT64, "spf": int(spf)})
+
+        try:
+            df.add(entry)
+        except gd.DuplicateError:
+            df.delete(field_name)   # remove existing field
+            df.add(entry)           # recreate it
+
+        df.putdata(field_name, coord)
+    df.close()
+
+def save_timestamps_dirfile(tod_file, T, spf, acquisition_frequency, key):
+    '''
+    Save the time tod in the .hdf5 format. 
+
+    Parameters
+    ----------
+    tod_file: string 
+        name of the output hdf5 file  
+    T: array
+        time timestreams
+    spf: int
+        the number of samples per frame
+    key: string
+        name under which the timestamps are saved
+    Returns
+    -------
+    '''
+
+    df = gd.dirfile(tod_file, gd.RDWR | gd.CREAT )
+
+    entry = gd.entry(gd.RAW_ENTRY, key, 0, parameters={"type": gd.FLOAT64, "spf": int(spf)})
+
+    try:
+        df.add(entry)
+    except gd.DuplicateError:
+        df.delete(key)   # remove existing field
+        df.add(entry)           # recreate it
+
+    df.putdata(key, T)
+    df.close()
+
+        
+    return 0

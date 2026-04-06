@@ -128,7 +128,7 @@ class utils(object):
         Parameters
         ----------
         Returns
-        ----------
+        -------
         ha: array
             hour angle in hour
         ''' 
@@ -145,7 +145,7 @@ class utils(object):
         hour_angle: array
             source hour angle in radians
         Returns
-        ----------
+        -------
         ra: array
             Right Ascension angle in hour
         '''
@@ -158,7 +158,7 @@ class utils(object):
         Parameters
         ----------
         Returns
-        ----------
+        -------
         az: array
             Azimuth angle in degree.
         el: array
@@ -177,7 +177,7 @@ class utils(object):
         Parameters
         ----------
         Returns
-        ----------
+        -------
         ra: array
             Right Ascension angle in degree.
         dec: array
@@ -198,7 +198,7 @@ class utils(object):
         Parameters
         ----------
         Returns
-        ----------
+        -------
         pa: array
             Parallactic angle angle in degree.
         '''
@@ -239,7 +239,7 @@ class convert_to_telescope(object):
         Parameters
         ----------
         Returns
-        ----------
+        -------
         '''
         
         parang = utils(self.coord1, self.coord2, self.lst, self.lat)
@@ -260,7 +260,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.array([0.,0.]),\
+    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.zeros((1, 2)),\
                  lst = None, lat = None):
         
         """
@@ -367,10 +367,8 @@ class apply_offset(object):
                 #det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
 
                 el_corrected[i, :] = el+self.xsc_offset[1]+self.det_offset[i, 1]
-
                 az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
 
-               
             return az_corrected, el_corrected
 
         else:

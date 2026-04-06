@@ -790,7 +790,7 @@ class AntiAliasingFilter():
         window : str
             'hann' or 'hamming'
         Returns
-        ----------
+        -------
         """
         self.fs_in = fs_in
         self.fs_out = fs_out
@@ -807,7 +807,7 @@ class AntiAliasingFilter():
         Parameters
         ----------
         Returns
-        ----------
+        -------
         """
         n = np.arange(self.numtaps) - (self.numtaps - 1) / 2
 
@@ -833,7 +833,7 @@ class AntiAliasingFilter():
         x: 1D array
             the detector data to be filtered
         Returns
-        ----------
+        -------
         filtered: 1D array
             the low-pass filtered data
         """
@@ -849,7 +849,7 @@ class AntiAliasingFilter():
         x: 1D array
             the data to be decimated
         Returns
-        ----------
+        -------
         decimated_data: 1D array
             the downsampled data
         """
@@ -867,7 +867,7 @@ class AntiAliasingFilter():
         x: 1D array
             the detector data to be filtered
         Returns
-        ----------
+        -------
         filtered: 1D array
             the low-pass filtered data
         """

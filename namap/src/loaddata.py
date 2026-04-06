@@ -91,7 +91,7 @@ class data_value():
             Instance of the data_value class
         """    
         self.det_path = det_path                    #Path of the detector dirfile
-        self.det_name = det_name                    #Detector name to be analyzed
+        self.det_name = det_name                    #Detector name to be analyzed kidnum
         self.coord1_name = coord1_name              #Coordinates 1 name, e.g. RA or AZ
         self.coord2_name = coord2_name              #Coordinates 2 name
         self.startframe = startframe                #Starting frame to be analyzed
@@ -110,7 +110,27 @@ class data_value():
         else:
             self.bufferframe = int(0)
 
-    def loadspf(file, field):
+        self.startframe += self.bufferframe
+
+    
+    def conversion_type(self, file_type):
+
+        '''
+        Function to define the different datatype conversions strings for pygetdata
+        '''
+
+        if file_type == 'u16':
+            gdtype = gd.UINT16
+        elif file_type == 'u32':
+            gdtype = gd.UINT32
+        elif file_type == 's32':
+            gdtype = gd.INT32
+        elif file_type == 'float':
+            gdtype = gd.FLOAT32
+
+        return gdtype 
+
+    def loadspf_hdf5(file, field):
         """
         Load the sample per frame of a field from a .hdf5 
         Parameters
@@ -131,7 +151,30 @@ class data_value():
         H.close()
         return spf
     
-    def load_acquisition_frequency(file, field):
+
+    def loadspf_dirfile(file, field):
+        """
+        Load the sample per frame of a field from a .hdf5 
+        Parameters
+        ----------
+        file: string
+            the name of the .hdf5 file
+        field: string
+            the field for which to get the spf
+        Returns
+        -------
+        spf: int
+            number of sample per frame
+        """    
+
+        d = gd.dirfile(file, gd.RDONLY)
+
+        e = d.entry(field)
+        spf = e.parameters["spf"]
+
+        return spf
+    
+    def load_acquisition_frequency_hdf5(file, field):
         """
         Load the sample per frame of a field from a .hdf5 
         Parameters
@@ -152,7 +195,7 @@ class data_value():
         H.close()
         return freq
     
-    def loaddata(file, field, DT, num_frames=None, first_frame=None):
+    def loaddata_hdf5(file, field, DT, num_frames=None, first_frame=None):
         """
         Load the data from a .hdf5 
         Equivalent to d.getdata()
@@ -185,6 +228,29 @@ class data_value():
             data = f['data'][()].astype(DT, copy=False)
         H.close()
         return data
+    
+    def loaddata_dirfile(self, filepath, file, DT, num=None, first_frame=None, file_type=None):
+
+        '''
+        Return the values of the DIRFILE as a numpy array
+        
+        filepath: path of the DIRFILE to be read
+        file: name of the value to be read from the dirfile, e.g. detector name or
+              coordinate name
+        file_type: data type conversion string for the DIRFILE data
+        '''
+
+        d = gd.dirfile(filepath, gd.RDONLY)
+
+        if file_type is not None:  gdtype = self.conversion_type(file_type)
+        else:                      gdtype = gd.FLOAT64
+
+        if(num is None): num = d.nframes
+        if(first_frame is None): first_frame = 0
+
+        values = d.getdata(file, gdtype, num_frames = num, first_frame=first_frame)
+
+        return np.asarray(values).astype(DT, copy=False)
 
     def values(self):
         """      
@@ -218,16 +284,14 @@ class data_value():
             the number of sample per frame of lat and lst. 
         """    
 
-        num = self.numframes#+self.bufferframe
-        first_frame = self.startframe+self.bufferframe
-        kid_num  = self.det_name
+
+        '''
+        Function to return the timestreams for detector and coordinates
+        '''
+        
 
         ##################
         """
-        Notes: probably gonna use dirfile, need to re-implement dirfile loading. 
-        d = gd.dirfile(filepath, gd.RDONLY)
-        values = d.getdata(file, gdtype, num_frames = num, first_frame=first_frame)
-
         kidutils = det.kidsutils()
         det_data = kidutils.KIDmag(I_data, Q_data)`
         """
@@ -235,13 +299,18 @@ class data_value():
 
         #-----------------------------------------------------------------------------------------------
         # Load the sample-per-frame of the detector timestreams, assuming they all have the same spf.
-        spf_data = data_value.loadspf(self.det_path,  f'data_time')
-
-        #Load the detector timestamps, assuming the detectors all have the same timestamps. 
-        #1st, load the pulse per second, which defines to which second each sample belong to. 
-        pps = data_value.loaddata(self.det_path, f'data_pps', self.DT,num, first_frame) 
-        #2nd, load the sub-second part of the timestamps. 
-        subsec = data_value.loaddata(self.det_path, f'data_subsecond_ps',self.DT, num, first_frame)
+        if('.hdf5' in self.det_path):
+            spf_data = data_value.loadspf_hdf5(self.det_path,  f'data_time')
+            #Load the detector timestamps, assuming the detectors all have the same timestamps. 
+            #1st, load the pulse per second, which defines to which second each sample belong to. 
+            pps = data_value.loaddata_hdf5(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
+            #2nd, load the sub-second part of the timestamps. 
+            subsec = data_value.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
+        else: 
+            spf_data = data_value.loadspf_dirfile(self.det_path,  f'data_time')
+            pps = data_value.loaddata_dirfile(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
+            subsec = data_value.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
+       
         #Get the final timestamps.
         dettime = pps+subsec
         #-----------------------------------------------------------------------------------------------
@@ -262,13 +331,25 @@ class data_value():
 
         #if downsample is True, define an anti-aliasing filter. 
         if(self.downsample): aaf = det.AntiAliasingFilter( fs_in=spf_data, fs_out=self.freq_target, fc=self.freq_target/2-5, DT=self.DT,window='hann')
+        kidutils = det.kidsutils()
 
         det_data = []
+
         #For each detector: 
-        for kid in kid_num: 
-            #Load the data and remove the frames that don't have all their samples: 
-            kidutils = det.kidsutils()
-            data = data_value.loaddata(self.det_path, f'kid_{kid}_roach', self.DT, num, first_frame) #kidutils.KIDmag(I_data, Q_data))
+        for kid in self.det_name: 
+            '''
+            det_I_string = 'kid'+kid+'_I_roachN' #different options in the names here
+            det_Q_string = 'kid'+kid+'_Q_roachN'
+            I_data = self.load(self.det_path, det_I_string, self.det_file_type)
+            Q_data = self.load(self.det_path, det_Q_string, self.det_file_type)
+            det_data = kidutils.KIDmag(I_data, Q_data)
+            '''
+            if('.hdf5' in self.det_path):
+                data = data_value.loaddata_hdf5(self.det_path, f'kid_{kid}_roach', self.DT, self.numframes, self.startframe) #kidutils.KIDmag(I_data, Q_data))
+            else: 
+                data = data_value.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
+
+            #remove the frames that don't have all their samples: 
             data = data[pps_start:pps_end]
 
             #Despike the data. 
@@ -286,7 +367,6 @@ class data_value():
         #remove the frames that don't have all their samples and decimate the timestamps. 
         dettime = dettime[pps_start:pps_end]
         if(self.downsample): dettime = aaf.downsample(dettime)
-
 
         if(self.downsample): spf_data = self.freq_target
         #-----------------------------------------------------------------------------------------------
@@ -306,30 +386,47 @@ class data_value():
         #-----------------------------------------------------------------------------------------------
         
         
+        print('COORDINATES', self.coord1_name.lower(), self.coord2_name.lower())
 
         #-----------------------------------------------------------------------------------------------
         # Load the timestamps associated with the coordinates, latitude and lst, assuming they all have the same timestamps. 
-        pps = data_value.loaddata(self.det_path, f'coords_pps',self.IT, num, first_frame) 
-        subsec = data_value.loaddata(self.det_path, f'coords_subsecond_ps',self.DT, num, first_frame) 
-        ctime  = pps.astype(self.DT)+subsec
+        if('.hdf5' in self.det_path): 
+            pps = data_value.loaddata_hdf5(self.det_path, f'coords_pps',self.IT, self.numframes, self.startframe)
+            subsec = data_value.loaddata_hdf5(self.det_path, f'coords_subsecond_ps',self.DT, self.numframes, self.startframe)
+            ctime  = pps.astype(self.DT)+subsec
+            #Assumes ctime and coords. have the same spf.
+            spf_ctime = data_value.loadspf_hdf5(self.det_path, f'coords_time')
+            spf_coord = data_value.loadspf_hdf5(self.det_path, self.coord2_name)
+            #Load the turnaround flags 
+            turnaround_flags = data_value.loaddata_hdf5(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
+            #Load the 1st coordinate timestream. 
+            coord2_data = data_value.loaddata_hdf5(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
+            if self.coord1_name.lower() == 'xel': 
+                coord1_data = data_value.loaddata_hdf5(self.det_path, 'EL', self.DT, self.numframes, self.startframe)
+                coord1_data *= np.cos(np.radians(coord2_data)) 
+            else: coord1_data = data_value.loaddata_hdf5(self.det_path, f'{self.coord1_name}', self.DT, self.numframes, self.startframe)
+            lat = data_value.loaddata_hdf5(self.det_path, 'lat',self.DT, self.numframes, self.startframe)
+            lst = data_value.loaddata_hdf5(self.det_path, 'lst',self.DT, self.numframes, self.startframe)
+            lst_lat_spf = data_value.loadspf_hdf5(self.det_path, 'lst')
 
-        #Assumes ctime and coords. have the same spf.
-        spf_ctime        = data_value.loadspf(self.det_path,  f'coords_time')
-        spf_coord = data_value.loadspf(self.det_path, self.coord2_name)
-
-        #Load the turnaround flags 
-        turnaround_flags = data_value.loaddata(self.det_path, f'turnaround_flags', self.DT, num, first_frame) 
-        
-        #Load the 1st coordinate timestream. 
-        coord2_data = data_value.loaddata(self.det_path, f'{self.coord2_name}', self.DT, num, first_frame) 
-        if self.coord1_name.lower() == 'xel': 
-            coord1_data = data_value.loaddata(self.det_path, 'EL', self.DT, num, first_frame) 
-            coord1_data *= np.cos(np.radians(coord2_data)) 
-        else: coord1_data = data_value.loaddata(self.det_path, f'{self.coord1_name}', self.DT, num, first_frame) 
-
-        lat = data_value.loaddata(self.det_path, 'lat',self.DT, num, first_frame)
-        lst = data_value.loaddata(self.det_path, 'lst',self.DT, num, first_frame)
-        lst_lat_spf = data_value.loadspf(self.det_path, 'lst')
+        else:
+            pps = data_value.loaddata_dirfile(self.det_path, f'coords_pps',self.IT, self.numframes, self.startframe)
+            subsec = data_value.loaddata_dirfile(self.det_path, f'coords_subsecond_ps',self.DT, self.numframes, self.startframe)
+            ctime  = pps.astype(self.DT)+subsec
+            #Assumes ctime and coords. have the same spf.
+            spf_ctime = data_value.loadspf_hdf5(self.det_path, f'coords_time')
+            spf_coord = data_value.loadspf_hdf5(self.det_path, self.coord2_name)
+            #Load the turnaround flags 
+            turnaround_flags = data_value.loaddata_dirfile(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
+            #Load the 1st coordinate timestream. 
+            coord2_data = data_value.loaddata_dirfile(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
+            if self.coord1_name.lower() == 'xel': 
+                coord1_data = data_value.loaddata_dirfile(self.det_path, 'EL', self.DT, self.numframes, self.startframe)
+                coord1_data *= np.cos(np.radians(coord2_data)) 
+            else: coord1_data = data_value.loaddata_dirfile(self.det_path, f'{self.coord1_name}', self.DT, self.numframes, self.startframe)
+            lat = data_value.loaddata_dirfile(self.det_path, 'lat',self.DT, self.numframes, self.startframe)
+            lst = data_value.loaddata_dirfile(self.det_path, 'lst',self.DT, self.numframes, self.startframe)
+            lst_lat_spf = data_value.loadspf_hdf5(self.det_path, 'lst')
 
         #Select the edge frames such as they have all their samples
         _, bn = np.unique(pps, return_counts=True)
@@ -750,8 +847,6 @@ class save_tods():
         -------
         '''
 
-        if os.path.exists(self.tods_path): shutil.rmtree(self.tods_path)
-
         df = gd.dirfile(self.tods_path, gd.RDWR | gd.CREAT | gd.TRUNC)
 
         data = np.asarray(self.det_data)
@@ -761,18 +856,23 @@ class save_tods():
 
             field_name = f"{self.prefix}KID_{kid}"
 
-            if field_name not in df.field_list():
                     
-                    entry = gd.entry(
-                        gd.RAW_ENTRY,
-                        field_name,
-                        0,
-                        parameters={
-                            "type": gd.INT8,
-                            "spf": int(self.det_sample_frame)
-                        }
-                    )
-                    df.add(entry)
+            entry = gd.entry(
+                gd.RAW_ENTRY,
+                field_name,
+                0,
+                parameters={
+                    "type": gd.INT8,
+                    "spf": int(self.det_sample_frame)
+                }
+            )
+        
+            try:
+                df.add(entry)
+            except gd.DuplicateError:
+                df.delete(key)   # remove existing field
+                df.add(entry)           # recreate it
+
 
             df.putdata(field_name, d)
 
@@ -781,18 +881,21 @@ class save_tods():
 
         for values, field_name in zip(( minmax, frames ), (f"min_max_{self.prefix}KID","first_frame_num_frames")):
                 
-            if field_name not in df.field_list():
+            entry = gd.entry(
+                gd.RAW_ENTRY,
+                field_name,
+                0,
+                parameters={
+                    "type": gd.FLOAT64,
+                    "spf": 1
+                }
+            )
 
-                    entry = gd.entry(
-                        gd.RAW_ENTRY,
-                        field_name,
-                        0,
-                        parameters={
-                            "type": gd.FLOAT64,
-                            "spf": 1
-                        }
-                    )
-                    df.add(entry)
+            try:
+                df.add(entry)
+            except gd.DuplicateError:
+                df.delete(key)   # remove existing field
+                df.add(entry)           # recreate it
 
             values = np.asarray(values, dtype=np.float64)
             df.putdata(field_name, values)
@@ -801,17 +904,21 @@ class save_tods():
             #if(self.int8): coords, min, max = self.to8bit_intprecision(coords)
             coords, min, max = np.float32(coords), None, None
 
-            if field_name not in df.field_list():
-                entry = gd.entry(
-                    gd.RAW_ENTRY,
-                    field_name,
-                    0,
-                    parameters={
-                        "type": gd.FLOAT32,
-                        "spf": int(self.coords_sample_frame)
-                    }
-                )
+            entry = gd.entry(
+                gd.RAW_ENTRY,
+                field_name,
+                0,
+                parameters={
+                    "type": gd.FLOAT32,
+                    "spf": int(self.coords_sample_frame)
+                }
+            )
+
+            try:
                 df.add(entry)
+            except gd.DuplicateError:
+                df.delete(key)   # remove existing field
+                df.add(entry)           # recreate it
             df.putdata(field_name, coords)
             #-----------------------------------------------------------------------------------------------
 
@@ -820,12 +927,15 @@ class save_tods():
                 gd.STRING_ENTRY,
                 'param_'+key,
                 0,
-                parameters={
-                    key: f"{self.P[key]}"
-                }
+                parameters={key: f"{self.P[key]}" }
             )
 
-            df.add(entry)
+
+            try:
+                df.add(entry)
+            except gd.DuplicateError:
+                df.delete(key)   # remove existing field
+                df.add(entry)           # recreate it
 
         df.close()
 
@@ -840,7 +950,6 @@ class save_tods():
         
         return 0
     
-
 class frame_zoom_sync():
 
     '''

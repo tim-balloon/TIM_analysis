@@ -1135,7 +1135,7 @@ if __name__ == "__main__":
     #I: coadded maps
     perfs_coadded_maps = True
     #II: individual mapscoadd
-    perfs_individual_maps = True
+    perfs_individual_maps = False
     #III a TODs 
     perfs_tods = False
     #
@@ -1168,7 +1168,7 @@ if __name__ == "__main__":
 
     #------------------------------------------------------
     dict_tods_fidelity_file = 'dict_tods_fidelity.p'
-    dict_coadded_map_fidelity_file = 'dict_coadded_map_fidelity.p'
+    dict_coadded_map_fidelity_file = 'dict_coadded_map_fidelity_test.p'
     dict_coadd_perf = 'namap_perf_profiling_coadded_maps.p'
     dict_individual_perf = 'namap_perf_profiling_individual_maps.p'
     dict_tods_perf = 'namap_perf_downsampled_tods.p'
@@ -1188,12 +1188,17 @@ if __name__ == "__main__":
     nb_bands  = (1,2,3,4,11,21, 41,  61,  81, 101, 128)
     #------------------------------------------------------
 
-    P['output_name'] = f'TOD_25.0min.hdf5' 
-    if(not os.path.isfile(P['output_path']+P['output_name']) ):
+    #------------------------------------------------------
+    exist = False
+    tod_file = P['output_path']+P['output_name']
+    if('.hdf5' in tod_file and os.path.isfile(tod_file)): exist = True
+    elif(os.path.exists(P['output_path']+P['output_name'])): exist = True
+    if(not exist):
         print(f'Generating {max(t_int_list)}min timestreams.')
-        gen_detectors_main(P)
+        if(not os.path.isfile(P['detectors_name_file'])): gen_detectors_main(P)
         main_1det(P)
         main_tod(P)
+    #------------------------------------------------------
 
     if USE_FAKE_SYSTEM:
         print("⚙️  Simulating Intel Celeron 4305UE environment...")
