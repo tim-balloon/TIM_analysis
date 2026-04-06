@@ -287,8 +287,8 @@ def main(P, nbdets=None):
                     hdr["BUNIT"] = 'MJy/sr'
                     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                    hdu.writeto( 'fits_and_hdf5/'+P['beam_output'], overwrite=True)
-                    print('save fits_and_hdf5/'+P['beam_output'])
+                    hdu.writeto( P['beam_output'], overwrite=True)
+                    print('save '+P['beam_output'])
                     hdu.close()  
 
 
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     1/2: git clone from TIM_analysis/namap
 
     2/2: Download the TOD file: https://drive.google.com/file/d/1BnkEUj_yhPBPJte7ZgwxNHtMI75y8Nj6/view?usp=drive_link
-    and put it in fits_and_hdf5/
+    and put it in datasets/
 
     To run: python namap_main.py --params-file PAR_FILES/params_namap.par
 
