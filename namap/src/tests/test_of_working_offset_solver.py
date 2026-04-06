@@ -48,6 +48,9 @@ alt_scan = center_altaz.alt + alt_offsets
 az_scan  = center_altaz.az  + az_offsets
 
 #---------------------------------------------------------------------------------------------------------------------
+#Download the point source's cube smoothed by the SPF at: 
+# https://drive.google.com/file/d/1s50Q0SnTs35531yw3yz5N84NCCwPxU_I/view?usp=drive_link
+#and place it in the datasets directory. 
 file = '../../datasets/cube_1source_with_1xbigger_sigma_PSF.fits'
 pix = 100
 map_value = fits.getdata(file)[0][pix:-pix, pix:-pix]
