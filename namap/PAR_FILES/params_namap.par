@@ -16,7 +16,7 @@ frequencies = (715.0,) #GHz
  
 Chose the data in the time dimension 
 num_frames=3300 #integration time in seconds to be loaded. 
-first_frame=110 #Starting time in second to loaded
+first_frame=0 #Starting time in second to loaded
 #----------------------------
 
 #--- Astrometry Parameters ---
