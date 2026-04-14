@@ -1133,11 +1133,11 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = True
+    perfs_coadded_maps = False
     #II: individual mapscoadd
-    perfs_individual_maps = False
+    perfs_individual_maps = True
     #III a TODs 
-    perfs_tods = False
+    perfs_tods = True
     #
     perf_fct = False
     #III b raw tods
@@ -1157,9 +1157,6 @@ if __name__ == "__main__":
 
     #----------------------------------------------------------------------------------------
     P = load_params(f'{DESKTOP}/'+'timestream_maker/PAR_files/params_strategy_profiling.par')
-    #-----------------------------
-    #P['nb_channels_per_array'] = 64 #!!
-    #P['acquisition_frequency'] = 110
     #-----------------------------
     P_namap = load_params(f'{DESKTOP}/'+'namap/PAR_FILES/params_namap_profiling.par')
     P_namap['detector_table'] = P['detectors_name_file']
