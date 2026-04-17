@@ -602,6 +602,7 @@ def profiling_raw_tods(dict_file_path, profiling_vs_tod_time = True, profiling_v
 
                         try:
                             os.remove(output_file)
+                            
                         except OSError as e:
                             print(f"Error deleting {output_file}: {e}")
 
