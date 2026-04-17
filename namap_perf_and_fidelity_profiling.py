@@ -89,7 +89,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         if os.path.exists(P_namap['output_map']): file_size_mb = os.path.getsize(P_namap['output_map'] ) / 1e6
                         else: file_size_mb = float('nan')  
 
-                        print(f"time {t}min| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print(f"time {t}min, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
 
                         # Store results
                         results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
@@ -154,7 +154,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         if os.path.exists(P_namap['output_map'] ): file_size_mb = os.path.getsize(P_namap['output_map'] ) / 1e6
                         else: file_size_mb = float('nan')  # file not found → record NaN or 0
 
-                        print(f"Nb bands {nband*npix}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print(f"Nb bands {nband*npix}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
                         print('')
 
                         # Store results
@@ -231,7 +231,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                     # Optionally, convert to MB
                     total_size_mb = total_size_bytes / (1024**2)
                     results[key][precision][map_compression]['output size [MB]'].append(total_size_mb)
-                    print(f"time {t}min| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
+                    print(f"time {t}min, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={total_size_mb:.2f}MB")
 
                     # Delete them
                     for f in files:
@@ -307,7 +307,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             # Optionally, convert to MB
                             total_size_mb = total_size_bytes / (1024**2)
                             results[key][precision][map_compression]['output size [MB]'].append(total_size_mb)
-                            print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={total_size_mb:.2f}MB")
+                            print(f"Nb bands {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={total_size_mb:.2f}MB")
 
                             # Delete them
                             for f in files:
@@ -383,7 +383,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         if os.path.isfile(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
                         else: file_size_mb = get_dir_size(output_file) / 1e6
                     else: file_size_mb = float('nan') 
-                    print(f" time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                    print(f" time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
 
                     results[key][precision][compression]['output size [MB]'].append(file_size_mb)
                     results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
@@ -460,7 +460,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                                 file_size_mb = get_dir_size(output_file) / 1e6
                         else: file_size_mb = float('nan') 
                         
-                        print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print(f"Nb bands {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
 
                         # Store results
                         results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
@@ -593,7 +593,7 @@ def profiling_raw_tods(dict_file_path, profiling_vs_tod_time = True, profiling_v
                         if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
                         else: file_size_mb = float('nan')  # file not found → record NaN or 0
 
-                        print(f"Nb bands {val}| time={timing:.2f}s | peak={peak/1e6:.2f}MB | output={file_size_mb:.2f}MB")
+                        print(f"Nb bands {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
 
                         # Store results
                         results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
@@ -602,7 +602,7 @@ def profiling_raw_tods(dict_file_path, profiling_vs_tod_time = True, profiling_v
 
                         try:
                             os.remove(output_file)
-                            
+
                         except OSError as e:
                             print(f"Error deleting {output_file}: {e}")
 
