@@ -33,8 +33,6 @@ class utils(object):
         Returns
         -------
         '''
-
-
         self.coord1 = np.radians(coord1)  #Array of coord 1 converted in degrees   
         self.coord2 = coord2  #Array of coord 2 converted in degrees   
         self.lst = lst        #Local Sideral Time in hours
@@ -76,9 +74,14 @@ class utils(object):
         """ 
 
         za = self.zenithAngle(HA)
-        cosAz = (np.sin(np.radians(self.coord2)) - np.sin(np.radians(self.lat)) * np.cos(za))/(np.cos(np.radians(self.lat)) * np.sin(za))
-        sinAz = - np.sin(np.radians(HA)) * np.cos(np.radians(self.coord2)) / np.sin(za)
-        return np.arctan2(sinAz,cosAz)
+        #cosAz = (np.sin(np.radians(self.coord2)) - np.sin(np.radians(self.lat)) * np.cos(za))/(np.cos(np.radians(self.lat)) * np.sin(za))
+        #sinAz = - np.sin(np.radians(HA)) * np.cos(np.radians(self.coord2)) / np.sin(za)
+
+        sinAz =  -np.sin(np.radians(HA)) * np.cos(np.radians(self.coord2)) / np.sin(za)
+        cosAz = (np.sin(np.radians(self.coord2)) - np.sin(np.radians(self.lat)) * np.cos(za)) / (np.cos(np.radians(self.lat)) * np.sin(za))
+        az = np.arctan2(sinAz, cosAz) % (2 * np.pi)
+        
+        return az
 
     def declinationAngle(self):
         """
@@ -96,7 +99,7 @@ class utils(object):
         """ 
 
         azi = self.coord1; alt =self.coord2 
-        sinDec = np.sin(np.radians(alt))*np.sin(np.radians(self.lat)) + np.cos(np.radians(alt))*np.cos(np.radians(self.lat))*np.cos(azi)
+        sinDec = np.sin(np.radians(alt))*np.sin(np.radians(self.lat)) + np.cos(np.radians(alt))*np.cos(np.radians(self.lat))*np.cos(np.radians(azi))
         return np.arcsin(sinDec)
     
     def azeltoha(self):
@@ -116,7 +119,7 @@ class utils(object):
         """ 
 
         tanHA = - np.sin(self.coord1) / (np.tan(np.radians(self.coord2)) * np.cos(np.radians(self.lat)) - np.cos(self.coord1)*np.sin(np.radians(self.lat)))
-        HA = np.arctan(tanHA)
+        HA = np.arctan2(tanHA)
 
         return HA
 
@@ -132,8 +135,8 @@ class utils(object):
         ha: array
             hour angle in hour
         ''' 
-
-        return self.lst*np.pi/12 - self.coord1
+        ha = self.lst*np.pi/12 - self.coord1
+        return  (ha + np.pi) % (2 * np.pi) - np.pi
 
     def ha2ra(self, hour_angle):
 
@@ -168,53 +171,119 @@ class utils(object):
         hour_angle = self.ra2ha()
         el = np.pi/2 - self.zenithAngle(np.degrees(hour_angle))
         az = self.azimuthAngle(np.degrees(hour_angle))     
+        
         return np.degrees(az), np.degrees(el)
 
-    def azel2radec(self):
-
-        '''
-        Function to convert AZ and EL to RA and DEC
-        Parameters
-        ----------
-        Returns
-        -------
-        ra: array
-            Right Ascension angle in degree.
-        dec: array
-            Declination angle in degree.
-        '''
-
-        dec = self.declinationAngle()
-        hour_angle  = self.azeltoha()
-        ra = self.ha2ra(hour_angle)
-
-        return np.degrees(ra), np.degrees(dec)
-
-    def parallactic_angle(self):
-
-        '''
-        Compute the parallactic angle which is returned in degrees  
+    def elevationAngle(self, HA): 
+        """
+        elevation angle (rad)
 
         Parameters
         ----------
+        dec: float 
+            declination angle in degrees     
+        lat: float
+            latitude angle in degrees
+        HA: array
+            hour angle in hour
+
         Returns
         -------
-        pa: array
-            Parallactic angle angle in degree.
+        ea: array
+            elevation angle in degree
+        """ 
+
+        return np.pi/2 - self.zenithAngle(HA)
+
+    def declinationAngle(self, azi, alt):
+        """
+        source declination angle (rad)
+
+        Parameters
+        ----------
+        azi: float 
+            azimuth in degrees     
+        alt: float
+            latitude  angle in degrees
+        lat: float
+            latitude angle in degree
+
+        Returns
+        -------
+        Dec: float
+            source declination angle (rad)
+        """ 
+        sinDec =  np.sin(np.radians(alt))*np.sin(np.radians(self.lat)) + np.cos(np.radians(alt))*np.cos(np.radians(self.lat))*np.cos(np.radians(azi))
+        return np.arcsin(sinDec)
+    
+    def hourAngle(self, azi, alt):
+        
+        tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(self.lat)) - np.cos(np.radians(azi))*np.sin(np.radians(self.lat)))
+        HA = np.arctan(tanHA)
         '''
+        sin_dec = np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
+        dec = np.arcsin(sin_dec)
+        
+        sin_HA = -np.sin(np.radians(azi))*np.cos(np.radians(alt)) / np.cos(dec)
+        cos_HA = (np.sin(np.radians(alt)) - np.sin(dec)*np.sin(np.radians(lat))) / (np.cos(dec)*np.cos(np.radians(lat)))
+        HA = np.arctan2(sin_HA, cos_HA)
+        '''
+        return HA
 
-        hour_angle = self.ra2ha() 
-        index, = np.where(hour_angle<0)
-        hour_angle[index] += 2*np.pi
+    def genPointingPath(self, offsets=np.zeros(2), azel=False):
+        """
+        Function that takes local paths and generates the pointing on sky vs time.
+        Parameters
+        ----------
+        offsets: array [EL_offset_deg, XEL_offset_deg]
+            EL and cross-EL offsets in degrees
+        Returns
+        -------
+        path: nd array
+            the RA/Dec coordinates of the pointing, in degrees
+        """
+        # Hour angle in radians (ra2ha returns radians)
+        ha = self.ra2ha()  # radians
 
-        pa = np.arctan2(np.sin(hour_angle), np.cos(np.radians((self.coord2))) * np.tan(np.radians(self.lat)) - np.sin(np.radians((self.coord2))) * np.cos(hour_angle))
+        # zenithAngle/azimuthAngle expect HA in DEGREES internally (they call np.radians on it)
+        ha_deg = np.degrees(ha)
 
-        #y_pa = np.cos(self.lat)*np.sin(hour_angle)
-        #x_pa = np.sin(self.lat)*np.cos(self.coord2)-np.cos(hour_angle)*np.cos(self.lat)*np.sin(self.coord2)
-        #pa = np.arctan2(y_pa, x_pa)
+        # Elevation and azimuth of the phase center (radians)
+        el = self.elevationAngle(ha_deg)   # radians
+        az = self.azimuthAngle(ha_deg)     # radians
 
-        return np.degrees(pa)
+        # Apply EL and XEL offsets (offsets[0]=EL deg, offsets[1]=XEL deg)
+        el_off  = np.radians(offsets[0])
+        xel_off = np.radians(offsets[1])
 
+        # XEL is perpendicular to EL in the Az direction, scaled by 1/cos(el)
+        az_off = xel_off / np.cos(el)
+
+        az_new = az + az_off
+        el_new = el + el_off
+
+        # Convert back: az/el (radians) -> Dec and HA
+        dec_point = self.declinationAngle(np.degrees(az_new), np.degrees(el_new))  # radians
+
+        # Hour angle from az/el using arctan2 for correct quadrant
+        azi_r = np.radians(np.degrees(az_new))  # keep as radians for clarity
+        alt_r = el_new
+
+        sin_HA = -np.sin(azi_r) * np.cos(alt_r) / np.cos(dec_point)
+        cos_HA = (np.sin(alt_r) - np.sin(dec_point) * np.sin(np.radians(self.lat))) / \
+                (np.cos(dec_point) * np.cos(np.radians(self.lat)))
+        ha_point = np.arctan2(sin_HA, cos_HA)  # radians
+
+        # RA = LST - HA  (LST in radians = lst_hours * pi/12)
+        lst_rad = self.lst * np.pi / 12
+        ra = lst_rad - ha_point
+
+        ra_unwrapped = np.unwrap(ra)
+
+        path = np.vstack((np.degrees(ra_unwrapped), np.degrees(dec_point))).T
+        
+        return path
+    
 class convert_to_telescope(object):
 
     '''
@@ -260,7 +329,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.zeros((1, 2)),\
+    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset=(0,0), DT=np.float64, IT=np.int64, det_offset = np.zeros((1, 2)),\
                  lst = None, lat = None):
         
         """
@@ -345,12 +414,11 @@ class apply_offset(object):
             return ra_corrected, dec_corrected
         
         elif self.ctype.lower() == 'az and el':
-
-                
-            if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
+                            
+            if(self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
-            elif(self.input_ctype ==self.input_ctype.lower() == 'az and el'):
+            elif(self.input_ctype.lower() == 'az and el'):
                 az, el = self.coord1, self.coord2
             else: 
                 el = self.coord2
@@ -365,8 +433,7 @@ class apply_offset(object):
                 
                 #xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
                 #det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
-
-                el_corrected[i, :] = el+self.xsc_offset[1]+self.det_offset[i, 1]
+                el_corrected[i, :] = el+self.det_offset[i, 1]+self.xsc_offset[1]
                 az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
 
             return az_corrected, el_corrected
@@ -391,118 +458,6 @@ class apply_offset(object):
                 el_corrected[i, :]  = el+self.xsc_offset[1]+self.det_offset[i, 1]
             return xel_corrected,el_corrected
         
-
-"""
-class compute_offset(object):
-    '''
-    Parameters
-    ----------
-    Returns
-    -------
-    '''
-
-    def __init__(self, coord1_ref, coord2_ref, map_data, \
-                 pixel1_coord, pixel2_coord, wcs_trans, ctype, \
-                 lst, lat):
-
-        self.coord1_ref = coord1_ref           #Reference value of the map along the x axis in RA and DEC
-        self.coord2_ref = coord2_ref           #Reference value of the map along the y axis in RA and DEC
-        self.map_data = map_data               #Maps 
-        self.pixel1_coord = pixel1_coord       #Array of the coordinates converted in pixel along the x axis
-        self.pixel2_coord = pixel2_coord       #Array of the coordinates converted in pixel along the y axis
-        self.wcs_trans = wcs_trans             #WCS transformation 
-        self.ctype = ctype                     #Ctype of the map
-        self.lst = lst                         #Local Sideral Time
-        self.lat = lat                         #Latitude
-
-    def centroid(self, threshold=0.275):
-
-        '''
-        For more information about centroid calculation see Shariff, PhD Thesis, 2016
-        Parameters
-        ----------
-        Returns
-        -------`
-        '''
-
-        maxval = np.max(self.map_data)
-        #minval = np.min(self.map_data)
-        y_max, x_max = np.where(self.map_data == maxval)
-
-        #lt_inds = np.where(self.map_data < threshold*maxval)
-        gt_inds = np.where(self.map_data > threshold*maxval)
-
-        weight = np.zeros((self.map_data.shape[0], self.map_data.shape[1]))
-        weight[gt_inds] = 1.
-        a = self.map_data[gt_inds]
-        flux = np.sum(a)
-
-        x_coord_max = np.floor(np.amax(self.pixel1_coord))+1
-        x_coord_min = np.floor(np.amin(self.pixel1_coord))
-
-        x_arr = np.arange(x_coord_min, x_coord_max)
-
-        y_coord_max = np.floor(np.amax(self.pixel2_coord))+1
-        y_coord_min = np.floor(np.amin(self.pixel2_coord))
-
-        y_arr = np.arange(y_coord_min, y_coord_max)
-
-        xx, yy = np.meshgrid(x_arr, y_arr)
-        
-        x_c = np.sum(xx*weight*self.map_data)/flux
-        y_c = np.sum(yy*weight*self.map_data)/flux
-
-        return np.rint(x_c), np.rint(y_c)
-    
-    def value(self):
-        '''
-        Parameters
-        ----------
-        Returns
-        -------
-        '''
-
-        #Centroid of the map
-        x_c, y_c = self.centroid()
-               
-        if self.ctype.lower() == 'ra and dec':
-            map_center = wcs.utils.pixel_to_skycoord(x_c, y_c, self.wcs_trans)
-            print('Centroid', map_center)
-            print(self.wcs_trans.all_pix2world(np.array([[x_c,y_c]]), 0))
-            x_map = map_center.ra.hour
-            y_map = map_center.dec.degree
-            print('b1', x_c, y_c, x_map*15., y_map, np.average(self.lst), np.average(self.lat))
-            centroid_conv = utils(x_map, y_map, np.average(self.lst), np.average(self.lat))
-
-            coord1_reference = self.coord1_ref/15.
-
-            az_centr, el_centr = centroid_conv.radec2azel()
-            xel_centr = az_centr*np.cos(np.radians(el_centr))
-
-        else:
-            map_center = self.wcs_trans.wcs_pix2world(x_c, y_c, 1)
-            coord1_reference = self.coord1_ref
-            el_centr = y_map
-            if self.cytpe.lower() == 'xel and el':
-                xel_centr = x_map            
-            else:
-                xel_centr = x_map/np.cos(np.radians(el_centr))
-            
-
-        ref_conv = utils(coord1_reference, self.coord2_ref, np.average(self.lst), \
-                         np.average(self.lat))
-
-        az_ref, el_ref = ref_conv.radec2azel()
-
-        xel_ref = az_ref*np.cos(np.radians(el_ref))
-
-        return xel_centr-xel_ref, el_ref+el_centr
-"""
-
-
-
-        
-
 
 
 
