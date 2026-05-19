@@ -151,8 +151,7 @@ class data_value():
         H.close()
         return spf
     
-
-    def loadspf_dirfile(file, field):
+    def loadspf_dirfile(self, file, field):
         """
         Load the sample per frame of a field from a .hdf5 
         Parameters
@@ -168,9 +167,7 @@ class data_value():
         """    
 
         d = gd.dirfile(file, gd.RDONLY)
-
-        e = d.entry(field)
-        spf = e.parameters["spf"]
+        spf = d.spf(field)
 
         return spf
     
@@ -239,7 +236,6 @@ class data_value():
               coordinate name
         file_type: data type conversion string for the DIRFILE data
         '''
-
         d = gd.dirfile(filepath, gd.RDONLY)
 
         if file_type is not None:  gdtype = self.conversion_type(file_type)
@@ -307,9 +303,9 @@ class data_value():
             #2nd, load the sub-second part of the timestamps. 
             subsec = data_value.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
         else: 
-            spf_data = data_value.loadspf_dirfile(self.det_path,  f'data_time')
-            pps = data_value.loaddata_dirfile(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
-            subsec = data_value.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
+            spf_data = self.loadspf_dirfile(self.det_path,  f'data_time')
+            pps      = self.loaddata_dirfile(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
+            subsec   = self.loaddata_dirfile(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
        
         #Get the final timestamps.
         dettime = pps+subsec
@@ -347,7 +343,7 @@ class data_value():
             if('.hdf5' in self.det_path):
                 data = data_value.loaddata_hdf5(self.det_path, f'kid_{kid}_roach', self.DT, self.numframes, self.startframe) #kidutils.KIDmag(I_data, Q_data))
             else: 
-                data = data_value.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
+                data = self.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
 
             #remove the frames that don't have all their samples: 
             data = data[pps_start:pps_end]
@@ -410,23 +406,23 @@ class data_value():
             lst_lat_spf = data_value.loadspf_hdf5(self.det_path, 'lst')
 
         else:
-            pps = data_value.loaddata_dirfile(self.det_path, f'coords_pps',self.IT, self.numframes, self.startframe)
-            subsec = data_value.loaddata_dirfile(self.det_path, f'coords_subsecond_ps',self.DT, self.numframes, self.startframe)
+            pps = self.loaddata_dirfile(self.det_path, f'coords_pps',self.IT, self.numframes, self.startframe)
+            subsec = self.loaddata_dirfile(self.det_path, f'coords_subsecond_ps',self.DT, self.numframes, self.startframe)
             ctime  = pps.astype(self.DT)+subsec
             #Assumes ctime and coords. have the same spf.
-            spf_ctime = data_value.loadspf_hdf5(self.det_path, f'coords_time')
-            spf_coord = data_value.loadspf_hdf5(self.det_path, self.coord2_name)
+            spf_ctime = self.loadspf_dirfile(self.det_path, f'coords_time')
+            spf_coord = self.loadspf_dirfile(self.det_path, self.coord2_name)
             #Load the turnaround flags 
-            turnaround_flags = data_value.loaddata_dirfile(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
+            turnaround_flags = self.loaddata_dirfile(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
             #Load the 1st coordinate timestream. 
-            coord2_data = data_value.loaddata_dirfile(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
+            coord2_data = self.loaddata_dirfile(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
             if self.coord1_name.lower() == 'xel': 
-                coord1_data = data_value.loaddata_dirfile(self.det_path, 'EL', self.DT, self.numframes, self.startframe)
+                coord1_data = self.loaddata_dirfile(self.det_path, 'EL', self.DT, self.numframes, self.startframe)
                 coord1_data *= np.cos(np.radians(coord2_data)) 
-            else: coord1_data = data_value.loaddata_dirfile(self.det_path, f'{self.coord1_name}', self.DT, self.numframes, self.startframe)
-            lat = data_value.loaddata_dirfile(self.det_path, 'lat',self.DT, self.numframes, self.startframe)
-            lst = data_value.loaddata_dirfile(self.det_path, 'lst',self.DT, self.numframes, self.startframe)
-            lst_lat_spf = data_value.loadspf_hdf5(self.det_path, 'lst')
+            else: coord1_data = self.loaddata_dirfile(self.det_path, f'{self.coord1_name}', self.DT, self.numframes, self.startframe)
+            lat = self.loaddata_dirfile(self.det_path, 'lat',self.DT, self.numframes, self.startframe)
+            lst = self.loaddata_dirfile(self.det_path, 'lst',self.DT, self.numframes, self.startframe)
+            lst_lat_spf = self.loadspf_dirfile(self.det_path, 'lst')
 
         #Select the edge frames such as they have all their samples
         _, bn = np.unique(pps, return_counts=True)

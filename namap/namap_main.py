@@ -153,6 +153,7 @@ def namap_main(P, nbdets=None):
                 DT=DT, IT=IT, P=P)
     
     timemap, det_data, ctime, coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values() #ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+
     #---------------------------------------------------------------
 
     #if(P['save_raw_IQ_TODS']): return 0

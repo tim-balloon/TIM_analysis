@@ -2,7 +2,7 @@
 
 #--- Input Data Paths and Parameters--
 #Path for TODs data
-input_file = 'datasets/TOD_25.0min' 
+input_file = '/home/mvancuyck/Desktop/TIM_analysis/namap/datasets/TOD_25.0min' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 

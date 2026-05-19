@@ -3,7 +3,7 @@
 #--- Input Data Paths and Parameters--
 
 #Path for TODs data
-input_file = 'datasets/TOD_25.0min' 
+input_file = 'datasets/TOD_25.0min.hdf5' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
@@ -16,7 +16,8 @@ frequencies = (715.0,) #GHz
  
 #Chose the data in the time dimension 
 num_frames = 25*60+1 #integration time in seconds to be loaded. 
-first_frame = 0 #Starting time in second to loaded
+first_frame = 0 #Starting time in second 
+
 #----------------------------
 
 
@@ -49,7 +50,7 @@ pixnum = 300, 300 #Number of pixels along the two axis. The input needs to be wr
 
 #-----------------------------
 
-
+pls  
 
 #--- Parameters for the processing of the TODs ---
 

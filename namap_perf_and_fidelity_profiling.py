@@ -1134,7 +1134,7 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = False
+    perfs_coadded_maps = True
     #II: individual mapscoadd
     perfs_individual_maps = True
     #III a TODs 
