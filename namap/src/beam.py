@@ -132,7 +132,7 @@ class beam(object):
 
         # Select only pixels with values >= 20% of the maximum
         # This masks out noisy/low-signal regions from the fit.
-        index, = np.where(y >= 0.2 * maxv)
+        index, = np.where(y >= 0.1 * maxv)
 
         # Compute normalized residuals for selected pixels
         return (y[index] - dat[index]) / err[index]
