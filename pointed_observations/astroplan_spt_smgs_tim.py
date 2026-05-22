@@ -260,7 +260,7 @@ if __name__ == '__main__':
     end   = datetime(2027, 1, 31, 0, 0, 0)   # or whatever end date you want
     #--------------------------------------------------------------------
 
-    step_hours = 10
+    step_hours = 5
     step = timedelta(hours=step_hours)  # 10h steps
     dates = []
     current = start
