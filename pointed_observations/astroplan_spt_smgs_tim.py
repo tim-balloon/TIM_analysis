@@ -256,8 +256,8 @@ if __name__ == '__main__':
 
     #--------------------------------------------------------------------
     launch_location = EarthLocation(lat=LDB[0], lon=LDB[1], height=FLOAT_ALT)
-    start = datetime(2026, 12, 1, 0, 0, 0)
-    end   = datetime(2027, 1, 31, 0, 0, 0)   # or whatever end date you want
+    start = datetime(2027, 12, 1, 0, 0, 0)
+    end   = datetime(2028, 1, 31, 0, 0, 0)   # or whatever end date you want
     #--------------------------------------------------------------------
 
     step_hours = 5
@@ -317,7 +317,7 @@ if __name__ == '__main__':
         curves_alt[name]['ra'] = data['RA'][igl]
         curves_alt[name]['dec'] = data['DEC'][igl]
                     
-    for curve, c in zip(reversed(curves_alt), colors):
+    for curve, c in zip(curves_alt, colors):
         if('SPT' in curve):
 
             times = np.asarray(curves_sun[curve]['times'])
@@ -326,12 +326,20 @@ if __name__ == '__main__':
             w = np.where(combined_mask)
             observable_time = len(w[0]) * step_hours
 
-            if(len(w[0]) == 0): continue
-            if(not curves_alt[curve]['line_mask']): continue
+            if(len(w[0]) == 0): 
+                print("'"+curve+"'", ':', False, ',') 
+                continue
+                
+            if(not curves_alt[curve]['line_mask']):
+                print("'"+curve+"'", ':', False, ',') 
+                continue
+                
+
             #w = np.where(curves_alt[curve]['mask'] & curves_sun[curve]['mask'])
             ax1.plot(times[w], curves_alt[curve]['altitude'][w],'.',c=c)
             ax2.plot(times[w], curves_sun[curve]['sun_relative_az'][w],'.', label=f'{curve}\n{observable_time:.0f}h,z={curves_alt[curve]["z"]:.1f}',c=c)
             ax3.scatter(curves_alt[curve]['ra'], curves_alt[curve]['dec'],color=c)
+            print("'"+curve+"'", ':', True, ',') 
         if('GOOD' in curve):
             '''
             times = np.asarray(curves_sun[curve]['times'])
