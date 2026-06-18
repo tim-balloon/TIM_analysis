@@ -11,6 +11,7 @@ class data_cleaned():
     '''
     Class to clean the detector TOD using the functions in 
     the next classes. Check them for more explanations
+
     Parameters
     ----------
     Returns
@@ -20,6 +21,7 @@ class data_cleaned():
     def __init__(self, data, detlist, det_offsets, fs, cutoff, polynomialorder, despike, sigma, prominence, sigma_clipping, low_thresh, high_thresh, DT):
         """
         create an instance of the class to clean the detector TODs.
+
         Parameters
         ----------
         data: list
@@ -59,6 +61,7 @@ class data_cleaned():
 
         '''
         Function to return the cleaned TOD as numpy array
+
         Parameters
         ----------
         Returns
@@ -114,6 +117,7 @@ class despike():
 
     '''
     Class to despike the TOD
+
     Parameters
     ----------
     Returns
@@ -124,6 +128,7 @@ class despike():
 
         '''
         Create an instance of the class to despike the TOD
+
         Parameters
         ----------
         data: 1d array
@@ -141,6 +146,7 @@ class despike():
         hthresh and pthres are measured in how many std the height (or the prominence) 
         of the peak is computed. The height of the peak is computed with respect to 
         the mean of the signal    
+
         Parameters
         ----------
         hthres: int
@@ -193,6 +199,7 @@ class despike():
         Window is the parameter used by the algorith to find the minimum 
         left and right of the peak. The minimum at left and right is used
         to compute the width of the peak
+
         Parameters
         ----------
         peaks: list
@@ -250,6 +257,7 @@ class despike():
         Window is the parameter used by the algorith to find the minimum 
         left and right of the peak. The minimum at left and right is used
         to compute the width of the peak
+
         Parameters
         ----------
         hthres: int
@@ -302,10 +310,10 @@ class despike():
         p_stat = np.abs(final_mean/final_var-1.)
         #print('CHAR', p_stat, final_mean, final_std, final_var)
         if p_stat <=1e-2:
-            '''
-            This means that the variance and the mean are approximately the 
-            same, so the distribution is Poissonian.
-            '''
+            
+            #This means that the variance and the mean are approximately the 
+            #same, so the distribution is Poissonian.
+            
             mu = (final_mean+final_var)/2.
             y_sub = np.random.poisson(mu, len(x_inter))
         else:
@@ -322,6 +330,7 @@ class filterdata():
 
     '''
     class for filter the detector TOD
+
     Parameters
     ----------
     Returns
@@ -332,6 +341,7 @@ class filterdata():
         
         '''
         See data_cleaned for parameters explanantion
+
         Parameters
         ----------
         data: 1d array
@@ -356,16 +366,17 @@ class filterdata():
 
         '''
         Highpass Butterworth filter.
+
         Parameters
+        ----------
         order: int
             the order of the butterworth filter
-        ----------
         Returns
+        -------
         b: ndarray
             Numerator polynomials of the IIR filter
         a: ndarray
             Denominator polynomials of the IIR filter
-        -------
         '''
         
         nyq = 0.5*self.fs
@@ -378,13 +389,13 @@ class filterdata():
         '''
         Data filtered with a butterworth filter 
         Parameters
+        -------
         order: int
             the order of the butterworth filter
-        ----------
         Returns
+        -------
         filterdata: array
             filtered timestream
-        -------        
         '''
         b, a = self.highpass(order)
         filterdata = sgn.lfilter(b, a, self.data)
@@ -395,13 +406,13 @@ class filterdata():
         '''
         Highpass cosine filter
         Parameters
+        -------
         f: float
             frequency at which to evaluate the filter
-        ----------
         Returns
+        -------
         cosline_filter: float
             the transmission of the cosine filter at f. 
-        -------
         '''
 
         if f < .5*self.cutoff:
@@ -417,13 +428,13 @@ class filterdata():
         Return an fft of the despiked data using the cosine filter.
         
         Parameters
+        -------
         Window: bool
             A parameter that can be true if the FFT is computed using a Hanning window. 
-        ----------
         Returns
+        -------
         filtereddata: array
             the filtered timestream. 
-        -------
         '''
 
         if window is True:
@@ -447,13 +458,13 @@ class filterdata():
         Inverse FFT of cleaned FFT data calculated in the previous function.
 
         Parameters
+        -------
         Window: bool
             A parameter that can be true if the FFT is computed using a Hanning window. 
-        ----------
         Returns
+        -------
         filtereddata: array
             the inverse FFT of cleaned FFT data. 
-        -------
         '''
 
         ifft_data = np.fft.irfft(self.fft_filter(window=window), len(self.data))
@@ -464,6 +475,7 @@ class detector_trend():
 
     '''
     Class to detrend a TOD
+
     Parameters
     ----------
     Returns
@@ -473,6 +485,7 @@ class detector_trend():
     def __init__(self, data):
         '''
         create an instance of the class to detrend a TOD
+
         Parameters
         ----------
         data: 1 array
@@ -487,18 +500,19 @@ class detector_trend():
 
         '''
         Function to fit a trend line to a TOD
+
         Parameters
+        -------
         edge: int
             dimension of the list of timestreams passed to the function. 
         order: int
             order of the polynome to be fit to the timsetream.
-        ----------
         Returns
+        -------
         y_fin: array
             fitted data
         index_exclude: array
             index of elements to set to 0. 
-        -------
         '''
 
         x = np.arange(len(self.data))
@@ -516,16 +530,17 @@ class detector_trend():
 
         '''
         Function to remove the trend polynomial from the TOD
+
         Parameters
+        -------
         edge: int
             dimension of the list of timestreams passed to the function. 
         order: int
             order of the polynome to be fit to the timsetream.
-        ----------
         Returns
+        -------
         fit_residual: array
             the residual between the timestream and the fit of the timestream. 
-        -------
         '''
 
         polyres = self.polyfit(edge=edge, order=order)
@@ -541,6 +556,7 @@ class sigma_clipping():
 
     '''
     Class to measure the variance in a timestream
+
     Parameters
     ----------
     Returns
@@ -550,12 +566,13 @@ class sigma_clipping():
     def __init__(self, data):
         '''
         Create an instance of the class to measure the variance in a timestream
+
         Parameters
         ----------
         data: 1d array
             the detector timestream
         Returns
-        -------
+        ----------
         '''
 
         self.data = np.float32(data)
@@ -563,6 +580,7 @@ class sigma_clipping():
     def clipping(self, low_thresh, high_thresh):
         '''
         Measure the variance of a timestream and return True if its variance is within the thresholds.
+
         Parameters
         ----------
         low_trhesh: float
@@ -571,7 +589,7 @@ class sigma_clipping():
         high_trhesh: float
             the higher threshold in sigma for the timestream variance
         Returns
-        -------
+        ----------
         reject: bool
             if the timestream variance is inside the thresholds or not. 
         '''        
@@ -596,20 +614,22 @@ class sigma_clipping():
 class kidsutils():
     '''
     Class containing useful functions for KIDs
+
     Parameters
     ----------
     Returns
-    -------
+    ----------
     '''
 
     def rotatePhase(self, I, Q):
 
         '''
         Rotate phase for a KID
+
         Parameters
         ----------
         Returns
-        -------
+        ----------
         '''
 
         X = I+1j*Q
@@ -627,11 +647,11 @@ class kidsutils():
         Power = Phase/Responsivity
 
         Parameters
+        -------
         I: array
             I phase of the kid 
         Q: array: 
             Q phase of the kid
-        ----------
         Returns
         -------
         phi: array
@@ -650,13 +670,13 @@ class kidsutils():
         Compute the magnitude response of a KID
 
         Parameters
+        ------- 
         I: array
             I phase of the kid 
         Q: array: 
             Q phase of the kid
-        ----------
         Returns
-        -------
+        ------- 
         mag: array
             the magnitude
         '''
@@ -669,11 +689,14 @@ class kidsutils():
         data: values that need to be interpolated
         bins: bins of data coming from the pps signal
         sampling: frequency sampling of the detectors 
+
         Parameters
         ----------
         Returns
-        -------
+        ----------
         '''
+
+
         """
         start = np.append(0, np.cumsum(bins[:-1]))
         end = np.cumsum(bins)
@@ -711,10 +734,11 @@ class kidsutils():
         '''
         get the time timestreams. 
         Need implementation for TIM
+
         Parameters
         ----------
         Returns
-        -------
+        ----------
         '''
 
         roach_string_ctime = ['ctime_packet_roach' + f'{roach}' for roach in roach_number] #roach_string_ctime = 'ctime_packet_roach'+str(int(roach_number))

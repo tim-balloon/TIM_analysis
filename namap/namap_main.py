@@ -287,15 +287,60 @@ def main(P, nbdets=None):
                     hdr["BUNIT"] = 'MJy/sr'
                     hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
                     hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                    hdu.writeto( 'fits_and_hdf5/'+P['beam_output'], overwrite=True)
-                    print('save fits_and_hdf5/'+P['beam_output'])
-                    hdu.close()    
+                    hdu.writeto( P['beam_output'], overwrite=True)
+                    print('save '+P['beam_output'])
+                    hdu.close()  
+
+
+        if P['check_offsets'] and not P['coadd']:
+
+            LST_mean = lst_data.mean()
+            lat_value = lat_data.mean()
+            corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
+            azi_ref, alt_ref = corr.correction()
+
+            '''
+            dettable = ld.det_table(kid_num, P['detector_table'])     
+            det_off, _,_ = dettable.loadtable() 
+            XEL = det_off[:,0] 
+            EL = det_off[:,1] 
+            '''
+            
+            file = P['detectors_output_file']    
+            f = open(file, 'w')
+            f.write("Name\tEL\tXEL\n")  # Column headers
+
+            for i_det, name_kid in enumerate(kid_num):
+   
+                beam_value = bm.beam(map_values[i_det] )
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
+
+                if isinstance(beam_map[0], str): 
+                    print(name_kid, beam_map[0])
+                    f.write(f"{name_kid}\t None \t None \n") 
+                else: 
+                    params = beam_map[1]
+                    cov = beam_map[2]
+                    uncertainties = np.sqrt(np.diag(cov))
+                    print(f'yo={params[2]:.2f} pm {uncertainties[2]:.2f} | xo={params[1]:.2f} pm {uncertainties[1]:.2f}' )
+                    x_peak = params[1]; y_peak = params[2]
+                    ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)                         
+                    conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) 
+                    AZ_dets, EL_dets = conv2azel.radec2azel()
+                    daz = AZ_dets - azi_ref
+                    xel = daz * np.cos(alt_ref)
+                    delv = EL_dets - alt_ref
+
+                    f.write(f"{name_kid}\t{delv:3f}\t{xel:3f}\n")  # Tab-separated values
+            f.close()                      
+
+
     return 0
 
 if __name__ == "__main__":
 
     #Repogroup.add_argument('-te', '--telemetry', action='store_true', help='For BLAST-TNG, specify if the data are coming from \
-
 
     '''
     If you want to modify this code, please create your own branch. 
@@ -305,7 +350,7 @@ if __name__ == "__main__":
     1/2: git clone from TIM_analysis/namap
 
     2/2: Download the TOD file: https://drive.google.com/file/d/1BnkEUj_yhPBPJte7ZgwxNHtMI75y8Nj6/view?usp=drive_link
-    and put it in fits_and_hdf5/
+    and put it in datasets/
 
     To run: python namap_main.py --params-file PAR_FILES/params_namap.par
 

@@ -5,6 +5,7 @@ from photutils import find_peaks
 from scipy.signal import find_peaks as fp
 from astropy.stats import sigma_clipped_stats
 from IPython import embed
+from astropy.wcs import WCS
 
 class beam(object):
     """
@@ -57,7 +58,7 @@ class beam(object):
             Current model parameter values
 
         Returns
-        -------
+        ----------
         multivariate_gaussian: array
             the final result as a 1D array 
         
@@ -122,7 +123,7 @@ class beam(object):
             Maximum value of the data (used to set a threshold).
 
         Returns
-        -------
+        ----------
         residuals : array
             (data - model) / error, evaluated only for pixels above threshold.
         """
@@ -426,10 +427,18 @@ class beam(object):
 class Beam1D(object):
     """
     Fit one or more 1D Gaussians to a collapsed map.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
     """
 
     def __init__(self, data, param=None, threshold_frac=0.2, fact=20):
         """
+        Init 
+
         Parameters
         ----------
         data : 1D array

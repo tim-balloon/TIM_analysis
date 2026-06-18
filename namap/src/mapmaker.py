@@ -11,6 +11,7 @@ class maps():
 
     '''
     Wrapper class for the wcs_word class and the mapmaking class.
+
     Parameters
     ----------
     Returns
@@ -20,6 +21,7 @@ class maps():
     def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False,  parang=None, params=None): #noise=1., telcoord=False,
         '''
         Create an instance of maps
+
         Parameters
         ----------
         Returns
@@ -54,6 +56,7 @@ class maps():
 
         '''
         Function to compute the projection and the pixel coordinates
+
         Parameters
         ----------
         Returns
@@ -68,6 +71,7 @@ class maps():
 
         '''
         Function to generate the maps using the pixel coordinates to bin
+
         Parameters
         ----------
         Returns
@@ -86,7 +90,8 @@ class maps():
     def map_plot(self, data_maps, kid_num):
 
         """
-        Plot the map out of the data timestreams.     
+        Plot the map out of the data timestreams.    
+
         Parameters
         ---------- 
         data_maps: list
@@ -157,7 +162,7 @@ class maps():
             hdr["BUNIT"] = 'MJy/sr'
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
             hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
-            hdu.writeto( os.getcwd()+'/fits_and_hdf5/'+self.output_file, overwrite=True)
+            hdu.writeto( os.getcwd()+'/datasets/'+self.output_file, overwrite=True)
             hdu.close()
 
         else: 
@@ -196,7 +201,7 @@ class maps():
                 hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
 
-                hdu.writeto(os.getcwd()+'/fits_and_hdf5/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                hdu.writeto(os.getcwd()+'/datasets/'+name_before_fits+'_'+name+fits_and_after, overwrite=True)
                 hdu.close()
 
 class wcs_world():
@@ -231,10 +236,10 @@ class wcs_world():
         -------
         '''
 
-        self.ctype = ctype    #ctype of the map, which projection is used to convert coordinates to pixel numbers
+        self.ctype = ctype  #ctype of the map, which projection is used to convert coordinates to pixel numbers
         self.cdelt = cdelt  #cdelt of the map, distance in deg between two close pixels
-        self.crpix = crpix    #crpix of the map, central pixel of the map in pixel coordinates
-        self.crval = crval    #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
+        self.crpix = crpix  #crpix of the map, central pixel of the map in pixel coordinates
+        self.crval = crval  #crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
         #self.telcoord = telcoord #Telescope coordinates boolean value. Check map class for more explanation
         self.DT = DT #Float precision required
         self.IT = IT #Integer precision required
@@ -244,6 +249,7 @@ class wcs_world():
         '''
         Function for creating a wcs projection and a pixel coordinates 
         from sky/telescope coordinates
+
         Parameters
         ----------
         coord1: list
@@ -259,7 +265,6 @@ class wcs_world():
         w: wcs object
             the world coordinate system object of Astropy
         '''        
-
         w = wcs.WCS(naxis=2)
         w.wcs.crpix = self.crpix #wo.wcs.crpix
         w.wcs.cdelt = self.cdelt
@@ -274,19 +279,21 @@ class wcs_world():
         for c1,c2 in zip(coord1, coord2):
             #world.append( w.world_to_pixel_values(c1,c2) )
 
-            x_pix, y_pix = w.world_to_pixel_values(c1, c2)
+            x_pix, y_pix = w.world_to_pixel_values(c1, c2) #Always uses NumPy / 0-based pixel coordinates
             
             # Convert both arrays to DT
             x_pix = np.array(x_pix, dtype=self.DT)
             y_pix = np.array(y_pix, dtype=self.DT)
             
-            world.append((x_pix, y_pix))        
+            world.append((x_pix, y_pix)) 
+                   
         return world, w
 
 class mapmaking(object):
 
     '''
     Class to generate the maps. 
+
     Parameters
     ----------
     Returns
@@ -298,6 +305,7 @@ class mapmaking(object):
 
         '''
         Create an instance of the class to generate the maps. 
+
         Parameters
         ----------
         data: list    
@@ -328,6 +336,7 @@ class mapmaking(object):
         
         '''
         Function to create the 2D map
+
         Parameters
         ----------
         coadd: bool
@@ -349,6 +358,7 @@ class mapmaking(object):
         if noise is None: noise = self.weight**2
 
 
+
         Xmin = np.inf
         Xmax = -np.inf
         Ymin = np.inf
@@ -357,6 +367,7 @@ class mapmaking(object):
         # --------------------------------------------- 
         # Compute extrema from your pixel list
         for i in range(self.number):
+            
             idxpixel = self.pixelmap[i]
             
             # Extract min and max for x and y
@@ -395,8 +406,8 @@ class mapmaking(object):
         # ---------------------------------------------
         # Shift crpix into new cutout
         
-        crpix[0] -= idx_xmin
-        crpix[1] -= idx_ymin
+        crpix[0] -= idx_xmin-1
+        crpix[1] -= idx_ymin-1
         
         # Recompute crval (reference world coordinate)
         # Using normal WCS linear approximation:
@@ -408,8 +419,8 @@ class mapmaking(object):
         Y_edges = np.arange(idx_ymin - 0.5, idx_ymax + 1.5, 1).astype(self.DT)
         
         #--------------------
-        #X_edges = np.arange(edges[0]-0.5, edges[1]+1.5,1).astype(self.DT)        
-        #Y_edges = np.arange(edges[2]-0.5, edges[3]+1.5,1).astype(self.DT) 
+        #X_edges = np.arange(0.5, crpix[0]*2+0.5,1).astype(self.DT)        
+        #Y_edges = np.arange(0.5, crpix[1]*2+0.5,1).astype(self.DT) 
 
         samples = []
         coord1samples = []
@@ -441,6 +452,7 @@ class mapmaking(object):
 
         '''
         Function to convolve the maps with a gaussian.
+        
         Parameters
         ----------
         std: float

@@ -9,6 +9,7 @@ class utils(object):
 
     '''
     class to handle conversion between different coodinates sytem 
+
     Parameters
     ----------
     Returns
@@ -19,6 +20,7 @@ class utils(object):
 
         '''
         class to handle conversion between different coodinates sytem 
+
         Parameters
         ----------
         coord1: 1d array
@@ -33,14 +35,14 @@ class utils(object):
         Returns
         -------
         '''
+        
+        self.coord1 = np.radians(coord1)
+        self.coord2 = np.radians(coord2)
 
+        self.lst = None if lst is None else np.asarray(lst) * np.pi / 12.0
+        self.lat = None if lat is None else np.radians(lat)
 
-        self.coord1 = np.radians(coord1)  #Array of coord 1 converted in degrees   
-        self.coord2 = coord2  #Array of coord 2 converted in degrees   
-        self.lst = lst        #Local Sideral Time in hours
-        self.lat = lat        #Latitude converted in degrees
-
-    def zenithAngle(self,HA):
+    def zenithAngle(self,ha):
         """
         source zenith angle (rad)
         latitutde and coord2 need to be in degrees.
@@ -54,12 +56,9 @@ class utils(object):
         za: array
             zenith angle in radians
         """
+        return np.arccos( np.sin(self.lat) * np.sin(self.coord2) + np.cos(self.lat) * np.cos(self.coord2) * np.cos(ha) )
 
-        za = np.arccos(np.sin(np.radians(self.lat)) * np.sin(np.radians(self.coord2)) + np.cos(np.radians(self.lat)) * np.cos(np.radians(self.coord2)) * np.cos(np.radians(HA)))
-
-        return za
-
-    def azimuthAngle(self, HA):
+    def azimuthAngle(self, ha):
         """
         source azimuth angle (rad)
         latitude and coord2 need to be in degrees.
@@ -75,10 +74,14 @@ class utils(object):
             source azimuth angle (rad)
         """ 
 
-        za = self.zenithAngle(HA)
-        cosAz = (np.sin(np.radians(self.coord2)) - np.sin(np.radians(self.lat)) * np.cos(za))/(np.cos(np.radians(self.lat)) * np.sin(za))
-        sinAz = - np.sin(np.radians(HA)) * np.cos(np.radians(self.coord2)) / np.sin(za)
-        return np.arctan2(sinAz,cosAz)
+        za = self.zenithAngle(ha)
+
+        cosA = ( np.sin(self.coord2) - np.sin(self.lat) * np.cos(za) ) / (np.cos(self.lat) * np.sin(za))
+
+        sinA = ( -np.sin(ha) * np.cos(self.coord2) / np.sin(za) )
+
+        return np.arctan2(sinA, cosA)
+
 
     def declinationAngle(self):
         """
@@ -125,6 +128,7 @@ class utils(object):
         '''
         Return the hour angle in radians given the lst in hours and RA in radians
         i.e. lst needs to be in hours, ra in needs to be in radians 
+
         Parameters
         ----------
         Returns
@@ -133,13 +137,15 @@ class utils(object):
             hour angle in hour
         ''' 
 
-        return self.lst*np.pi/12 - self.coord1
-
-    def ha2ra(self, hour_angle):
+        if self.lst is None: raise ValueError("LST must be provided for RA→HA conversion")
+        return self.lst - self.coord1
+    
+    def ha2ra(self, ha):
 
         '''
         Return the right ascension in radians given the lst in hours and the hour angle in radians
         i.e. lst needs to be in hours, hour angle in needs to be in radians 
+
         Parameters
         ----------
         hour_angle: array
@@ -149,12 +155,15 @@ class utils(object):
         ra: array
             Right Ascension angle in hour
         '''
-        return self.lst*np.pi/12 - hour_angle
 
+        if self.lst is None: raise ValueError("LST must be provided for HA→RA conversion")
+        return self.lst - ha
+    
     def radec2azel(self):
 
         '''
         Function to convert RA and DEC to AZ and EL
+
         Parameters
         ----------
         Returns
@@ -164,16 +173,19 @@ class utils(object):
         el: array
             Elevation angle in degree.
         '''
+        ha = self.ra2ha()
 
-        hour_angle = self.ra2ha()
-        el = np.pi/2 - self.zenithAngle(np.degrees(hour_angle))
-        az = self.azimuthAngle(np.degrees(hour_angle))     
+        za = self.zenithAngle(ha)
+        el = np.pi / 2.0 - za
+        az = self.azimuthAngle(ha)
+
         return np.degrees(az), np.degrees(el)
 
     def azel2radec(self):
 
         '''
         Function to convert AZ and EL to RA and DEC
+
         Parameters
         ----------
         Returns
@@ -184,9 +196,15 @@ class utils(object):
             Declination angle in degree.
         '''
 
-        dec = self.declinationAngle()
-        hour_angle  = self.azeltoha()
-        ra = self.ha2ra(hour_angle)
+        az = self.coord1
+        el = self.coord2
+
+        sin_dec = ( np.sin(el) * np.sin(self.lat) + np.cos(el) * np.cos(self.lat) * np.cos(az) )
+        dec = np.arcsin(sin_dec)
+
+        ha = np.arctan2( -np.sin(az), np.tan(el) * np.cos(self.lat) - np.cos(az) * np.sin(self.lat) )
+
+        ra = self.ha2ra(ha)
 
         return np.degrees(ra), np.degrees(dec)
 
@@ -219,6 +237,7 @@ class convert_to_telescope(object):
 
     '''
     Class to convert from sky equatorial coordinates to telescope coordinates
+
     Parameters
     ----------
     Returns
@@ -236,6 +255,7 @@ class convert_to_telescope(object):
 
         '''
         This function rotates the coordinates projected on the plane using the parallactic angle
+
         Parameters
         ----------
         Returns
@@ -260,8 +280,7 @@ class apply_offset(object):
     -------
     """    
 
-    def __init__(self, input_ctype, coord1, coord2, ctype, xsc_offset, DT, IT, det_offset = np.array([0.,0.]),\
-                 lst = None, lat = None):
+    def __init__(self, input_ctype, coord1, coord2, ctype, DT, IT, xsc_offset = (0., 0.), det_offset = np.array([[0., 0.]]), lst = None, lat = None):
         
         """
         Return an instance of the apply_offset class
@@ -299,6 +318,7 @@ class apply_offset(object):
     def correction(self):
         """
         Apply offset
+
         Parameters
         ----------
         Returns
@@ -350,7 +370,7 @@ class apply_offset(object):
             if(self.input_ctype == self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
                 az, el = conv2azel.radec2azel()
-            elif(self.input_ctype ==self.input_ctype.lower() == 'az and el'):
+            elif(self.input_ctype.lower() == 'az and el'):
                 az, el = self.coord1, self.coord2
             else: 
                 el = self.coord2
@@ -365,8 +385,7 @@ class apply_offset(object):
                 
                 #xsc_quat = quaternion.eul2quat(self.xsc_offset[0], self.xsc_offset[1], 0)
                 #det_quat = quaternion.eul2quat(self.det_offset[i,0], self.det_offset[i,1], 0)
-
-                el_corrected[i, :] = el+self.xsc_offset[1]+self.det_offset[i, 1]
+                el_corrected[i, :] = np.asarray(el)+self.xsc_offset[1]+self.det_offset[i, 1]
 
                 az_corrected[i, :] = (xEL-self.xsc_offset[0]-self.det_offset[i, 0]) / cos_el
 
@@ -395,6 +414,7 @@ class apply_offset(object):
         
 class compute_offset(object):
     '''
+
     Parameters
     ----------
     Returns
@@ -419,6 +439,7 @@ class compute_offset(object):
 
         '''
         For more information about centroid calculation see Shariff, PhD Thesis, 2016
+
         Parameters
         ----------
         Returns
@@ -456,6 +477,7 @@ class compute_offset(object):
     
     def value(self):
         '''
+        
         Parameters
         ----------
         Returns
