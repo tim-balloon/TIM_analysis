@@ -51,6 +51,8 @@ pixnum = 300, 300 #Number of pixels along the two axis. The input needs to be wr
 
 #--- Parameters for the processing of the TODs ---
 
+bypass_synch = False
+
 #Choose the precision in which to run the code
 precision = 'float64'
 
@@ -66,7 +68,7 @@ save_downsampled_TODS = False
 coadd = True
 
 #If called and coadd=True, will add an inverse-variance weight to each TOD in the coadded map. 
-variance_weigthing = False
+variance_weighting = False
 
 #Frequency to downsample the TODs to. If no downsampling, put downsample_frequency = None. 
 downsample_frequency = 100 #Hz
@@ -75,10 +77,10 @@ downsample_frequency = 100 #Hz
 highpassfreq    = 0 
 
 #Polynomial order used to fit the TOD to detrend data. If no detrending, put polynomialorder = 0. 
-polynomialorder = 3 
+polynomialorder = 0 
 
 #Despike flag. If called, two possible parameters can be explicited. 
-despike         = True 
+despike         = False 
 #The first is the height in sigma unit for the peak, 
 sigma=10       
 #and the second is the prominence in sigma unit for the peak 
@@ -92,8 +94,6 @@ high_thresh = 5
 #If called remove data acquired during turnarounds of the telescope. 
 remove_turnarounds = True
 
-#Fit a gaussian beam to the created map(s).
-checkBeam = False
 
 #convolution by the beam
 gaussian_convolution = False 
@@ -107,3 +107,8 @@ output_map =  'coadd.fits'
 output_tods = 'tods'
 beam_output = 'beam.fits'
 #-------------------------
+
+#Fit a gaussian beam to the created map(s).
+checkBeam = False
+check_offsets = False
+checkAngularPowerSpectrum = False
