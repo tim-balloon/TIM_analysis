@@ -16,13 +16,47 @@ from astropy.io import fits
 import datetime
 import os
 import json
+
 #for debugging purpose only
 from IPython import embed
+
 #for profilling purpose only
 import tracemalloc
 import time
 
-def namap_main(P, nbdets=None):
+
+def load_par_file(filepath):
+    """
+    Return as a dictionary the parameters stores in a .par file
+    
+    Parameters
+    ----------
+    filepath: str
+        path and name of the parameter file
+    Returns
+    -------
+    params: dictionary
+        dictionary containing the loaded parameters
+    """    
+
+    params = {}
+    with open(filepath, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip()
+                try:
+                    val = ast.literal_eval(val)
+                except Exception:
+                    pass  # fallback: treat as string
+                params[key] = val
+    return params
+
+def main(P, nbdets=None):
     """
     Main script to call Namap. 
     
@@ -35,9 +69,7 @@ def namap_main(P, nbdets=None):
     Returns
     -------
     """    
-
     #-----------------------------------------------------------------------------------------
-    #Choose a precision to run the code with. 
 
     _prec = str(P['precision'].lower())
     dtype_map = {
@@ -57,20 +89,17 @@ def namap_main(P, nbdets=None):
         IT = int_map[_prec]
     except KeyError:
         raise ValueError(f"Unsupported precision '{_prec}'. Choose float16/32/64 or 16/32/64.")
-    print(f"Using numeric dtype: {DT}, {IT}")
+    print(f"Using numeric dtype: {DT}")
     #-----------------------------------------------------------------------------------------
-    
-    #---------------------------------------------------------------
-    #1st frame and number of frames to load. 
-    num_frames, first_frame = P['num_frames'], P['first_frame'] 
+    #------------------------------------------------------------------------------------------
+    #### start mathilde code 
+    #---------------------------------
+    num_frames, first_frame = P['num_frames'], P['first_frame']
 
-    #The file to load the frames from. 
-    filepath = P['input_file']
-    #---------------------------------------------------------------
-
-    #----------------------------------------------------------------
-    #Also need to be implemented ?
+    #Also need to be implemented. 
     telemetry = P['telemetry']
+
+    #So far, only 'RA and DEC' is implemented and working.   
 
     if P['input_ctype'] == 'RA and DEC':
         coord1 = str('RA')
@@ -88,195 +117,230 @@ def namap_main(P, nbdets=None):
         coord1 = str('X')
         coord2 = str('Y')
         xystage = True
+
     #----------------------------------------------------------------
-    
-    #----------------------------------------------------------------
-    #Load the table of detector names and E.M frequency
+    filepath = P['hdf5_file']
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
+    if P['frequencies'] is not None:
+        filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
     
-    #if a list of E.M frequencies in GHz is provided, select detectors per their E.M frequency:
-    if P['frequencies'] is not None: filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
-    
-    #If a list of detector names is provided, select detectors in that list:
     if P['detectors_to_use'] is not None:
         good_kid_table = tb.Table.read(P['detectors_to_use'], format='ascii.tab')
         filtered = btable[np.isin(btable['Name'], good_kid_table['Name'])]
-
-    if P['frequencies'] is None and P['detectors_to_use'] is None: filtered = btable
-    #----------------------------------------------------------------
+    if P['frequencies'] is None and P['detectors_to_use'] is None:
+        filtered = btable
+    #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
+    
     if(nbdets is not None):
         result_rows = []
         # Loop over unique frequencies
         for freq in np.unique(filtered['Frequency']):
             sub = filtered[filtered['Frequency'] == freq]
             # take first N rows for this frequency
-            result_rows.append(sub[:nbdets])
+            result_rows.append(sub[nbdets:])
 
         # Concatenate back into a single table
         kid_num = Table(np.hstack(result_rows))['Name']
 
     else: kid_num = filtered['Name']
-    print('Nb dets: ', len(kid_num))
     #-------------------------------------------------
 
-    #---------------------------------------------------------------
-    #load the table of detector offsets
-    dettable = ld.det_table(kid_num, P['detector_table']) 
-    det_off, _,_ = dettable.loadtable() 
+    print('Nb dets: ', len(kid_num))
+    #----------------------------------------------------------------
 
-    #Offset with respect to star cameras in xEL and EL
-    xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
-    #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
-    #xsc_offset = xsc_file.read_file()
-    #---------------------------------------------------------------
-
-    #---------------------------------------------------------------
-    #Pre-processing parameters for TODs
+    #Cleaning data parameters
     highpassfreq = P['highpassfreq']
     polynomialorder = P['polynomialorder']
     despike_bool = P['despike']
     sigma,prominence = P['sigma'],P['prominence']
     sigma_clipping_bool = ['sigma_clipping']
     low_thresh, high_thresh = P['low_thresh'], P['high_thresh'] 
-    if(P['downsample_frequency'] is not None): downsample = True
-    else: downsample = False
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
-    #---------------------------------------------------------------
+    #---------------------------------
 
-    #---------------------------------------------------------------
-    #Load the TODs
-    dataload = ld.data_value( det_path=filepath, det_name=kid_num, coord1_name=coord1, coord2_name=coord2, startframe=first_frame,
-                numframes=num_frames, despike=despike_bool, sigma=sigma, prominence=prominence, downsample=downsample, freq_target=P['downsample_frequency'],
-                DT=DT, IT=IT, P=P)
-    
-    timemap, det_data, ctime, coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values() #ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
+    #----------------------------------
+    #Load the data
+    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT)
+    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, ra_list, dec_list = dataload.values()
+    #-------------------------------
 
-    #---------------------------------------------------------------
-
-    #if(P['save_raw_IQ_TODS']): return 0
-
-    if(P['save_raw_TODS']):
-        
-        tods_compressor = ld.save_tods(P['output_tods'], kid_num, det_data, spf_data, timemap, 
-                                           coord1, coord2, coord1_data, coord2_data, spf_coord, ctime, 
-                                           first_frame, num_frames, lst_data, lat_data, P,
-                                            DT, IT, prefix='NOT_SYNCH_PHASE_')
-        tods_compressor.fct_save_tods()
-
-        return 0      
-    
-    #---------------------------------------------------------------
-    #Remove a baseline, apply a high-pass filter and discard TOD with large & low variance, on a detector-per-detector basis. 
-    det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, sigma_clipping_bool, low_thresh, high_thresh, DT)           
-    cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
-    P['rejected detectors list'] = rejected_detetectors_list
-
-    #For testing purpose only ! To be removed for real data. 
+    #---------------------------------
+    #First remove noise peaks and discard TODs with large & low variance. 
+    #det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
+    #cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
+    #P['rejected detectors list'] = rejected_detetectors_list
     cleaned_data=det_data.copy()
+    #---------------------------------
+
+    #---------------------------------
+    if(len(cleaned_data[0]) != len(coord1_data) ): #<-- for testing purpose only
+
+        zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
+                                            lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
+        
+        timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data() 
+        P['bypass_synch'] = False
+    else: 
+        print('Bypass Synch')
+        P['bypass_synch'] = True
+
+    #---------------------------------
+
+    #---------------------------------
+    #Clean the TOD by removing smooth polynomial component and apply a high pass filter
+    #det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
+    #cleaned_data, _, _, _ = det_tod.data_clean()
+
+    #Filter out the turnarounds
+    if(P['remove_turnarounds'] and not P['bypass_synch']):
+        for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
+        if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
+        lst_data = lst_data[turnarounds_flag==1]
+        lat_data = lat_data[turnarounds_flag==1]
+        coord2_data = coord2_data[turnarounds_flag==1]
+        coord1_data = coord1_data[turnarounds_flag==1] 
     #---------------------------------------------------------------
 
-    #--------------------------------------------------------------
-    zoomsyncdata = ld.frame_zoom_sync(timemap, cleaned_data, spf_data, ctime, coord1_data, coord2_data, spf_coord, 
-                                        turnaround_flags, lst_data, lat_data,  lat_spf,  DT, IT)                
-    timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnaround_flags = zoomsyncdata.sync_data() 
-    #---------------------------------------------------------------
-
-    #---------------------------------------------------------------
-    #Filter out the turnarounds, i.e remove the samples taken when the telescope speed is not constant. 
-    if(P['remove_turnarounds'] ):
-        for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnaround_flags==1]
-        if P['save_downsampled_TODS']: timemap = timemap[turnaround_flags==1]
-        lst_data = lst_data[turnaround_flags==1]
-        lat_data = lat_data[turnaround_flags==1]
-        coord2_data = coord2_data[turnaround_flags==1]
-        coord1_data = coord1_data[turnaround_flags==1] 
-    #---------------------------------------------------------------
     
     #---------------------------------------------------------------
     #Apply detector's response
     #cleaned_data = [arr * resp for arr, resp in zip(cleaned_data, resp)]
-    #---------------------------------------------------------------
+    #---------------------------------
 
     if(P['save_downsampled_TODS']):
-        tods_compressor = ld.save_tods(P['output_tods'], kid_num, cleaned_data, P['downsample_frequency'], timemap, 
-                                           coord1, coord2, coord1_data, coord2_data, P['downsample_frequency'], timemap, 
-                                           first_frame, num_frames, lst_data, lat_data,P, DT, IT, prefix='PHASE_')
+
+        tods_compressor = ld.compress_tods(P['output_hdf5'], kid_num, cleaned_data, P['downsample_frequency'], timemap, 
+                                           coord1, coord2, coord1_data, coord2_data, 
+                                           first_frame, num_frames, lst_data, lat_data,P,
+                                            DT, IT, int8=P['int8'])
+        tods_compressor.save_tods()
+
+    else:
         
 
-        tods_compressor.fct_save_tods()
-        return 0 
+        #load the table
+        dettable = ld.det_table(kid_num, P['detector_table']) 
+        det_off, _,_ = dettable.loadtable() #noise_det, resp
+        
+        #---------------------------------
+        #Offset with respect to star cameras in xEL and EL
+        xsc_offset = (P['xsc_offset'],P['det_offset']) #needs to be tested with real offsets. 
+        #xsc_file = ld.xsc_offset(P['pointing_table'], first_frame, num_frames+first_frame)
+        #xsc_offset = xsc_file.read_file()
+        corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
+        coord1slice, coord2slice = corr.correction()
+        #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
+        #---------------------------------
 
-    #---------------------------------
-    corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
-    coord1slice, coord2slice = corr.correction()
-    #---------------------------------
+        #--------------------
+        #Need to be implemented ! So far, set parallactic angle to 0.
+        parallactic=[]
+        if P['telescope_coordinate']:
+            for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
+                tel = pt.utils(c1, c2, lst_data, lat_data)
+                parallactic.append( tel.parallactic_angle() )
+        else:
+            for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
+                parallactic.append(np.zeros_like(c1, dtype=DT))
+        #---------------------------------
 
-    #--------------------------------------------------
-    #Need to be implemented ! So far, set parallactic angle to 0.
-    parallactic=[]
-    if P['telescope_coordinate']:
-        for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            tel = pt.utils(c1, c2, lst_data, lat_data)
-            parallactic.append( tel.parallactic_angle() )
-    else:
-        for j, (c1, c2) in enumerate(zip(coord1slice,coord2slice)): 
-            parallactic.append(np.zeros_like(c1, dtype=DT))
-    #--------------------------------------------------
+        #--------------------
+        #Create the maps
+        maps = mp.maps(P['ctype'], 
+                    np.asarray([P['crpix'][0],P['crpix'][1]]), 
+                    np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
+                    np.asarray([P['crval'][0], P['crval'][1]]), 
+                    np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
+                    cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
+                    coadd=P['coadd'],   parang=parallactic, params=str(P)) #noise=noise_det,telcoord = P['telescope_coordinate'],
+        
+        maps.wcs_proj()
+        map_values = maps.map2d()
+        map_values = np.asarray(map_values)
+        map_values /= ( P['cdelt'][0] * np.pi / 180 )**2
+        wcs = maps.w
+        #--------------------------------------------------
 
-    #--------------------------------------------------
-    #Create the maps
-    maps = mp.maps(P['ctype'], 
-                np.asarray([P['crpix'][0],P['crpix'][1]]), 
-                np.asarray([P['cdelt'][0],P['cdelt'][1]]), 
-                np.asarray([P['crval'][0], P['crval'][1]]), 
-                np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
-                cleaned_data, coord1slice, coord2slice, 
-                convolution, std, P['output_map'], DT,IT,
-                coadd=P['coadd'], variance_weigthing = P['variance_weigthing'],  
-                parang=parallactic, params=str(P)) 
-    
-    maps.wcs_proj()
-    map_values = maps.map2d()
-    map_values = np.asarray(map_values)
-    map_values /= ( P['cdelt'][0] * np.pi / 180 )**2
-    wcs = maps.w
-    #--------------------------------------------------
+        #--------------------------------------------------    
+        #Plot the maps
+        maps.map_plot(data_maps = map_values, kid_num=kid_num)
+        #--------------------------------------------------      
+        
+        if P['checkBeam'] and P['coadd']:
+                
+                beam_value = bm.beam(map_values, )#param = self.beamparam
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
 
-    #--------------------------------------------------    
-    #Save the maps
-    maps.map_plot(data_maps = map_values, kid_num=kid_num)
-    #--------------------------------------------------   
-    
-    #If the coadded map is created, fit a gaussian beam model.
-    #If the model converges, save it in fits
-    if P['checkBeam'] and P['coadd']:
+                if isinstance(beam_map[0], str): print(beam_map[0])
+                else: 
+
+                    f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
+                    hdu = fits.HDUList([f])
+                    hdr = hdu[0].header
+                    hdr.set("map")
+                    hdr.set("Datas")
+                    hdr["BITPIX"] = ("64", "array data type")
+                    hdr["BUNIT"] = 'MJy/sr'
+                    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+                    hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+                    hdu.writeto( P['beam_output'], overwrite=True)
+                    print('save '+P['beam_output'])
+                    hdu.close()  
+
+
+        if P['check_offsets'] and not P['coadd']:
+
+            LST_mean = lst_data.mean()
+            lat_value = lat_data.mean()
+            corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
+            azi_ref, alt_ref = corr.correction()
+
+            '''
+            dettable = ld.det_table(kid_num, P['detector_table'])     
+            det_off, _,_ = dettable.loadtable() 
+            XEL = det_off[:,0] 
+            EL = det_off[:,1] 
+            '''
             
-            beam_value = bm.beam(map_values, )
-            beam_map = beam_value.beam_fit()
-            param = beam_map[1]
+            file = P['detectors_output_file']    
+            f = open(file, 'w')
+            f.write("Name\tEL\tXEL\n")  # Column headers
 
-            if isinstance(beam_map[0], str): print(beam_map[0])
-            else: 
+            for i_det, name_kid in enumerate(kid_num):
+   
+                beam_value = bm.beam(map_values[i_det] )
+                beam_map = beam_value.beam_fit()
+                param = beam_map[1]
 
-                f = fits.PrimaryHDU(beam_map[0], header=wcs.to_header())
-                hdu = fits.HDUList([f])
-                hdr = hdu[0].header
-                hdr.set("map")
-                hdr.set("Datas")
-                hdr["BITPIX"] = ("64", "array data type")
-                hdr["BUNIT"] = 'MJy/sr'
-                hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-                hdr["INFO"] = json.dumps(P, ensure_ascii=True)
-                hdu.writeto(P['beam_output'], overwrite=True)
-                print('save '+ P['beam_output'])
-                hdu.close()   
+                if isinstance(beam_map[0], str): 
+                    print(name_kid, beam_map[0])
+                    f.write(f"{name_kid}\t None \t None \n") 
+                else: 
+                    params = beam_map[1]
+                    cov = beam_map[2]
+                    uncertainties = np.sqrt(np.diag(cov))
+                    print(f'yo={params[2]:.2f} pm {uncertainties[2]:.2f} | xo={params[1]:.2f} pm {uncertainties[1]:.2f}' )
+                    x_peak = params[1]; y_peak = params[2]
+                    ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)                         
+                    conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) 
+                    AZ_dets, EL_dets = conv2azel.radec2azel()
+                    daz = AZ_dets - azi_ref
+                    xel = daz * np.cos(alt_ref)
+                    delv = EL_dets - alt_ref
 
-    return 0 
+                    f.write(f"{name_kid}\t{delv:3f}\t{xel:3f}\n")  # Tab-separated values
+            f.close()                      
+
+
+    return 0
 
 if __name__ == "__main__":
+
+    #Repogroup.add_argument('-te', '--telemetry', action='store_true', help='For BLAST-TNG, specify if the data are coming from \
 
     '''
     If you want to modify this code, please create your own branch. 
@@ -286,15 +350,25 @@ if __name__ == "__main__":
     1/2: git clone from TIM_analysis/namap
 
     2/2: Download the TOD file: https://drive.google.com/file/d/1BnkEUj_yhPBPJte7ZgwxNHtMI75y8Nj6/view?usp=drive_link
-    and put it in fits_and_hdf5/
+    and put it in datasets/
 
     To run: python namap_main.py --params-file PAR_FILES/params_namap.par
 
     Left to be done:
-        (I,Q) --> df/f (tod.kidsutils), implement several options
+        (I,Q) --> df/f (tod.kidsutils)
+        Improve downsampling (ld.frame_zoom_sync)
+        Implement respons correction and                    
+          noise detectors ? Replaced by sigma clipping. 
         Test parallactic angle & telescope coordinates
-        Double check that every arguments of the .par file is also in ARGPARSE SETUP
+        Improve TOD compression (ld.compress_tods)
+    
+        Focus (see src/beam.py)
+        Boresight (see src/coordinate.py/rotate)
+        Double check every par file key can be passed as argument
     '''
+
+    ## bookend mathilde code 
+    #------------------------------------------------------------------------------------------
 
     # ----------------- ARGPARSE SETUP -----------------
     parser = argparse.ArgumentParser(description='NAMAP Parameters')
@@ -351,7 +425,7 @@ if __name__ == "__main__":
     # Step 2: Load .par values if requested
     defaults = {}
     if args_partial.params_file:
-        defaults = ld.load_params(args_partial.params_file)
+        defaults = load_par_file(args_partial.params_file)
 
     # Step 3: Set parser defaults from .par
     parser.set_defaults(**defaults)
@@ -362,4 +436,122 @@ if __name__ == "__main__":
     # Step 5: Convert Namespace to dictionary
     P = vars(args)
 
-    namap_main(P)
+    main(P)
+
+
+
+
+
+    '''
+    f = fits.PrimaryHDU(map_values_forfit, header=wcs_forfit.to_header())
+    hdu = fits.HDUList([f])
+    hdr = hdu[0].header
+    hdr.set("map")
+    hdr.set("Datas")
+    hdr["BITPIX"] = ("64", "array data type")
+    hdr["BUNIT"] = 'Jy/sr'
+    hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
+    hdr["INFO"] = json.dumps(P, ensure_ascii=True)
+    hdu.writeto( os.getcwd()+'/src/'+'test_maps.fits', overwrite=True)
+    hdu.close()
+    '''
+
+    '''
+    N_gaussians = len(beam_map[1]) // 6
+    if(N_gaussians >1 ): 
+        w = np.where( beam_map[1][::6] == beam_map[1][::6].max() )
+        j = w[0][0] * 6
+        params = beam_map[1][j:j+6]
+        cov = beam_map[2][j:j+6, j:j+6]
+    else: 
+    '''
+            
+"""
+Compute relative detector offsets using Gaussian peak centers in pixels.
+
+Parameters
+----------
+x_peaks, y_peaks : arrays shape (N,)
+    Pixel coordinates of Gaussian centers for each detector.
+wcs : astropy.wcs.WCS
+    WCS of your map.
+time : astropy.time.Time
+    Time of observation (needed for RA/DEC -> AZ/EL).
+location : astropy.coordinates.EarthLocation
+    Telescope location.
+ref : int
+    Index of reference detector.
+
+Returns
+-------
+delta_EL : array shape (N,)
+    Offsets in Elevation relative to detector `ref`.
+delta_xEL : array shape (N,)
+    Offsets in cross-elevation (AZ*cos(EL)).
+AZ, EL : arrays shape (N,)
+    Absolute telescope coordinates for each detector.
+"""
+
+
+"""
+if(P['coadd']):
+    import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
+    zscale = ZScaleInterval()
+    vmin, vmax = zscale.get_limits(map_values)
+    
+    fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+    img = ax[0].imshow(map_values, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+    fig.colorbar(img, ax=ax[0], label='Amplitude')
+    ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
+    ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
+    ax[0].set_ylabel('Dec [deg]')
+    ax[0].set_xlabel('RA [deg]')
+    ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
+
+
+else: 
+    
+    import matplotlib.pyplot as plt
+    from astropy.visualization import ZScaleInterval
+    zscale = ZScaleInterval()
+    wcs = maps.w
+    zscale = ZScaleInterval()
+    ####################
+    if(P['coadd']): shape = map_values.shape
+    else: shape = map_values.shape[1:]
+    xbins = np.arange(-0.5, shape[0]+0.5, 1)
+    ybins = np.arange(-0.5, shape[1]+0.5, 1)
+    #We sample the map for each detector, following its path on the sky. 
+        
+    ####################
+    for id, (rapath, decpath) in enumerate(zip(ra_list, dec_list)):
+        vmin, vmax = zscale.get_limits(map_values[id])
+
+        fig, ax = plt.subplots(1,2,dpi=150,figsize=(8, 8),subplot_kw={'projection': wcs})
+        img = ax[0].imshow(map_values[id], origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+        fig.colorbar(img, ax=ax[0], label='Amplitude')
+        ax[0].coords[0].set_format_unit('deg', decimal=True)  # RA
+        ax[0].coords[1].set_format_unit('deg', decimal=True)  # De
+        ax[0].set_ylabel('Dec [deg]')
+        ax[0].set_xlabel('RA [deg]')
+        ax[0].plot(P['crval'][0], P['crval'][1],'or', transform=ax[0].get_transform('world'))
+
+        '''
+        y_pixel_coords, x_pixel_coords = wcs.world_to_pixel_values(rapath, decpath)    
+        # Round the positions and convert to integer indices
+        norm, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins),  )
+        hist, edges = np.histogramdd(sample=(x_pixel_coords.ravel(), y_pixel_coords.ravel()), bins=(xbins,ybins), weights=cleaned_data[id].ravel())
+    
+        im2 = ax[1].imshow(hist/norm, origin='lower', cmap='binary', vmin=vmin, vmax=vmax)
+        fig.colorbar(img, ax=ax[1], label='Amplitude')
+        ax[1].coords[0].set_format_unit('deg', decimal=True)  # RA
+        ax[1].coords[1].set_format_unit('deg', decimal=True)  # De
+        ax[1].set_ylabel('Dec [deg]')
+        ax[1].set_xlabel('RA [deg]')
+        ax[1].plot(P['crval'][0], P['crval'][1],'or', transform=ax[1].get_transform('world'))
+        '''
+        plt.tight_layout()
+    
+    plt.show()
+"""
