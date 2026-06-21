@@ -3,7 +3,7 @@
 #--- Input Data Paths and Parameters--
 
 #Path for TODs data
-input_file = 'datasets/TOD_25.0min.hdf5' 
+input_file = 'datasets/TOD_25.0min' 
 
 #Table with name of detectors, response, white noise level and offsets. 
 detector_table = 'config/TIM_kid_table.tsv' 
@@ -15,7 +15,7 @@ detectors_to_use = None
 frequencies = (715.0,) #GHz
  
 #Chose the data in the time dimension 
-num_frames = 25*60+1 #integration time in seconds to be loaded. 
+num_frames = 1500 #integration time in seconds to be loaded. 
 first_frame = 0 #Starting time in second 
 
 #----------------------------
@@ -50,9 +50,10 @@ pixnum = 300, 300 #Number of pixels along the two axis. The input needs to be wr
 
 #-----------------------------
 
-pls  
 
 #--- Parameters for the processing of the TODs ---
+
+bypass_synch = False
 
 #Choose the precision in which to run the code
 precision = 'float64'
@@ -69,7 +70,7 @@ save_downsampled_TODS = False
 coadd = True
 
 #If called and coadd=True, will add an inverse-variance weight to each TOD in the coadded map. 
-variance_weigthing = False
+variance_weighting = False
 
 #Frequency to downsample the TODs to. If no downsampling, put downsample_frequency = None. 
 downsample_frequency = 100 #Hz
@@ -95,9 +96,6 @@ high_thresh = 5
 #If called remove data acquired during turnarounds of the telescope. 
 remove_turnarounds = True
 
-#Fit a gaussian beam to the created map(s).
-checkBeam = False
-
 #convolution by the beam
 gaussian_convolution = False 
 #STD of the gaussian used for the convolution. The value is in arcsec
@@ -107,9 +105,15 @@ std = 0
 
 
 #--- Output Parameters ---
-
+int8 = False
 output_map =  'coadd.fits' 
 output_tods = 'tods'
 beam_output = 'beam.fits'
 
 #-------------------------
+
+
+#Fit a gaussian beam to the created map(s).
+checkBeam = False
+check_offsets = False
+checkAngularPowerSpectrum = False
