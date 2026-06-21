@@ -4,6 +4,7 @@ import src.detector as tod
 import src.mapmaker as mp
 import src.pointing as pt  
 import src.beam as bm
+import src.map_power_spectrum as mps
 import copy
 from astropy import wcs 
 import astropy.table as tb
@@ -119,16 +120,14 @@ def main(P, nbdets=None):
         xystage = True
 
     #----------------------------------------------------------------
-    filepath = P['hdf5_file']
+    filepath = P['input_file']
     btable = tb.Table.read(P['detector_table'], format='ascii.tab')
-    if P['frequencies'] is not None:
-        filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
+    if P['frequencies'] is not None: filtered = btable[np.isin(btable['Frequency'], P['frequencies'])]
     
     if P['detectors_to_use'] is not None:
         good_kid_table = tb.Table.read(P['detectors_to_use'], format='ascii.tab')
         filtered = btable[np.isin(btable['Name'], good_kid_table['Name'])]
-    if P['frequencies'] is None and P['detectors_to_use'] is None:
-        filtered = btable
+    if P['frequencies'] is None and P['detectors_to_use'] is None: filtered = btable
     #option in the par file to good kids list
 
     #-------- for profiling purpose only -------------
@@ -159,42 +158,44 @@ def main(P, nbdets=None):
     low_thresh, high_thresh = P['low_thresh'], P['high_thresh'] 
     #Beam convolution parameters
     convolution, std = P['gaussian_convolution'], P['std'] 
+    downsample_frequency = P['downsample_frequency'] 
+    if(downsample_frequency is not None): downsample_bool = True
+    else: downsample_bool = False
     #---------------------------------
 
     #----------------------------------
     #Load the data
-    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,  DT, IT)
-    det_data, coord1_data, coord2_data, lst_data, lat_data, spf_data, spf_coord, lat_spf, ra_list, dec_list = dataload.values()
+    dataload = ld.data_value(filepath, kid_num, coord1, coord2, first_frame, num_frames,despike_bool, sigma, prominence, downsample_bool, downsample_frequency,  DT, IT)
+    dettime, det_data, ctime,  coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #-------------------------------
 
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    print('len det data=', len(det_data))
+    
     #---------------------------------
-    #First remove noise peaks and discard TODs with large & low variance. 
-    #det_tod = tod.data_cleaned(det_data, kid_num, det_off, spf_data,  0, 0, despike_bool, sigma, prominence, sigma_clipping_bool, low_thresh,high_thresh ,DT)
-    #cleaned_data, kid_num, det_off, rejected_detetectors_list = det_tod.data_clean() 
-    #P['rejected detectors list'] = rejected_detetectors_list
+    #Clean the TOD by clipping out of further analysis TODs with low or high variance,
+    # then remove smooth polynomial component and apply a high pass filter to selected TODs.
+    """
+    det_tod = tod.data_cleaned(det_data, kid_num, spf_data, highpassfreq, polynomialorder, False, 0, 0, sigma_clipping_bool, low_thresh,high_thresh, DT)
+    cleaned_data, kid_num, rejected_detetectors_list = det_tod.data_clean()
+    P['rejected detectors list'] = rejected_detetectors_list
+    """
     cleaned_data=det_data.copy()
     #---------------------------------
 
     #---------------------------------
-    if(len(cleaned_data[0]) != len(coord1_data) ): #<-- for testing purpose only
-
-        zoomsyncdata = ld.frame_zoom_sync(filepath, cleaned_data, spf_data, coord1_data, coord2_data, spf_coord, first_frame, num_frames, 
-                                            lst_data, lat_data,  lat_spf,  DT, IT, freq_target=P['downsample_frequency'])
-        
+    if(not P['bypass_synch']):
+        zoomsyncdata = ld.frame_zoom_sync(dettime, cleaned_data, spf_data, ctime, coord1_data, coord2_data, spf_coord, turnaround_flags, lst_data, lat_data,  lat_spf,  DT, IT)
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data() 
-        P['bypass_synch'] = False
-    else: 
-        print('Bypass Synch')
-        P['bypass_synch'] = True
-
     #---------------------------------
-
-    #---------------------------------
-    #Clean the TOD by removing smooth polynomial component and apply a high pass filter
-    #det_tod = tod.data_cleaned(cleaned_data, kid_num, det_off, spf_data, highpassfreq, polynomialorder, False, 0, 0, False, 0,0, DT)
-    #cleaned_data, _, _, _ = det_tod.data_clean()
-
     #Filter out the turnarounds
+
+    
     if(P['remove_turnarounds'] and not P['bypass_synch']):
         for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
         if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
@@ -212,18 +213,35 @@ def main(P, nbdets=None):
 
     if(P['save_downsampled_TODS']):
 
-        tods_compressor = ld.compress_tods(P['output_hdf5'], kid_num, cleaned_data, P['downsample_frequency'], timemap, 
+
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print('SAVE TODS')
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+        print("")
+
+        tods_compressor = ld.compress_tods(P['output_tods'], kid_num, cleaned_data, spf_data, timemap, 
                                            coord1, coord2, coord1_data, coord2_data, 
                                            first_frame, num_frames, lst_data, lat_data,P,
-                                            DT, IT, int8=P['int8'])
+                                            DT, IT)
         tods_compressor.save_tods()
 
     else:
         
 
+        #---------------------------------
         #load the table
         dettable = ld.det_table(kid_num, P['detector_table']) 
         det_off, _,_ = dettable.loadtable() #noise_det, resp
+        #---------------------------------
         
         #---------------------------------
         #Offset with respect to star cameras in xEL and EL
@@ -232,7 +250,6 @@ def main(P, nbdets=None):
         #xsc_offset = xsc_file.read_file()
         corr = pt.apply_offset(P['input_ctype'], coord1_data, coord2_data, P['ctype'], xsc_offset, DT,IT, det_offset = det_off, lst = lst_data, lat = lat_data, )
         coord1slice, coord2slice = corr.correction()
-        #plt.plot(np.ravel(np.asarray(coord1slice)), np.ravel(np.asarray(coord2slice)), '.r')
         #---------------------------------
 
         #--------------------
@@ -255,7 +272,7 @@ def main(P, nbdets=None):
                     np.asarray([P['crval'][0], P['crval'][1]]), 
                     np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                     cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                    coadd=P['coadd'],   parang=parallactic, params=str(P)) #noise=noise_det,telcoord = P['telescope_coordinate'],
+                    coadd=P['coadd'],   parang=parallactic, params=str(P), variance_weighting=P['variance_weighting']) 
         
         maps.wcs_proj()
         map_values = maps.map2d()
@@ -267,9 +284,9 @@ def main(P, nbdets=None):
         #--------------------------------------------------    
         #Plot the maps
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
-        #--------------------------------------------------      
-        
-        if P['checkBeam'] and P['coadd']:
+        #-------------------------------------------------- 
+        #      
+        if P['checkBeam'] and P['coadd'] and False:
                 
                 beam_value = bm.beam(map_values, )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
@@ -292,7 +309,7 @@ def main(P, nbdets=None):
                     hdu.close()  
 
 
-        if P['check_offsets'] and not P['coadd']:
+        if P['check_offsets'] and not P['coadd'] and False:
 
             LST_mean = lst_data.mean()
             lat_value = lat_data.mean()
@@ -335,6 +352,64 @@ def main(P, nbdets=None):
                     f.write(f"{name_kid}\t{delv:3f}\t{xel:3f}\n")  # Tab-separated values
             f.close()                      
 
+
+        if(P['checkAngularPowerSpectrum'] and False): 
+
+            from astropy.visualization import ZScaleInterval  
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+            import matplotlib.pyplot as plt
+            zscale = ZScaleInterval()
+
+            if(P['coadd']): 
+                vmin, vmax = zscale.get_limits(map_values)
+
+                fig, (ax, axp) = plt.subplots(1,2,figsize=(8, 6) )#, subplot_kw={'projection': wcs})
+                im = ax.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                fig.colorbar(im, cax=cax, label='Amplitude')
+                ax.set_xlabel('X pixel')
+                ax.set_ylabel('Y pixel')
+                ax.set_aspect('equal')
+
+                powspec = mps.angular_power_spectrum(map_values, res = P['cdelt'][0] * np.pi / 180, delta_k_over_k = 0.3 )
+                pk, k = powspec.p2() 
+
+                axp.step(k /(180/np.pi*60) ,pk, markersize=1, c='g')
+                axp.set_xscale('log')
+                axp.set_xlabel('$\\rm arcmin^{-1}$')
+                axp.set_ylabel('$\\rm Jy^2/sr$')
+                axp.set_yscale('log')
+                axp.set_aspect('equal') 
+
+                fig.tight_layout()
+
+            else: 
+                fig, axp = plt.subplots(figsize=(8, 6) )#, subplot_kw={'projection': wcs})
+
+                '''
+                vmin, vmax = zscale.get_limits(map_values)
+                im = ax.imshow(map_values[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+                fig.colorbar(im, cax=cax, label='Amplitude')
+                ax.set_xlabel('X pixel')
+                ax.set_ylabel('Y pixel')
+                ax.set_aspect('equal')
+                '''
+                
+                powspec = mps.angular_power_spectrum(map_values, res = P['cdelt'][0] * np.pi / 180, delta_k_over_k = 0.3 )
+                pk, k = powspec.p2() 
+
+                axp.step(k /(180/np.pi*60) ,pk, markersize=1, c='k', alpha=0.1)
+                axp.set_xscale('log')
+                axp.set_xlabel('$\\rm arcmin^{-1}$')
+                axp.set_ylabel('$\\rm Jy^2/sr$')
+                axp.set_yscale('log')
+                
+                fig.tight_layout()
+
+                plt.show()
 
     return 0
 
