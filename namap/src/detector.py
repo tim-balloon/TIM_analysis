@@ -17,7 +17,7 @@ class data_cleaned():
     -------
     '''
 
-    def __init__(self, data, detlist, det_offsets, fs, 
+    def __init__(self, data, detlist, fs, 
                  cutoff, 
                  polynomialorder, 
                  despike, sigma, prominence, 
@@ -49,7 +49,6 @@ class data_cleaned():
 
         self.data = data                       #detector TODs
         self.detlist = detlist                 #detector name list
-        self.det_offsets = det_offsets         #detector boresight offsets list
         self.fs = float(fs)                    #frequency sampling of the detector
         self.cutoff = float(cutoff)            #cutoff frequency of the highpass filter     
         self.polynomialorder = polynomialorder #polynomial order for fitting
@@ -75,15 +74,24 @@ class data_cleaned():
         
         
         cleaned_data = [] #[np.zeros_like(slice) for slice in self.data]
+
         rejected_detetectors_list = []
-        accepted_detectors_list = []
-        accepted_offsets_list = []
+        if(not self.sigma_clipping): accepted_detectors_list = self.detlist
+        else:                        accepted_detectors_list = []
 
-        if(not self.sigma_clipping): 
-            accepted_detectors_list = self.detlist
-            accepted_offsets_list = self.det_offsets
+        for i, (data, det_name) in enumerate(zip(self.data, self.detlist)):
 
-        for i, (data, det_name, offset) in enumerate(zip(self.data, self.detlist, self.det_offsets)):
+            if self.sigma_clipping:
+                clip = sigma_clipping(data)
+                reject = clip.clipping(low_thresh = self.low_thresh, high_thresh = self.high_thresh) 
+                if(reject):
+                    rejected_detetectors_list.append(det_name)
+                    continue
+                else: 
+                    accepted_detectors_list.append(det_name)
+                    data_clipped = data
+            else: data_clipped = data.copy()
+
             det_data = detector_trend(data, self.DT)
 
             if self.polynomialorder != 0: 
@@ -94,29 +102,13 @@ class data_cleaned():
                 desp = despike(residual_data)
                 data_despiked = desp.replace_peak(hthres=self.sigma, pthres=self.prominence)
             else: data_despiked = residual_data.copy()
-
-            if self.sigma_clipping:
-            
-                clip = sigma_clipping(data_despiked)
-                reject = clip.clipping(low_thresh = self.low_thresh, high_thresh = self.high_thresh) 
-                if(reject):
-                    rejected_detetectors_list.append(det_name)
-                    continue
-                else: 
-                    accepted_offsets_list.append(offset)
-                    accepted_detectors_list.append(det_name)
-                    data_clipped = data_despiked
-
-            else: data_clipped = data_despiked.copy()
             
             if self.cutoff != 0:
-
                 filterdat = filterdata(data_despiked, self.cutoff, self.fs, self.DT)
                 cleaned_data.append( filterdat.ifft_filter(window=True) )
-                
             else: cleaned_data.append( data_despiked )
         
-        return cleaned_data, accepted_detectors_list, np.asarray(accepted_offsets_list), rejected_detetectors_list
+        return cleaned_data, accepted_detectors_list, rejected_detetectors_list
     
 class despike():
 

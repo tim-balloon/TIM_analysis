@@ -112,7 +112,6 @@ class data_value():
 
         self.startframe += self.bufferframe
 
-    
     def conversion_type(self, file_type):
 
         '''
@@ -280,12 +279,6 @@ class data_value():
             the number of sample per frame of lat and lst. 
         """    
 
-
-        '''
-        Function to return the timestreams for detector and coordinates
-        '''
-        
-
         ##################
         """
         kidutils = det.kidsutils()
@@ -295,6 +288,7 @@ class data_value():
 
         #-----------------------------------------------------------------------------------------------
         # Load the sample-per-frame of the detector timestreams, assuming they all have the same spf.
+        
         if('.hdf5' in self.det_path):
             spf_data = data_value.loadspf_hdf5(self.det_path,  f'data_time')
             #Load the detector timestamps, assuming the detectors all have the same timestamps. 
@@ -833,6 +827,7 @@ class save_tods():
 
         return downsampled_array, np.float16(min), np.float16(max)
 
+"""
     def save_tods_dirfile(self):
 
         '''
@@ -945,6 +940,7 @@ class save_tods():
             )
         
         return 0
+"""
     
 class frame_zoom_sync():
 
@@ -1105,3 +1101,219 @@ class frame_zoom_sync():
         #---------------------------------------------------------------
 
         return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data, self.turnaround_flags
+
+class compress_tods():
+    
+    '''
+    Class to compress timestreams and save them into an .hdf5 file. 
+    Parameters
+    ----------
+    Returns
+    -------
+    '''
+
+    def __init__(self, tods_path,kid_num, det_data, det_sample_frame, det_timestamps,\
+                 coord1, coord2, coord1_data, coord2_data, startframe, numframes, lst_data, lat_data, P,
+                 DT, IT, int8=False):
+        
+        '''
+        Class to compress timestreams and save them into an .hdf5 file. 
+        Parameters
+        tods_path: str
+            path and name of the .hdf5 file in which to save the timestreams. 
+        kid_num: list
+            list of detector names
+        det_data: list
+            list of cleaned data timestreams, ordered by detectors like in kid_num 
+        det_sample_frame: float
+            sample frequency of the cleaned data
+        det_timestamps: 1d array
+            timestamps associated with the cleaned data
+        coord1: str
+            Coordinate 1 type (RA, AZ...)
+        coord2: str
+            Coordinate 2 type (DEC, EL...)
+        coord1_data: 1d array
+            Coordinate 1 timestream
+        coord2_data: 1d array    
+            Coordinate 2 timestream
+        startframe: int
+            the first loaded frame
+        numframes: int
+            the number of loaded frames
+        lst_data: 1d array
+            Local Sideral Time timestream
+        lat_data: 1d array    
+            Latitude timestream    
+        P: dictionary
+            The parameters dictionary that will be saved in the metadata. 
+        DT: type
+            Float precision required
+        IT: type
+            Integer precision required
+        int8: bool
+            If to save data in 1 byte
+        ----------
+        Returns
+        -------
+        '''
+
+        self.tods_path = tods_path                               #Path of the timestreams hdf5
+        self.kid_num = kid_num                                   #Dectector name list
+        self.det_data = det_data                                 #Detector data timestream
+        self.det_sample_frame = int(float(det_sample_frame))     #Detector samples in each frame of the timestream
+        self.det_timestamps = det_timestamps                     #Detector timestamps
+        self.coord1 = coord1                                     #Coordinate 1 name  
+        self.coord2 = coord2                                     #Coordinate 2 name
+        self.coord1_data = coord1_data                           #Coordinate 1 data timestream                        
+        self.coord2_data = coord2_data                           #Coordinate 2 data timestream
+        self.startframe = int(float(startframe))                 #Start frame
+        self.numframes = int(float(numframes))                   #Number of frames
+        self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
+        self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
+        self.P = P                                               #Parameter dictionary
+        self.DT=DT                                               #Float precision required 
+        self.IT=IT                                               #Int precision required 
+        self.int8 = int8                                         #If to save data in 1 byte
+
+    def save_tods(self):
+
+        '''
+        Save the timestreams in an .hdf5 
+        Parameters
+        ----------
+        Returns
+        -------
+        '''
+
+        
+
+        # Create the file if it doesn't exist, otherwise open it
+        if not os.path.exists(self.tods_path):
+            # 'w' creates a new file (overwrites if exists)
+            with h5py.File(self.tods_path, "w") as f:
+                print(f"Created empty file: {self.tods_path}")
+        else:
+            # 'a' opens existing file (read/write mode)
+            with h5py.File(self.tods_path, "a") as f:
+                print(f"Opened existing file: {self.tods_path}")
+
+        data = np.asarray(self.det_data)
+        if(self.int8): data, min, max = self.to8bit_intprecision(data)
+        else: data, min, max = self.DT(data), None, None
+        self.save_array_to_hdf5('TODs', data, self.kid_num, spf=self.det_sample_frame, min=min, max=max)
+
+        coords = np.vstack((self.coord1_data,self.coord2_data, self.lst_data, self.lat_data)).T
+        if(self.int8): coords, min, max = self.to8bit_intprecision(coords)
+        else: coords, min, max = self.DT(coords), None, None
+
+        self.save_array_to_hdf5('coordinates', coords, (self.coord1,self.coord2,'LST','latitude'), spf=self.det_sample_frame, min=min, max=max)
+
+        self.save_array_to_hdf5('frames',(self.startframe, self.numframes), ('start_frame', 'num_frames'))
+
+        timestamps = self.det_timestamps
+        if(self.int8): timestamps, min, max = self.to8bit_intprecision(timestamps)
+        else: timestamps, min, max = self.DT(timestamps), None, None
+        self.save_array_to_hdf5('timestamps', timestamps, 'synchronized_timestamps', spf=self.det_sample_frame, min=min, max=max)
+
+        #self.save_array_to_hdf5('parameters', 0, self.P)
+
+        return 0
+    
+    def save_array_to_hdf5(self, grp_name, data, list_names, spf=None, min=None, max=None):
+            
+        '''
+        Save an array in .hdf5
+        Parameters
+        grp_name: str
+            name of the group in which to save the array
+        data: 2d array
+            array to be saved
+        list_names: list
+            list that describes the rows of the data array
+        spf: int
+            sample per frame of the array if applicable
+        min: float
+            minimum negative value <0  to reconstruct an array saved in 8bits
+        max: float
+            maximum positive to reconstruct an array saved in 8bits
+        ----------
+        Returns
+        -------
+        '''
+
+        temp_filename = self.tods_path + ".tmp"
+
+        try:
+            # Step 1 — Copy the existing file to a temporary one
+            shutil.copy2(self.tods_path, temp_filename)
+
+            # Step 2 — Open the temporary file in append mode and modify it
+            with h5py.File(temp_filename, "a") as H:
+
+                if grp_name not in H: f = H.create_group(grp_name)
+                else:                f = H[grp_name]
+
+                if 'data' in f: del f['data']  # deletes group or dataset safely
+                f.create_dataset('data', data=data, compression='gzip', compression_opts=9)  # example element
+
+                if 'list_names' in f: del f['list_names']  
+                dt = h5py.string_dtype(encoding='utf-8')
+                f.create_dataset('list_names', data=np.array(list_names, dtype=dt))
+
+                if 'min' in f: del f['min'] 
+                if(min is not None): f.create_dataset('min', data=min) 
+
+                if 'max' in f: del f['max'] 
+                if(max is not None): f.create_dataset('max', data=max) 
+
+                if('spf' in f): del f['spf'] 
+                if(spf is not None):f.create_dataset('spf', data=spf) 
+
+            # Step 3 — Replace the original only after successful write
+            os.replace(temp_filename, self.tods_path)
+
+        except Exception as e:
+            print("Error occurred:", e)
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+
+        return 0
+    
+    def to8bit_intprecision(array): 
+
+        '''
+        function to save an array in 8bits precision. 
+        Parameters
+        array: ndarray
+            array to be downsized
+        ----------
+        Returns
+        -------
+        downsampled_array: ndarray
+            Array in 8bits precision
+        min: float
+            the minimum negative value of the array
+        max: float
+            The maximum value of the array. 
+        '''        
+
+        # Rescale data to float range 0.0-1.0
+
+        min = float_array.min()
+        if(min<0): float_array -= min
+        else: min=None
+
+        max = np.abs(float_array).max()
+        float_array /= max
+
+        # 1. Scale the values to the 0-255 range
+        scaled_array = float_array * 255
+
+        # 2. Clip the values to ensure they are within the 8-bit range (0-255)
+        clipped_array = np.clip(scaled_array, 0, 255)
+
+        # 3. Convert to unsigned 8-bit integer type
+        downsampled_array = clipped_array.astype(np.uint8)
+
+        return downsampled_array, np.float16(min), np.float16(max)

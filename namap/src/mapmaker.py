@@ -17,7 +17,7 @@ class maps():
     -------
     '''
 
-    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, variance_weigthing=False, parang=None, params=None): #telcoord=False,
+    def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, variance_weighting=False, parang=None, params=None): #telcoord=False,
         '''
         Create an instance of maps
         Parameters
@@ -50,7 +50,7 @@ class maps():
             Int precision required
         coadd: bool
             If True, coadd all the detectors provided.
-        variance_weigthing: bool
+        variance_weighting: bool
             If True, compute the variance of each detector and weight its data by it in the map. 
         parang: 1d array
             The paralactic angle
@@ -77,7 +77,7 @@ class maps():
         self.DT = DT                    #Float precision required
         self.IT = IT                    #Integer precision required
         self.coadd = coadd       #If to coadd all the detectors maps or return their individual maps. 
-        self.variance_weigthing = variance_weigthing
+        self.variance_weighting = variance_weighting
         if parang is not None:
             self.parang = [np.radians(p) for p in parang ] #Parallactic Angle. This is used to compute the pixel indices in telescopes coordinates
         else:
@@ -109,7 +109,7 @@ class maps():
         -------
         '''
         
-        if(self.variance_weigthing): weights = [np.std(d) for d in self.data] 
+        if(self.variance_weighting): weights = [np.std(d) for d in self.data] 
         else:                        weights = np.ones(len(self.data))
         
         mapmaker = mapmaking(self.data, weights, len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
@@ -365,8 +365,7 @@ class mapmaking(object):
         self.DT = DT
         self.IT = IT
 
-
-    def map_Ionly(self, crpix, pixnum, coadd=False, value=None, noise=None, pixelmap = None):
+    def map_Ionly(self, crpix, pixnum, coadd=False, value=None, var=None, pixelmap = None):
         
         '''
         Function to create the 2D map
@@ -388,7 +387,7 @@ class mapmaking(object):
 
         if pixelmap is None: pixelmap = self.pixelmap.copy()
         
-        if noise is None: noise = self.weight**2
+        if var is None: var = self.weight**2
 
 
         Xmin = np.inf
@@ -451,9 +450,9 @@ class mapmaking(object):
         coord2samples = []
         individual_maps = []
 
-        for pix, val, n, i in zip(self.pixelmap, value, noise, range(self.number)):
+        for pix, val, v, i in zip(self.pixelmap, value, var, range(self.number)):
             #------
-            if n !=0: sigma = 1/n**2
+            if v!=0: sigma = 1/v**2
             else: sigma = 1
             val *= sigma
             if(coadd): samples.append(val)

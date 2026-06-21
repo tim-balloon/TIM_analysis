@@ -33,7 +33,7 @@ class utils(object):
         Returns
         -------
         '''
-        self.coord1 = np.radians(coord1)  #Array of coord 1 converted in degrees   
+        self.coord1 = np.radians(coord1)  
         self.coord2 = coord2  #Array of coord 2 converted in degrees   
         self.lst = lst        #Local Sideral Time in hours
         self.lat = lat        #Latitude converted in degrees
@@ -283,7 +283,33 @@ class utils(object):
         path = np.vstack((np.degrees(ra_unwrapped), np.degrees(dec_point))).T
         
         return path
-    
+
+    def azel2radec(self):
+
+        '''
+        Function to convert AZ and EL to RA and DEC
+
+        Parameters
+        ----------
+        Returns
+        ----------
+        ra: array
+            Right Ascension angle in degree.
+        dec: array
+            Declination angle in degree.
+        '''
+
+        az = self.coord1
+        el = np.radians(self.coord2)
+        lat = np.radians(self.lat)
+
+        sin_dec = ( np.sin(el) * np.sin(lat) + np.cos(el) * np.cos(lat) * np.cos(az) )
+        dec = np.arcsin(sin_dec)
+        ha = np.arctan2( -np.sin(az), np.tan(el) * np.cos(lat) - np.cos(az) * np.sin(lat) )
+        ra = self.ha2ra(ha)
+
+        return np.degrees(ra), np.degrees(dec)
+
 class convert_to_telescope(object):
 
     '''
