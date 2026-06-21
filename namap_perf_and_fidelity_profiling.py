@@ -29,10 +29,11 @@ DESKTOP = Path.home() / "/home/mvancuyck/Desktop/TIM_analysis/"
 sys.path.insert(0, str(DESKTOP / "namap"))
 sys.path.insert(0, str(DESKTOP / "timestream_maker"))
 
-from namap_main import namap_main
-from gen_timestreams import *
-from hitmap_1detector import *
-from gen_detectors_arrays import *
+from timestream_maker.gen_timestreams import *
+from timestream_maker.hitmap_1detector import *
+from timestream_maker.gen_detectors_arrays import *
+
+from namap.namap_main import main as namap_main
 import namap.src.loaddata as ld
 import namap.src.detector as det
 import namap.src.psd_analysis as aps
@@ -322,6 +323,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
 
 def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
 
+    
     def get_dir_size(path):
         total = 0
         for root, dirs, files in os.walk(path):
@@ -347,7 +349,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','zip'):
+            for compression in ('','.hdf5','.zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -364,7 +366,6 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     P_namap['save_downsampled_TODS'] = True
                     P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
                     P_namap['remove_turnarounds'] = False
-
                     #------------------------------------------------------
                     tracemalloc.start()
                     start = time.time()
@@ -377,8 +378,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
                     # Store results
                     output_file = P_namap['output_tods'] 
-                    if('zip' in compression): output_file += '.zip'
-                    
+                    #if('zip' in compression): output_file += '.zip'
                     if os.path.exists(output_file):
                         if os.path.isfile(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
                         else: file_size_mb = get_dir_size(output_file) / 1e6
@@ -406,7 +406,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','zip'):
+            for compression in ('','.hdf5','.zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -451,7 +451,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
                         # Measure output file size (adapt this path!)
                         output_file = P_namap['output_tods']
-                        if('zip' in compression): output_file += '.zip'
+                        #if('zip' in compression): output_file += '.zip'
 
                         if os.path.exists(output_file):
                             if os.path.isfile(output_file):
@@ -1134,11 +1134,11 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = True
+    perfs_coadded_maps = False
     #II: individual mapscoadd
     perfs_individual_maps = True
     #III a TODs 
-    perfs_tods = True
+    perfs_tods =  False
     #
     perf_fct = False
     #III b raw tods
@@ -1158,7 +1158,6 @@ if __name__ == "__main__":
 
     #----------------------------------------------------------------------------------------
     P = load_params(f'{DESKTOP}/'+'timestream_maker/PAR_files/params_strategy_profiling.par')
-    #-----------------------------
     P_namap = load_params(f'{DESKTOP}/'+'namap/PAR_FILES/params_namap_profiling.par')
     P_namap['detector_table'] = P['detectors_name_file']
     P_namap['cdelt'] = res, res
@@ -1228,9 +1227,6 @@ if __name__ == "__main__":
         print("Real CPU model:", platform.processor())
         print("OMP threads (default):", os.environ.get("OMP_NUM_THREADS", "not set"))
 
-        if(perfs_coadded_maps): profiling_coadded_maps('mycomputer_'+dict_coadd_perf)
-        if(perfs_individual_maps): profiling_individual_maps('mycomputer_'+dict_individual_perf)
-        if(perfs_tods): profiling_individual_maps(dict_tods_perf)
-        if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
-        if(tod_fidelity): test_namap_tods_fidelity('mycomputer_'+dict_tods_fidelity_file)
-        if(map_fidelity): test_namap_coadded_map_fidelity('mycomputer_'+dict_coadded_map_fidelity_file)
+        #if(perfs_coadded_maps): profiling_coadded_maps('mycomputer_'+dict_coadd_perf)
+        #if(perfs_individual_maps): profiling_individual_maps('mycomputer_'+dict_individual_perf)
+        if(perfs_tods): profiling_tods('mycomputer_'+dict_tods_perf)
