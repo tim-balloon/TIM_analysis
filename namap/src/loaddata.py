@@ -327,6 +327,7 @@ class data_value():
         det_data = []
 
         #For each detector: 
+        
         for kid in self.det_name: 
             '''
             det_I_string = 'kid'+kid+'_I_roachN' #different options in the names here
@@ -338,6 +339,7 @@ class data_value():
             if('.hdf5' in self.det_path):
                 data = data_value.loaddata_hdf5(self.det_path, f'kid_{kid}_roach', self.DT, self.numframes, self.startframe) #kidutils.KIDmag(I_data, Q_data))
             else: 
+                
                 data = self.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
 
             #remove the frames that don't have all their samples: 
@@ -352,8 +354,9 @@ class data_value():
                     continue
 
             #Decimate the data if downsample is True. 
-            if(self.downsample): det_data.append( aaf.process(data) )
+            if(self.downsample):  det_data.append( aaf.process(data) )
             else: det_data.append( data )
+        
 
         #remove the frames that don't have all their samples and decimate the timestamps. 
         dettime = dettime[pps_start:pps_end]
@@ -848,6 +851,7 @@ class save_tods():
         if os.path.exists(self.tods_path):
             shutil.rmtree(self.tods_path)
             print(f"Removed existing directory: {self.tods_path}")
+        print('dirfile is:' , self.tods_path)
 
         df = gd.dirfile(self.tods_path, gd.RDWR | gd.CREAT | gd.TRUNC)
 
@@ -943,6 +947,8 @@ class save_tods():
 
 
         if('zip' in self.tods_path):
+            #embed()
+            print('make the zip')
 
             shutil.make_archive(
                 base_name=self.tods_path,   # name of the zip file (no .zip)

@@ -51,7 +51,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
             results.setdefault(key, {})
 
             results[key]["t_int"] = t_int_list
-            map_compression_list = ('coadd.fits','coadd.fits.gz')
+            map_compression_list = ('coadd.fits',)
 
             for precision in precision_list: 
 
@@ -106,7 +106,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
 
             results[key].setdefault(precision, {})
 
-            for map_compression in ('coadd.fits','coadd.fits.gz'):
+            for map_compression in ('coadd.fits',):
 
                 results[key][precision].setdefault(map_compression, {})
                 results[key][precision][map_compression]['peak memory [MB]'] = []
@@ -127,7 +127,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         if val > 1000 and len(results[key]["nb dets"]) > 0:
                             if val < 1.3 * max(results[key]["nb dets"]): continue
                             
-                        results[key]["nb dets"].append(val)
+                        #results[key]["nb dets"].append(val)
 
                         freq_list = 715.0 + 4.0 * np.arange(nband)
                         P_namap['cdelt'] = 40/3600, 40/3600
@@ -140,15 +140,17 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['save_downsampled_TODS'] = False
                         P_namap['remove_turnarounds'] = True
                         P_namap['downsample_frequency'] = 100
-                        print('')
                         #------------------------------------------------------
                         tracemalloc.start()
                         start = time.time()
-                        namap_main(P_namap, npix)
+                        pitot = namap_main(P_namap, npix)
+                        
                         current, peak = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
                         end = time.time()
                         timing = end - start
+
+                        results[key]["nb dets"].append(pitot)
                         #------------------------------------------------------
 
                         # Measure output file size (adapt this path!)
@@ -207,11 +209,12 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                     #------------------------------------------------------
                     tracemalloc.start()
                     start = time.time()
-                    namap_main(P_namap)
+                    pitot = namap_main(P_namap)
                     current, peak = tracemalloc.get_traced_memory()
                     tracemalloc.stop()
                     end = time.time()
                     timing = end - start
+
                     #------------------------------------------------------
 
                     # Store results
@@ -268,7 +271,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             if val > 1000 and len(results[key]["nb dets"]) > 0:
                                 if val < 1.3 * max(results[key]["nb dets"]): continue
 
-                            results[key]["nb dets"].append(val)
+                            #results[key]["nb dets"].append(val)
                             freq_list = 715.0 + 4.0 * np.arange(nband)
 
                             P_namap['cdelt'] = 40/3600, 40/3600
@@ -284,11 +287,13 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             #------------------------------------------------------
                             tracemalloc.start()
                             start = time.time()
-                            namap_main(P_namap, npix)
+                            pitot = namap_main(P_namap, npix)
                             current, peak = tracemalloc.get_traced_memory()
                             tracemalloc.stop()
                             end = time.time()
                             timing = end - start
+
+                            results[key]["nb dets"].append(pitot)
                             #------------------------------------------------------
 
                             # Store results
@@ -338,7 +343,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
         if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
         else: results = {}
 
-    if(profiling_vs_tod_time):
+    if(profiling_vs_tod_time and True):
 
         key = 'profiling vs tod time'
         results.setdefault(key, {})
@@ -349,7 +354,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','.zip'):
+            for compression in ('','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -370,6 +375,8 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     tracemalloc.start()
                     start = time.time()
                     namap_main(P_namap)
+
+                    print('here1:',51*len(P_namap['frequencies'] ))
                     current, peak = tracemalloc.get_traced_memory()
                     tracemalloc.stop()
                     end = time.time()
@@ -378,7 +385,8 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
                     # Store results
                     output_file = P_namap['output_tods'] 
-                    #if('zip' in compression): output_file += '.zip'
+                    if('zip' in compression): 
+                        output_file += '.zip'
                     if os.path.exists(output_file):
                         if os.path.isfile(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
                         else: file_size_mb = get_dir_size(output_file) / 1e6
@@ -406,7 +414,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','.zip'):
+            for compression in ('','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -426,7 +434,6 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         if val > 1000 and len(results[key]["nb dets"]) > 0:
                             if val < 1.3 * max(results[key]["nb dets"]): continue
 
-                        results[key]["nb dets"].append(val)
                         
                         freq_list = 715.0 + 4.0 * np.arange(nband)
 
@@ -442,15 +449,20 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         #------------------------------------------------------
                         tracemalloc.start()
                         start = time.time()
-                        namap_main(P_namap, npix)
+                        print('here22:',len(freq_list)*npix )
+                        pitot = namap_main(P_namap, npix)
+
                         current, peak = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
                         end = time.time()
                         timing = end - start
+                        results[key]["nb dets"].append(pitot)
                         #------------------------------------------------------
 
                         # Measure output file size (adapt this path!)
                         output_file = P_namap['output_tods']
+                        if('zip' in compression): 
+                            output_file += '.zip'
                         #if('zip' in compression): output_file += '.zip'
 
                         if os.path.exists(output_file):
@@ -460,7 +472,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                                 file_size_mb = get_dir_size(output_file) / 1e6
                         else: file_size_mb = float('nan') 
                         
-                        print(f"Nb bands {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
+                        print(f"Nb pix {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
 
                         # Store results
                         results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
@@ -1134,11 +1146,11 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = False
+    perfs_coadded_maps = True
     #II: individual mapscoadd
-    perfs_individual_maps = False
+    perfs_individual_maps = True
     #III a TODs 
-    perfs_tods = True
+    perfs_tods = False
     #
     perf_fct = False
     #III b raw tods

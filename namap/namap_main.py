@@ -144,9 +144,9 @@ def main(P, nbdets=None):
         kid_num = Table(np.hstack(result_rows))['Name']
 
     else: kid_num = filtered['Name']
-    #-------------------------------------------------
 
-    print('Nb dets: ', len(kid_num))
+    #print('in namap len;',len(kid_num), nbdets)
+    #-------------------------------------------------
     #----------------------------------------------------------------
 
     #Cleaning data parameters
@@ -296,7 +296,8 @@ def main(P, nbdets=None):
         if P['check_offsets'] and not P['coadd'] and False:
 
             LST_mean = lst_data.mean()
-            lat_value = lat_data.mean()
+            lat_value = lat_data.mean()                   
+
             corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
             azi_ref, alt_ref = corr.correction()
 
@@ -370,6 +371,7 @@ def main(P, nbdets=None):
 
             else: 
                 fig, axp = plt.subplots(figsize=(8, 6) )#, subplot_kw={'projection': wcs})
+                    
 
                 '''
                 vmin, vmax = zscale.get_limits(map_values)
@@ -395,7 +397,7 @@ def main(P, nbdets=None):
 
                 plt.show()
 
-    return 0
+    return len(kid_num)
 
 if __name__ == "__main__":
 
