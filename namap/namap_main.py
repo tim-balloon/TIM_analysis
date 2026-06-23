@@ -169,14 +169,6 @@ def main(P, nbdets=None):
     dettime, det_data, ctime,  coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #-------------------------------
 
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    print('len det data=', len(det_data))
-    
     #---------------------------------
     #Clean the TOD by clipping out of further analysis TODs with low or high variance,
     # then remove smooth polynomial component and apply a high pass filter to selected TODs.
@@ -212,27 +204,19 @@ def main(P, nbdets=None):
     #---------------------------------
 
     if(P['save_downsampled_TODS']):
-
-
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print('SAVE TODS')
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-        print("")
-
-        tods_compressor = ld.compress_tods(P['output_tods'], kid_num, cleaned_data, spf_data, timemap, 
-                                           coord1, coord2, coord1_data, coord2_data, 
-                                           first_frame, num_frames, lst_data, lat_data,P,
-                                            DT, IT)
-        tods_compressor.save_tods()
+        if(not len(kid_num) == len(set(kid_num))):
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        tods_compressor = ld.save_tods(P['output_tods'], kid_num, cleaned_data, spf_data, timemap, 
+                                           coord1, coord2, coord1_data, coord2_data, spf_data,timemap,
+                                           first_frame, num_frames, lst_data, lat_data,P,             DT, IT)
+        tods_compressor.fct_save_tods()
 
     else:
         

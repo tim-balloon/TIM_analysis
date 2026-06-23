@@ -1136,9 +1136,9 @@ if __name__ == "__main__":
     #I: coadded maps
     perfs_coadded_maps = False
     #II: individual mapscoadd
-    perfs_individual_maps = True
+    perfs_individual_maps = False
     #III a TODs 
-    perfs_tods =  False
+    perfs_tods = True
     #
     perf_fct = False
     #III b raw tods
@@ -1229,4 +1229,4 @@ if __name__ == "__main__":
 
         #if(perfs_coadded_maps): profiling_coadded_maps('mycomputer_'+dict_coadd_perf)
         #if(perfs_individual_maps): profiling_individual_maps('mycomputer_'+dict_individual_perf)
-        if(perfs_tods): profiling_tods('mycomputer_'+dict_tods_perf)
+        #if(perfs_tods): profiling_tods('mycomputer_'+dict_tods_perf)
