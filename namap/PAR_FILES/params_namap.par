@@ -94,7 +94,7 @@ low_thresh  = 1e-5
 high_thresh = 5
 
 #If called remove data acquired during turnarounds of the telescope. 
-remove_turnarounds = True
+remove_turnarounds = False
 
 #convolution by the beam
 gaussian_convolution = False 
