@@ -169,6 +169,7 @@ def main(P, nbdets=None):
     dettime, det_data, ctime,  coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     #-------------------------------
 
+
     #---------------------------------
     #Clean the TOD by clipping out of further analysis TODs with low or high variance,
     # then remove smooth polynomial component and apply a high pass filter to selected TODs.
@@ -186,9 +187,7 @@ def main(P, nbdets=None):
         timemap, cleaned_data, coord1_data, coord2_data, lst_data, lat_data, turnarounds_flag = zoomsyncdata.sync_data() 
     #---------------------------------
     #Filter out the turnarounds
-
-    
-    if(P['remove_turnarounds'] and not P['bypass_synch']):
+    if(P['remove_turnarounds'] and not P['bypass_synch'] ):
         for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
         if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
         lst_data = lst_data[turnarounds_flag==1]
@@ -204,15 +203,6 @@ def main(P, nbdets=None):
     #---------------------------------
 
     if(P['save_downsampled_TODS']):
-        if(not len(kid_num) == len(set(kid_num))):
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         tods_compressor = ld.save_tods(P['output_tods'], kid_num, cleaned_data, spf_data, timemap, 
                                            coord1, coord2, coord1_data, coord2_data, spf_data,timemap,
                                            first_frame, num_frames, lst_data, lat_data,P,             DT, IT)
