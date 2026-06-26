@@ -354,7 +354,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','zip'):
+            for compression in ('rawzip', '','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -371,6 +371,8 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     P_namap['save_downsampled_TODS'] = True
                     P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
                     P_namap['remove_turnarounds'] = False
+                    if('raw' in compression): P_namap['downsample_frequency'] = None
+                    else: P_namap['downsample_frequency'] = 100
                     #------------------------------------------------------
                     tracemalloc.start()
                     start = time.time()
@@ -414,7 +416,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
 
             results[key].setdefault(precision, {})
 
-            for compression in ('','.hdf5','zip'):
+            for compression in ('rawzip','','.hdf5','zip'):
             
                 results[key][precision].setdefault(compression, {})
                 results[key][precision][compression]['peak memory [MB]'] = []
@@ -445,6 +447,8 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         P_namap['save_downsampled_TODS'] = True
                         P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
                         P_namap['remove_turnarounds'] = False
+                        if('raw' in compression): P_namap['downsample_frequency'] = None
+                        else: P_namap['downsample_frequency'] = 100
 
                         #------------------------------------------------------
                         tracemalloc.start()
@@ -482,139 +486,6 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         try:
                             if os.path.isfile(output_file): os.remove(output_file)
                             else: shutil.rmtree(output_file)
-                        except OSError as e:
-                            print(f"Error deleting {output_file}: {e}")
-
-        with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
-        return 0
-
-def profiling_raw_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
-
-    if(load_directly): results = pickle.load( open(dict_file_path, 'rb'))
-    else: 
-        if(os.path.isfile(dict_file_path)): results = pickle.load( open(dict_file_path, 'rb'))
-        else: results = {}
-
-    if(profiling_vs_tod_time):
-
-        key = 'profiling vs tod time'
-        results.setdefault(key, {})
-
-        results[key]["t_int"] = t_int_list
-
-        for precision in precision_list: 
-
-            results[key].setdefault(precision, {})
-
-            for compression, frequency in zip(('100Hz','no_compression'), (100,None)):
-            
-                results[key][precision].setdefault(compression, {})
-                results[key][precision][compression]['peak memory [MB]'] = []
-                results[key][precision][compression]['time [s]'] = []
-                results[key][precision][compression]['output size [MB]'] = []
-
-                for t in results[key]["t_int"]:
-
-                    P_namap['cdelt'] = 40/3600, 40/3600
-                    P_namap['frequencies'] = (715.0,) #GHz       
-                    P_namap['precision'] = precision                        
-                    P_namap['num_frames']  = t * 60 #seconds 
-                    P_namap['first_frame'] = 0 #Starting time in second to loaded
-                    P_namap['output_tods'] = P['output_path']+f'tods_{precision}_{compression}'
-                    P_namap['remove_turnarounds'] = False
-                    P_namap['downsample_frequency'] = frequency
-                    P_namap['save_raw_TODS'] = True
-
-                    #------------------------------------------------------
-                    tracemalloc.start()
-                    start = time.time()
-                    namap_main(P_namap)
-                    current, peak = tracemalloc.get_traced_memory()
-                    tracemalloc.stop()
-                    end = time.time()
-                    timing = end - start
-                    #------------------------------------------------------
-
-                    # Store results
-                    output_file = P_namap['output_tods'] + '.zip'
-                    
-                    if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                    else: file_size_mb = float('nan')  # file not found → record NaN or 0
-
-                    results[key][precision][compression]['output size [MB]'].append(file_size_mb)
-                    results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
-                    results[key][precision][compression]['time [s]'].append(timing)
-
-                    try:
-                        os.remove(output_file)
-                    except OSError as e:
-                        print(f"Error deleting {output_file}: {e}")
-
-    if(profiling_vs_nb_bands):
-
-        key = 'profiling vs nb bands'
-        results.setdefault(key, {})
-
-        for precision in precision_list: 
-
-            results[key].setdefault(precision, {})
-
-            for compression, frequency in zip(('100Hz','no_compression'), (100,None)):
-            
-                results[key][precision].setdefault(compression, {})
-                results[key][precision][compression]['peak memory [MB]'] = []
-                results[key][precision][compression]['time [s]'] = []
-                results[key][precision][compression]['output size [MB]'] = []
-                
-                results[key]["nb dets"] = []
-
-                for nband in nb_bands:
-                    for npix in nb_pixels:
-                        val = int(nband * npix)
-                        if val in results[key]["nb dets"]: continue
-                                    
-                        # Skip if val is smaller than max so far
-                        if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
-                        results[key]["nb dets"].append(val)
-                        
-                        freq_list = 715.0 + 4.0 * np.arange(nband)
-
-                        P_namap['cdelt'] = 40/3600, 40/3600
-                        P_namap['frequencies'] = freq_list    
-                        P_namap['precision'] = precision                        
-                        P_namap['num_frames']  = 5 * 60 #seconds 
-                        P_namap['first_frame'] = 0 #Starting time in second to loaded
-                        P_namap['save_downsampled_TODS'] = True
-                        P_namap['output_tods'] = P['output_path']+f'tods_{precision}'
-                        P_namap['remove_turnarounds'] = False
-                        P_namap['downsample_frequency'] = frequency
-                        P_namap['save_raw_TODS'] = True
-
-                        #------------------------------------------------------
-                        tracemalloc.start()
-                        start = time.time()
-                        namap_main(P_namap, npix)
-                        current, peak = tracemalloc.get_traced_memory()
-                        tracemalloc.stop()
-                        end = time.time()
-                        timing = end - start
-                        #------------------------------------------------------
-
-                        # Measure output file size (adapt this path!)
-                        output_file = P_namap['output_tods'] + '.zip'
-                        if os.path.exists(output_file): file_size_mb = os.path.getsize(output_file) / 1e6
-                        else: file_size_mb = float('nan')  # file not found → record NaN or 0
-
-                        print(f"Nb bands {val}, time={timing:.2f}s , peak={peak/1e6:.2f}MB , output={file_size_mb:.2f}MB")
-
-                        # Store results
-                        results[key][precision][compression]['peak memory [MB]'].append(peak / 1e6)
-                        results[key][precision][compression]['time [s]'].append(timing)
-                        results[key][precision][compression]['output size [MB]'].append(file_size_mb)
-
-                        try:
-                            os.remove(output_file)
-
                         except OSError as e:
                             print(f"Error deleting {output_file}: {e}")
 
@@ -1146,11 +1017,11 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = True
+    perfs_coadded_maps = False
     #II: individual mapscoadd
-    perfs_individual_maps = True
+    perfs_individual_maps = False
     #III a TODs 
-    perfs_tods = False
+    perfs_tods = True
     #
     perf_fct = False
     #III b raw tods
