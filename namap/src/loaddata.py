@@ -54,7 +54,8 @@ class data_value():
     def __init__(self, det_path, det_name, coord1_name, \
                  coord2_name, startframe, numframes, \
                  despike, sigma, prominence, \
-                 downsample, freq_target, DT, IT, P=None):
+                 downsample, freq_target, DT, IT, 
+                 remove_turnarounds=False,P=None):
 
         """
         Init a instance of the class to load the data from a .hdf5 
@@ -105,6 +106,7 @@ class data_value():
         self.prominence = prominence                #prominence in std value to look for spikes
         self.despike = despike                      #if True despikes the data 
         self.P = P
+        self.remove_turnarounds = remove_turnarounds
 
         if self.startframe < 100:
             self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
@@ -354,8 +356,10 @@ class data_value():
                     continue
 
             #Decimate the data if downsample is True. 
-            if(self.downsample):  det_data.append( aaf.process(data) )
-            else: det_data.append( data )
+            if(self.downsample):  
+                det_data.append( aaf.process(data) )
+            else: 
+                det_data.append( data )
         
 
         #remove the frames that don't have all their samples and decimate the timestamps. 
@@ -379,7 +383,6 @@ class data_value():
         '''
         #-----------------------------------------------------------------------------------------------
         
-        
         print('COORDINATES', self.coord1_name.lower(), self.coord2_name.lower())
 
         #-----------------------------------------------------------------------------------------------
@@ -392,7 +395,7 @@ class data_value():
             spf_ctime = data_value.loadspf_hdf5(self.det_path, f'coords_time')
             spf_coord = data_value.loadspf_hdf5(self.det_path, self.coord2_name)
             #Load the turnaround flags 
-            turnaround_flags = data_value.loaddata_hdf5(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
+            if(self.remove_turnarounds): turnaround_flags = data_value.loaddata_hdf5(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
             #Load the 1st coordinate timestream. 
             coord2_data = data_value.loaddata_hdf5(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
             if self.coord1_name.lower() == 'xel': 
@@ -411,7 +414,7 @@ class data_value():
             spf_ctime = self.loadspf_dirfile(self.det_path, f'coords_time')
             spf_coord = self.loadspf_dirfile(self.det_path, self.coord2_name)
             #Load the turnaround flags 
-            turnaround_flags = self.loaddata_dirfile(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
+            if(self.remove_turnarounds): turnaround_flags = self.loaddata_dirfile(self.det_path, f'turnaround_flags', self.DT, self.numframes, self.startframe)
             #Load the 1st coordinate timestream. 
             coord2_data = self.loaddata_dirfile(self.det_path, f'{self.coord2_name}', self.DT, self.numframes, self.startframe)
             if self.coord1_name.lower() == 'xel': 
@@ -436,7 +439,7 @@ class data_value():
         coord2_data = coord2_data[pps_start:pps_end]
         lat = lat[pps_start:pps_end]
         lst = lst[pps_start:pps_end]
-        turnaround_flags = turnaround_flags[pps_start:pps_end]
+        if(self.remove_turnarounds): turnaround_flags = turnaround_flags[pps_start:pps_end]
         #-----------------------------------------------------------------------------------------------
 
         #-----------------------------------------------------------------------------------------------
@@ -448,7 +451,7 @@ class data_value():
             self.coord2_data = aaf.downsample(self.coord2_data)
             self.lst_data = aaf.downsample(self.lst_data)
             self.lat_data = aaf.downsample(self.lat_data)
-            turnaround_flags = aaf.downsample(turnaround_flags)
+            if(self.remove_turnarounds): turnaround_flags = aaf.downsample(turnaround_flags)
         #-----------------------------------------------------------------------------------------------
 
         #-----------------------------------------------------------------------------------------------
@@ -482,9 +485,10 @@ class data_value():
             tods_compressor.save_tods()
         '''
         #-----------------------------------------------------------------------------------------------
-
+        if(not self.remove_turnarounds): turnaround_flags= None
+        
         return dettime, det_data, ctime, coord1_data, coord2_data, turnaround_flags, lst, lat, spf_data, spf_coord, lst_lat_spf #ras, decs#, acqfreq_data, acqfreq_coord, acqfreq_lstlat
-
+        
 class xsc_offset():
     """
     class to read star camera offset files
@@ -957,7 +961,6 @@ class save_tods():
             )
         
         return 0
-
     
 class frame_zoom_sync():
 
@@ -1022,6 +1025,8 @@ class frame_zoom_sync():
         self.coord_sample_frame = int(float(coord_sample_frame)) #Coordinates samples in each frame of the time stream
         self.coord2_data = coord2_data                           #Coordinate 2 data timestream
         self.turnaround_flags = turnaround_flags                 #Flags for not-constant telescope speed.
+        if(self.turnaround_flags == None): self.remove_turnarounds = False
+        else: self.remove_turnarounds = True
         self.lst_data = lst_data                                 #LST timestream (if correction is required and coordinates are RA-DEC)
         self.lat_data = lat_data                                 #LAT timestream (if correction is required and coordinates are RA-DEC)
         self.lstlat_sample_frame = lstlat_sample_frame           #LST-LAT samples per frame (if correction is required and coordinates are RA-DEC)
@@ -1100,12 +1105,12 @@ class frame_zoom_sync():
         for i in range(len(self.det_data)):
             self.det_data[i] = self.det_data[i][i_d_start:i_d_end]
 
-        ctime   = ctime[i_c_start:i_c_end]
+        ctime = ctime[i_c_start:i_c_end]
         self.coord1_data = self.coord1_data[i_c_start:i_c_end]
         self.coord2_data = self.coord2_data[i_c_start:i_c_end]
         self.lst_data = self.lst_data[i_c_start:i_c_end]
         self.lat_data = self.lat_data[i_c_start:i_c_end]
-        self.turnaround_flags = self.turnaround_flags[i_c_start:i_c_end]
+        if(self.remove_turnarounds): self.turnaround_flags = self.turnaround_flags[i_c_start:i_c_end]
         #---------------------------------------------------------------
         
         #---------------------------------------------------------------
@@ -1113,8 +1118,10 @@ class frame_zoom_sync():
         if(len(ctime) != len(dettime)):
             self.coord1_data, self.coord2_data = self.coord_int(self.coord1_data, self.coord2_data, ctime, dettime)
             self.lst_data, self.lat_data       = self.coord_int(self.lst_data, self.lat_data, ctime, dettime)
-            f = interp1d(ctime, self.turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
-            self.turnaround_flags= np.round(f(dettime))
+            if(self.remove_turnarounds):
+                f = interp1d(ctime, self.turnaround_flags, kind='linear',bounds_error=False,fill_value="extrapolate")
+                self.turnaround_flags= np.round(f(dettime))
         #---------------------------------------------------------------
+        if(not self.remove_turnarounds): self.turnaround_flags = None
 
         return dettime, self.det_data, self.coord1_data, self.coord2_data, self.lst_data, self.lat_data, self.turnaround_flags
