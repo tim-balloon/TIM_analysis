@@ -9,6 +9,7 @@ import numpy as np
 from astropy.cosmology import Planck18 as cosmo
 
 class angular_power_spectrum:
+
     """
     Class to measure an angular power spectrum out of a 2D map
 
@@ -41,9 +42,10 @@ class angular_power_spectrum:
         """
         self.maps = maps
         self.map2 = map2
-        self.res = res
+        self.resx = res
         self.delta_k_over_k = delta_k_over_k
         self.ny, self.nx = maps[0].shape
+
     # ------------------------------------------------------------
     # Make k bins
     # ------------------------------------------------------------
@@ -78,40 +80,10 @@ class angular_power_spectrum:
                 bintab.append(k)
 
         return np.array(bintab)
-
-
-    # ------------------------------------------------------------
-    # Correct spatial frequency map 
-    # ------------------------------------------------------------
-    def give_map_spatial_angular_freq(self):
-        """
-        Return the 2D Discrete Fourier Transform sample frequencies.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        k_map: 2D array
-            the Fourier Transform frequency map
-        """
-        ny, nx = self.ny, self.nx
-        res = self.res
-
-        # FFT frequencies in cycles per radian
-        ky = np.fft.fftfreq(ny, d=res)
-        kx = np.fft.fftfreq(nx, d=res)
-
-        KX, KY = np.meshgrid(kx, ky)
-
-        k_map = np.sqrt(KX**2 + KY**2)
-        return k_map
-        
-
-
+     
     # ------------------------------------------------------------
     # Compute the k-binning and maps
-    # ------------------------------------------------------------
+    # ------------------------------------------------------------   
     def set_k_infos_2d(self):
         """
         Compute all wavenumber related quantities based on the resolution and shape of the map to be analysed.
@@ -125,9 +97,9 @@ class angular_power_spectrum:
         """
 
         ny, nx = self.ny, self.nx
-        res = self.res
+        res = self.resx
 
-        k_map = self.give_map_spatial_angular_freq()
+        k_map = self.give_map_spatial_freq()
 
         kmin = 1.0 / (min(ny, nx) * res)
         kmax = np.max(k_map)
@@ -142,6 +114,55 @@ class angular_power_spectrum:
         self.k_map = k_map
         self.k_bin_tab = k_bin_tab
         self.k_out = k_out
+    
+
+    # ------------------------------------------------------------
+    # Correct spatial frequency map 
+    # ------------------------------------------------------------
+    def give_map_spatial_freq(self):
+        """
+        Return the 2D Discrete Fourier Transform sample frequencies.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        k_map: 2D array
+            the Fourier Transform frequency map
+        """
+        nx, ny, res = self.nx, self.ny, self.resx
+        Ys, Xs = np.unravel_index(np.arange(nx*ny),(ny,nx))
+        N = np.zeros((ny, nx))
+        M = np.zeros((ny, nx))
+        for  xs, ys, in zip(Xs, Ys):
+            N[ys,xs] = int(xs)
+            M[ys,xs] = int(ys)
+        w_sup = np.where(M>ny/2)
+        M[w_sup] = ny - M[w_sup]
+        w_sup = np.where(N>nx/2)
+        N[w_sup] = nx - N[w_sup]
+        Kx = M/nx/res
+        Ky = N/ny/res
+        k_map = (Kx**2 + Ky**2)**(1/2)
+        #l_map = k_map * 2 * np.pi
+        
+        return k_map
+
+        '''
+        ny, nx = self.ny, self.nx
+        res = self.res
+
+        # FFT frequencies in cycles per radian
+        ky = np.fft.fftfreq(ny, d=res)
+        kx = np.fft.fftfreq(nx, d=res)
+
+        KX, KY = np.meshgrid(kx, ky)
+
+        k_map = np.sqrt(KX**2 + KY**2)
+        return k_map
+        '''
+
 
     # ------------------------------------------------------------
     # Main P(k) estimator
@@ -163,7 +184,7 @@ class angular_power_spectrum:
         """
 
         ny, nx = self.ny, self.nx
-        res = self.res
+        res = self.resx
 
         norm = (res**2) / (nx * ny)
 
@@ -187,7 +208,7 @@ class angular_power_spectrum:
             if self.map2 is None:
                 ft2 = ft
             else:
-                map_filled_2 = np.nan_to_num(self.map2, nan=0.0)
+                map_filled_2 = np.nan_to_num(self.map2[i], nan=0.0)
                 ft2 = np.fft.fft2(map_filled_2)
             
             p2map = (ft * np.conj(ft2)).real * norm
@@ -259,54 +280,6 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
     # ------------------------------------------------------------
     # Compute the k-binning and maps
     # ------------------------------------------------------------
-
-    # ------------------------------------------------------------
-    # Correct spatial frequency map 
-    # ------------------------------------------------------------
-    def give_map_spatial_freq(self):
-        """
-        Return the 2D Discrete Fourier Transform sample frequencies.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        k_map: 2D array
-            the Fourier Transform frequency map
-        """
-        nx, ny, res = self.nx, self.ny, self.resx
-        Ys, Xs = np.unravel_index(np.arange(nx*ny),(ny,nx))
-        N = np.zeros((ny, nx))
-        M = np.zeros((ny, nx))
-        for  xs, ys, in zip(Xs, Ys):
-            N[ys,xs] = int(xs)
-            M[ys,xs] = int(ys)
-        w_sup = np.where(M>ny/2)
-        M[w_sup] = ny - M[w_sup]
-        w_sup = np.where(N>nx/2)
-        N[w_sup] = nx - N[w_sup]
-        Kx = M/nx/res
-        Ky = N/ny/res
-        k_map = (Kx**2 + Ky**2)**(1/2)
-        #l_map = k_map * 2 * np.pi
-        
-        return k_map
-
-        '''
-        ny, nx = self.ny, self.nx
-        res = self.res
-
-        # FFT frequencies in cycles per radian
-        ky = np.fft.fftfreq(ny, d=res)
-        kx = np.fft.fftfreq(nx, d=res)
-
-        KX, KY = np.meshgrid(kx, ky)
-
-        k_map = np.sqrt(KX**2 + KY**2)
-        return k_map
-        '''
-
     def set_k_infos(self):
         """
         Compute all wavenumber related quantities based on the resolution and shape of the cube to be analysed.
