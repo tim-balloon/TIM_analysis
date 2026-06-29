@@ -1,6 +1,7 @@
 #NAMAP parameters 
 
 #--- Input Data Paths and Parameters--
+
 #Path for TODs data
 input_file = '/home/mvancuyck/Desktop/TIM_analysis/namap/datasets/TOD_25.0min' 
 
@@ -14,8 +15,9 @@ detectors_to_use = None
 frequencies = (715.0,) #GHz
  
 #Chose the data in the time dimension 
-num_frames=60#integration time in seconds to be loaded. 
-first_frame=0 #Starting time in second to loaded
+num_frames = 60 #integration time in seconds to be loaded. 
+first_frame = 0 #Starting time in second to loaded
+
 #----------------------------
 
 
@@ -45,8 +47,8 @@ crpix = 126, 127 #Default crpix, updated automatically by src.mapmaker/mapmaking
 cdelt = 0.005555555555555556, 0.005555555555555556 #Pixel resolution along the two axis in degree. 
 crval =  0, -27.80833 #Value of the reference pixel in degree and its associated pixel number. 
 pixnum = 300, 300 #Number of pixels along the two axis. The input needs to be written as XX YY. 
-#-----------------------------
 
+#-----------------------------
 
 
 #--- Parameters for the processing of the TODs ---
@@ -60,8 +62,7 @@ precision = 'float64'
 save_raw_IQ_TODS = False
 
 #If called, save only phase data, and stops Namap after. 
-save_raw_TODS = False
-save_downsampled_TODS = False
+save_TODS = False
 
 #Coadd the detectors 
 #If called, the data of detectors are coadded and saved in a single map. Else, a map for each detector is saved.
@@ -94,21 +95,22 @@ high_thresh = 5
 #If called remove data acquired during turnarounds of the telescope. 
 remove_turnarounds = False
 
-
 #convolution by the beam
 gaussian_convolution = False 
 #STD of the gaussian used for the convolution. The value is in arcsec
 std = 0 
+
 #-----------------------------------------------
 
-
 #--- Output Parameters ---
+int8 = False
 output_map =  'coadd.fits' 
 output_tods = 'tods'
-beam_output = 'beam.fits'
 #-------------------------
+
 
 #Fit a gaussian beam to the created map(s).
 checkBeam = False
+beam_output = 'beam.fits'
 check_offsets = False
 checkAngularPowerSpectrum = False

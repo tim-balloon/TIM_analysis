@@ -73,7 +73,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
                         P_namap['output_map'] = P['output_path']+map_compression
                         P_namap['coadd'] = True
-                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['save_TODS'] = False
                         P_namap['remove_turnarounds'] = True
                         P_namap['downsample_frequency'] = 100
 
@@ -137,7 +137,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
                         P_namap['output_map'] = P['output_path']+map_compression
                         P_namap['coadd'] = True
-                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['save_TODS'] = False
                         P_namap['remove_turnarounds'] = True
                         P_namap['downsample_frequency'] = 100
                         #------------------------------------------------------
@@ -204,7 +204,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                     P_namap['first_frame'] = 0 #Starting time in second to loaded
                     P_namap['output_map'] = P['output_path']+map_compression
                     P_namap['coadd'] = False
-                    P_namap['save_downsampled_TODS'] = False
+                    P_namap['save_TODS'] = False
 
                     #------------------------------------------------------
                     tracemalloc.start()
@@ -281,7 +281,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             P_namap['first_frame'] = 0 #Starting time in second to loaded
                             P_namap['output_map'] = P['output_path']+map_compression
                             P_namap['coadd'] = False
-                            P_namap['save_downsampled_TODS'] = False
+                            P_namap['save_TODS'] = False
                             
 
                             #------------------------------------------------------
@@ -368,7 +368,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     P_namap['precision'] = precision                        
                     P_namap['num_frames']  = t * 60 #seconds 
                     P_namap['first_frame'] = 0 #Starting time in second to loaded
-                    P_namap['save_downsampled_TODS'] = True
+                    P_namap['save_TODS'] = True
                     P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
                     P_namap['remove_turnarounds'] = False
                     if('raw' in compression): P_namap['downsample_frequency'] = None
@@ -444,7 +444,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         P_namap['precision'] = precision                        
                         P_namap['num_frames']  = 5 * 60 #seconds 
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
-                        P_namap['save_downsampled_TODS'] = True
+                        P_namap['save_TODS'] = True
                         P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
                         P_namap['remove_turnarounds'] = False
                         if('raw' in compression): P_namap['downsample_frequency'] = None
@@ -518,7 +518,7 @@ def profiling_fcts(dict_file_path, load_directly = False):
         P_namap['first_frame'] = 0 #Starting time in second to loaded
         P_namap['output_map'] = P['output_path']+map_compression
         P_namap['coadd'] = True
-        P_namap['save_downsampled_TODS'] = False
+        P_namap['save_TODS'] = False
         P_namap['remove_turnarounds'] = True
         P_namap['downsample_frequency'] = 100
 
@@ -542,7 +542,7 @@ def profiling_fcts(dict_file_path, load_directly = False):
         for i in range(nrep):
             results[key][precision][map_compression]['peak memory [MB] loaddata'][i],results[key][precision][map_compression]['time [s] loaddata'][i],results[key][precision][map_compression]['peak memory [MB] clean'][i], results[key][precision][map_compression]['time [s] clean'][i], results[key][precision][map_compression]['peak memory [MB] sync'][i], results[key][precision][map_compression]['time [s] sync'][i], results[key][precision][map_compression]['peak memory [MB] turns'][i], results[key][precision][map_compression]['time [s] turns'][i], results[key][precision][map_compression]['peak memory [MB] corr'][i], results[key][precision][map_compression]['time [s] corr'][i], results[key][precision][map_compression]['peak memory [MB] maps'][i], results[key][precision][map_compression]['time [s] maps'][i], results[key][precision][map_compression]['peak memory [MB] savemap'][i], results[key][precision][map_compression]['time [s] savemap'][i] = namap_main(P_namap)
 
-        P_namap['save_downsampled_TODS'] = True
+        P_namap['save_TODS'] = True
         P_namap['output_tods'] = 'tods'
 
         for i in range(nrep):
@@ -615,7 +615,7 @@ def test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file, load_directl
                         #-------------------------------------------
                         P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
                         P_namap['remove_turnarounds'] = True
-                        P_namap['save_downsampled_TODS'] = False
+                        P_namap['save_TODS'] = False
                         P_namap['downsample_frequency'] = downsample_frequency
                         #P_namap['output_hdf5'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
                         P_namap['num_frames']  = int(t_int*60+1) #integration time in seconds to be loaded. 
@@ -792,7 +792,7 @@ def test_namap_tods_fidelity(dict_tods_fidelity_file, load_directly = False):
                     #-------------------------------------------
                     P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
                     P_namap['remove_turnarounds'] = True
-                    P_namap['save_downsampled_TODS'] = True
+                    P_namap['save_TODS'] = True
                     P_namap['downsample_frequency'] = downsample_frequency
                     P_namap['output_hdf5'] = P['output_path']+f'downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
                     P_namap['num_frames']  = int(t_int*60+1) #integration time in seconds to be loaded. 

@@ -62,8 +62,7 @@ precision = 'float64'
 save_raw_IQ_TODS = False
 
 #If called, save only phase data, and stops Namap after. 
-save_raw_TODS = False
-save_downsampled_TODS = False
+save_TODS = False
 
 #Coadd the detectors 
 #If called, the data of detectors are coadded and saved in a single map. Else, a map for each detector is saved.
@@ -79,7 +78,7 @@ downsample_frequency = 100 #Hz
 highpassfreq    = 0 
 
 #Polynomial order used to fit the TOD to detrend data. If no detrending, put polynomialorder = 0. 
-polynomialorder = 3 
+polynomialorder = 0
 
 #Despike flag. If called, two possible parameters can be explicited. 
 despike         = True 
@@ -108,12 +107,11 @@ std = 0
 int8 = False
 output_map =  'coadd.fits' 
 output_tods = 'tods'
-beam_output = 'beam.fits'
-
 #-------------------------
 
 
 #Fit a gaussian beam to the created map(s).
 checkBeam = False
+beam_output = 'beam.fits'
 check_offsets = False
 checkAngularPowerSpectrum = False

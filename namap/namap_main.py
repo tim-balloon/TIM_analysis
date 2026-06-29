@@ -25,7 +25,6 @@ from IPython import embed
 import tracemalloc
 import time
 
-
 def load_par_file(filepath):
     """
     Return as a dictionary the parameters stores in a .par file
@@ -189,7 +188,7 @@ def main(P, nbdets=None):
     #Filter out the turnarounds
     if(P['remove_turnarounds'] and not P['bypass_synch'] ):
         for i in range(len(cleaned_data)): cleaned_data[i] = cleaned_data[i][turnarounds_flag==1]
-        if P['save_downsampled_TODS']: timemap = timemap[turnarounds_flag==1]
+        if P['save_TODS']: timemap = timemap[turnarounds_flag==1]
         lst_data = lst_data[turnarounds_flag==1]
         lat_data = lat_data[turnarounds_flag==1]
         coord2_data = coord2_data[turnarounds_flag==1]
@@ -260,8 +259,8 @@ def main(P, nbdets=None):
         maps.map_plot(data_maps = map_values, kid_num=kid_num)
         #-------------------------------------------------- 
         #      
-        if P['checkBeam'] and P['coadd'] and False:
-                
+        if P['checkBeam'] and P['coadd']:
+                                
                 beam_value = bm.beam(map_values, )#param = self.beamparam
                 beam_map = beam_value.beam_fit()
                 param = beam_map[1]
@@ -282,14 +281,14 @@ def main(P, nbdets=None):
                     print('save '+P['beam_output'])
                     hdu.close()  
 
-
-        if P['check_offsets'] and not P['coadd'] and False:
+        if P['check_offsets'] and not P['coadd']:
 
             LST_mean = lst_data.mean()
-            lat_value = lat_data.mean()                   
+            lat_value = lat_data.mean()              
 
             corr = pt.apply_offset('RA and DEC', (wcs.wcs.crval[0],), (wcs.wcs.crval[1],), 'AZ and EL', DT,IT, lst = LST_mean, lat = lat_value, )
             azi_ref, alt_ref = corr.correction()
+
 
             '''
             dettable = ld.det_table(kid_num, P['detector_table'])     
@@ -317,75 +316,54 @@ def main(P, nbdets=None):
                     uncertainties = np.sqrt(np.diag(cov))
                     print(f'yo={params[2]:.2f} pm {uncertainties[2]:.2f} | xo={params[1]:.2f} pm {uncertainties[1]:.2f}' )
                     x_peak = params[1]; y_peak = params[2]
-                    ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)                         
+                    ra_deg, dec_deg = wcs.pixel_to_world_values(x_peak, y_peak)
+                    '''                        
                     conv2azel = pt.utils(ra_deg, dec_deg, LST_mean, lat_value) 
                     AZ_dets, EL_dets = conv2azel.radec2azel()
                     daz = AZ_dets - azi_ref
                     xel = daz * np.cos(alt_ref)
                     delv = EL_dets - alt_ref
+                    '''
+                                        
+                    conv = pt.apply_offset('RA and DEC',ra_deg,dec_deg,'AZ and EL',lst = LST_mean, lat = lat_value,)
+                    AZ_dets_mine, EL_dets_mine = conv.correction()
+                    daz2 = AZ_dets_mine - azi_ref
+                    daz2 = (daz2 + 180) % 360 - 180
+                    xel = daz2 * np.cos(np.radians(alt_ref))  #alt_ref_namap
+                    delv = EL_dets_mine - alt_ref
 
                     f.write(f"{name_kid}\t{delv:3f}\t{xel:3f}\n")  # Tab-separated values
             f.close()                      
 
 
-        if(P['checkAngularPowerSpectrum'] and False): 
+        if(P['checkAngularPowerSpectrum']): 
 
             from astropy.visualization import ZScaleInterval  
             from mpl_toolkits.axes_grid1 import make_axes_locatable
             import matplotlib.pyplot as plt
             zscale = ZScaleInterval()
+            vmin, vmax = zscale.get_limits(np.asarray(map_values))
 
-            if(P['coadd']): 
-                vmin, vmax = zscale.get_limits(map_values)
+            fig, (ax, axp) = plt.subplots(1,2,figsize=(8, 6) )#, subplot_kw={'projection': wcs})
+            im = ax.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
+            fig.colorbar(im, cax=cax, label='Amplitude')
+            ax.set_xlabel('X pixel')
+            ax.set_ylabel('Y pixel')
+            ax.set_aspect('equal')
 
-                fig, (ax, axp) = plt.subplots(1,2,figsize=(8, 6) )#, subplot_kw={'projection': wcs})
-                im = ax.imshow(map_values, origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-                fig.colorbar(im, cax=cax, label='Amplitude')
-                ax.set_xlabel('X pixel')
-                ax.set_ylabel('Y pixel')
-                ax.set_aspect('equal')
+            powspec = mps.angular_power_spectrum(map_values, res = P['cdelt'][0] * np.pi / 180, delta_k_over_k = 0.3 )
+            pk_list, k = powspec.p2() 
 
-                powspec = mps.angular_power_spectrum(map_values, res = P['cdelt'][0] * np.pi / 180, delta_k_over_k = 0.3 )
-                pk, k = powspec.p2() 
-
-                axp.step(k /(180/np.pi*60) ,pk, markersize=1, c='g')
-                axp.set_xscale('log')
-                axp.set_xlabel('$\\rm arcmin^{-1}$')
-                axp.set_ylabel('$\\rm Jy^2/sr$')
-                axp.set_yscale('log')
-                axp.set_aspect('equal') 
-
-                fig.tight_layout()
-
-            else: 
-                fig, axp = plt.subplots(figsize=(8, 6) )#, subplot_kw={'projection': wcs})
-                    
-
-                '''
-                vmin, vmax = zscale.get_limits(map_values)
-                im = ax.imshow(map_values[0], origin='lower', cmap='viridis', vmin=vmin, vmax=vmax)
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes("right", size="5%", pad=0.05)  # size can be a percentage or absolute
-                fig.colorbar(im, cax=cax, label='Amplitude')
-                ax.set_xlabel('X pixel')
-                ax.set_ylabel('Y pixel')
-                ax.set_aspect('equal')
-                '''
-                
-                powspec = mps.angular_power_spectrum(map_values, res = P['cdelt'][0] * np.pi / 180, delta_k_over_k = 0.3 )
-                pk, k = powspec.p2() 
-
-                axp.step(k /(180/np.pi*60) ,pk, markersize=1, c='k', alpha=0.1)
-                axp.set_xscale('log')
-                axp.set_xlabel('$\\rm arcmin^{-1}$')
-                axp.set_ylabel('$\\rm Jy^2/sr$')
-                axp.set_yscale('log')
-                
-                fig.tight_layout()
-
-                plt.show()
+            for pk in pk_list:
+                axp.step(k /(180/np.pi*60) ,pk, markersize=1, c='k', alpha=0.1, drawstyle='steps_mid')
+            axp.set_xscale('log')
+            axp.set_xlabel('$\\rm arcmin^{-1}$')
+            axp.set_ylabel('$\\rm Jy^2/sr$')
+            axp.set_yscale('log')
+            axp.set_aspect('equal') 
+            fig.tight_layout()
 
     return len(kid_num)
 
@@ -465,7 +443,7 @@ if __name__ == "__main__":
     cli.add_argument('--precision ',type=str, help='precision required in float64,float32,float16')
     cli.add_argument('--downsample_frequency ',type=float, help='The frequency to downsample the data to')
     cli.add_argument('--remove_turnarounds ',action='store_true', help='if True, remove data acquired during turnarounds')
-    cli.add_argument('--save_downsampled_TODS ',action='store_true', help='if True, save the TOD in an .hdf5')
+    cli.add_argument('--save_TODS ',action='store_true', help='if True, save the TOD in an .hdf5')
     cli.add_argument('--output_hdf5',type=str, help='name of the hdf5 file in which to store the TODs.')
     cli.add_argument('--output_map',type=str, help='name of the fits file to which save the map. Write name.fits.gz to automatically compress the fits file')
 
