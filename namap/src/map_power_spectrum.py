@@ -5,7 +5,6 @@ from IPython import embed
 from scipy.optimize import curve_fit
 from scipy import interpolate
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import numpy as np
 from astropy.cosmology import Planck18 as cosmo
 
 class angular_power_spectrum:
@@ -44,7 +43,14 @@ class angular_power_spectrum:
         self.map2 = map2
         self.resx = res
         self.delta_k_over_k = delta_k_over_k
-        self.ny, self.nx = maps[0].shape
+        self.resx = res
+
+        if maps.ndim == 2:
+            self.ny, self.nx = maps.shape
+        elif maps.ndim == 3:
+            self.nz, self.ny, self.nx = maps.shape
+        else:
+            raise ValueError(f"Expected a 2D or 3D map, got shape {maps[0].shape}")
 
     # ------------------------------------------------------------
     # Make k bins
@@ -115,7 +121,6 @@ class angular_power_spectrum:
         self.k_bin_tab = k_bin_tab
         self.k_out = k_out
     
-
     # ------------------------------------------------------------
     # Correct spatial frequency map 
     # ------------------------------------------------------------
@@ -164,36 +169,12 @@ class angular_power_spectrum:
         '''
 
 
-    # ------------------------------------------------------------
-    # Main P(k) estimator
-    # ------------------------------------------------------------
-    def p2(self,mask_correction=False):
-            
-        """
-        Estimates the angular power spectrum in Jy**2/sr of an 2D angular map in Jy/sr
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        pk: array
-            the Fourier amplitudes in Jy**2/sr
-        k_bin_tab: array
-            the k bins in rad-1        
-        """
-
+    def compute_power_amplitudes(self,mask_correction=False):
+        
         ny, nx = self.ny, self.nx
         res = self.resx
-
         norm = (res**2) / (nx * ny)
-
-        self.set_k_infos_2d()
-
-        k_map = self.k_map
-
-        # FFTs
-        pk_list = []
+        self.power_amp_maps = []
 
         for i, map in enumerate(self.maps):
 
@@ -215,10 +196,38 @@ class angular_power_spectrum:
 
             if(mask_correction): 
             # Corrected power spectrum
-                ft_mask = np.fft.fft2(mask)
+                ft_mask = np.fft.fft2(self.mask)
                 pmask = np.abs(ft_mask)**2 
                 w = np.where(np.abs(pmask)>0)
                 p2map[w] /=  np.abs(pmask)[w]
+            self.power_amp_maps.append(p2map)
+
+
+    # ------------------------------------------------------------
+    # Main P(k) estimator
+    # ------------------------------------------------------------
+    def p2(self,mask_correction=False):
+            
+        """
+        Estimates the angular power spectrum in Jy**2/sr of an 2D angular map in Jy/sr
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        pk: array
+            the Fourier amplitudes in Jy**2/sr
+        k_bin_tab: array
+            the k bins in rad-1        
+        """
+
+        self.set_k_infos_2d()
+        k_map = self.k_map
+        self.compute_power_amplitudes(mask_correction=mask_correction)
+        pk_list = []
+
+        for i, p2map in enumerate(self.power_amp_maps):
 
             # Compute radial average
             hist_w, _ = np.histogram(k_map, bins=self.k_bin_tab, weights=p2map)
