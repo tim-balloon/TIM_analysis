@@ -2,9 +2,8 @@ import numpy as np
 from astropy import wcs
 from astropy.convolution import Gaussian2DKernel, convolve
 from IPython import embed
-import os
+import os, datetime
 from astropy.io import fits
-import datetime
 import json
 
 class maps():

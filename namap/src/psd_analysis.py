@@ -5,7 +5,6 @@ from IPython import embed
 from scipy.optimize import curve_fit
 from scipy import interpolate
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-import numpy as np
 
 class tod_psd:
     """

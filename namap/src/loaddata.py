@@ -2,15 +2,12 @@
 import numpy as np
 from scipy.interpolate import interp1d, PchipInterpolator
 from scipy.signal import resample_poly, resample
-import os
+import os, h5py, shutil
 import astropy.table as tb
 from IPython import embed
 import src.detector as det 
-import h5py
 import matplotlib.pyplot as plt
-import shutil
 import pygetdata as gd
-import shutil
 
 def load_params(path):
     """
