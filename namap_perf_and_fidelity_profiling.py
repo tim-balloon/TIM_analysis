@@ -74,7 +74,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['output_map'] = P['output_path']+map_compression
                         P_namap['coadd'] = True
                         P_namap['save_TODS'] = False
-                        P_namap['remove_turnarounds'] = True
+                        P_namap['remove_turnarounds'] = False
                         P_namap['downsample_frequency'] = 100
 
                         #------------------------------------------------------
@@ -96,7 +96,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
                         results[key][precision][map_compression]['time [s]'].append(timing)
                         results[key][precision][map_compression]['output size [MB]'].append(file_size_mb)
-
+                
     if(profiling_vs_nb_bands):
 
         key = 'profiling vs nb bands'
@@ -123,12 +123,9 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         # Skip if val is smaller than max so far
                         if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
 
-
                         if val > 1000 and len(results[key]["nb dets"]) > 0:
-                            if val < 1.3 * max(results[key]["nb dets"]): continue
-                            
-                        #results[key]["nb dets"].append(val)
-
+                            if val < 1.25 * max(results[key]["nb dets"]): continue
+                        
                         freq_list = 715.0 + 4.0 * np.arange(nband)
                         P_namap['cdelt'] = 40/3600, 40/3600
                         P_namap['frequencies'] = freq_list     
@@ -138,12 +135,12 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['output_map'] = P['output_path']+map_compression
                         P_namap['coadd'] = True
                         P_namap['save_TODS'] = False
-                        P_namap['remove_turnarounds'] = True
+                        P_namap['remove_turnarounds'] = False
                         P_namap['downsample_frequency'] = 100
                         #------------------------------------------------------
                         tracemalloc.start()
                         start = time.time()
-                        pitot = namap_main(P_namap, npix)
+                        pitot = namap_main(P_namap, val)
                         
                         current, peak = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
@@ -269,7 +266,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
 
                             if val > 1000 and len(results[key]["nb dets"]) > 0:
-                                if val < 1.3 * max(results[key]["nb dets"]): continue
+                                if val < 1.25 * max(results[key]["nb dets"]): continue
 
                             #results[key]["nb dets"].append(val)
                             freq_list = 715.0 + 4.0 * np.arange(nband)
@@ -287,7 +284,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             #------------------------------------------------------
                             tracemalloc.start()
                             start = time.time()
-                            pitot = namap_main(P_namap, npix)
+                            pitot = namap_main(P_namap, val)
                             current, peak = tracemalloc.get_traced_memory()
                             tracemalloc.stop()
                             end = time.time()
@@ -328,7 +325,6 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
 
 def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb_bands=True, load_directly = False):
 
-    
     def get_dir_size(path):
         total = 0
         for root, dirs, files in os.walk(path):
@@ -377,8 +373,6 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     tracemalloc.start()
                     start = time.time()
                     namap_main(P_namap)
-
-                    print('here1:',51*len(P_namap['frequencies'] ))
                     current, peak = tracemalloc.get_traced_memory()
                     tracemalloc.stop()
                     end = time.time()
@@ -424,17 +418,15 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                 results[key][precision][compression]['output size [MB]'] = []
                 
                 results[key]["nb dets"] = []
-
                 for nband in nb_bands:
                     for npix in nb_pixels:
                         val = int(nband * npix)
-                        if val in results[key]["nb dets"]: continue
                                     
                         # Skip if val is smaller than max so far
                         if results[key]["nb dets"] and val < max(results[key]["nb dets"]): continue
 
                         if val > 1000 and len(results[key]["nb dets"]) > 0:
-                            if val < 1.3 * max(results[key]["nb dets"]): continue
+                            if val < 1.25 * max(results[key]["nb dets"]): continue
 
                         
                         freq_list = 715.0 + 4.0 * np.arange(nband)
@@ -453,14 +445,12 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         #------------------------------------------------------
                         tracemalloc.start()
                         start = time.time()
-                        print('here22:',len(freq_list)*npix )
-                        pitot = namap_main(P_namap, npix)
-
+                        pixtot = namap_main(P_namap, val)
                         current, peak = tracemalloc.get_traced_memory()
                         tracemalloc.stop()
                         end = time.time()
                         timing = end - start
-                        results[key]["nb dets"].append(pitot)
+                        results[key]["nb dets"].append(pixtot)
                         #------------------------------------------------------
 
                         # Measure output file size (adapt this path!)
@@ -488,6 +478,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                             else: shutil.rmtree(output_file)
                         except OSError as e:
                             print(f"Error deleting {output_file}: {e}")
+        
 
         with open(dict_file_path, 'wb') as f: pickle.dump(results, f)
         return 0
@@ -519,7 +510,7 @@ def profiling_fcts(dict_file_path, load_directly = False):
         P_namap['output_map'] = P['output_path']+map_compression
         P_namap['coadd'] = True
         P_namap['save_TODS'] = False
-        P_namap['remove_turnarounds'] = True
+        P_namap['remove_turnarounds'] = False
         P_namap['downsample_frequency'] = 100
 
         results[key][precision]['peak memory [MB] loaddata'] = np.zeros(nrep)
@@ -614,7 +605,7 @@ def test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file, load_directl
                         dict_maps_fidelity[T_key][df_key][prec].setdefault(res_key, {})  
                         #-------------------------------------------
                         P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
-                        P_namap['remove_turnarounds'] = True
+                        P_namap['remove_turnarounds'] = False
                         P_namap['save_TODS'] = False
                         P_namap['downsample_frequency'] = downsample_frequency
                         #P_namap['output_hdf5'] = P['output_path']+f'namap_downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
@@ -791,7 +782,7 @@ def test_namap_tods_fidelity(dict_tods_fidelity_file, load_directly = False):
 
                     #-------------------------------------------
                     P_namap['hdf5_file'] = P['output_path']+f'TOD_{t_int:.1f}min.hdf5' 
-                    P_namap['remove_turnarounds'] = True
+                    P_namap['remove_turnarounds'] = False
                     P_namap['save_TODS'] = True
                     P_namap['downsample_frequency'] = downsample_frequency
                     P_namap['output_hdf5'] = P['output_path']+f'downsampled_TOD_{t_int:.1f}min_{downsample_frequency:.1f}Hz_{prec}.hdf5' 
@@ -1017,9 +1008,9 @@ if __name__ == "__main__":
 
     #-----------------------
     #I: coadded maps
-    perfs_coadded_maps = False
+    perfs_coadded_maps = True
     #II: individual mapscoadd
-    perfs_individual_maps = False
+    perfs_individual_maps = True
     #III a TODs 
     perfs_tods = True
     #
@@ -1059,7 +1050,7 @@ if __name__ == "__main__":
     k_min_for_aps, freq_max_for_aps = 1e-1,3e-1
     delta_k_over_k = 0.1
 
-    t_int_list = (4, 5, 6, 7, 8, 9,10,15, 25) #min
+    t_int_list = (4, 5, 6, 7, 8, 9,10,15, 24) #min
     downsampled_freq_list = (100,50,150)
     precision_list = ('float32', 'float16') #'float64',
     resolution_list = (res,40/3600,50/3600,60/3600) #deg
@@ -1099,7 +1090,6 @@ if __name__ == "__main__":
             if(perfs_coadded_maps): profiling_coadded_maps(dict_coadd_perf)
             if(perfs_individual_maps): profiling_individual_maps(dict_individual_perf)
             if(perfs_tods): profiling_tods(dict_tods_perf)
-            if(perfs_raw_tods): profiling_raw_tods(dict_tods_raw_perf)
             if(perf_fct): profiling_fcts(dict_fcts)
             if(tod_fidelity): test_namap_tods_fidelity(dict_tods_fidelity_file)
             if(map_fidelity): test_namap_coadded_map_fidelity(dict_coadded_map_fidelity_file)
