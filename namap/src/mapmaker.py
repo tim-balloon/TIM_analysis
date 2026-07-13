@@ -112,6 +112,7 @@ class maps():
         else:                        weights = np.ones(len(self.data))
         
         mapmaker = mapmaking(self.data, weights, len(self.data), self.proj, self.coadd, self.DT, self.IT) # self.noise,
+        
         Pow_map, crpix = mapmaker.map_Ionly( crpix = self.crpix, pixnum = self.pixnum, coadd=self.coadd,)
         
         self.w.wcs.crpix = crpix
@@ -400,8 +401,8 @@ class mapmaking(object):
             idxpixel = self.pixelmap[i]
             
             # Extract min and max for x and y
-            xmin, xmax = idxpixel[0].min(), idxpixel[0].max()
-            ymin, ymax = idxpixel[1].min(), idxpixel[1].max()
+            xmin, xmax = np.nanmin(idxpixel[0]), np.nanmax(idxpixel[0])
+            ymin, ymax = np.nanmin(idxpixel[1]), np.nanmax(idxpixel[1])
             
             # Update global min and max
             Xmin = min(Xmin, xmin)
@@ -409,7 +410,7 @@ class mapmaking(object):
             Ymin = min(Ymin, ymin)
             Ymax = max(Ymax, ymax)
 
-        edges = np.round((Xmin, Xmax, Xmin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
+        edges = np.round((Xmin, Xmax, Ymin, Ymax)) #np.round((Xmin, Xmax, Ymin, Ymax))
 
         # ---------------------------------------------
         # 2) Enforce that the cutout cannot exceed pixnum
@@ -423,6 +424,8 @@ class mapmaking(object):
         # ---------------------------------------------
         cx = (edges[0] + edges[1]) / 2
         cy = (edges[2] + edges[3]) / 2
+
+        
 
         idx_xmin = int(np.floor(cx - cut_width/2))
         idx_xmax = idx_xmin + cut_width

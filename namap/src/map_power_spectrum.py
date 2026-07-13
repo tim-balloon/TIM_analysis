@@ -546,6 +546,12 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
         self.resx = res_pix.mean()
         self.resy = res_pix.mean()
         self.resz = Delta_Dc.mean() 
+        
+        print("")
+        print(f'z={z_list.mean():.1f}, Vtot = {self.Vvoxel/1e6*self.nx*self.ny*self.nz:.1f} 10^6 Mpc^3')
+        print(f'z={z_list.mean():.1f}, dV = {(self.Vvoxels.max()/self.Vvoxel.min()):.2f} ')
+        print("")
+        
 
         return 0
     

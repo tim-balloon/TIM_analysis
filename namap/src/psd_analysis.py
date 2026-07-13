@@ -17,7 +17,7 @@ class tod_psd:
     -------
     """
 
-    def __init__(self, det_data, freq_res, delta_f_over_f=0):
+    def __init__(self, det_data, freq_res, delta_f_over_f=0.5):
 
         """
         Create an instance of the class.
@@ -152,7 +152,7 @@ class tod_psd:
         
         norm = (1/freq_res)**2 / n # is the square really there ?
 
-        self.set_k_infos()
+        self.set_f_infos()
 
         f = self.f
 
@@ -167,7 +167,7 @@ class tod_psd:
             # Fill NaNs with 0 (or the mean, depending on your normalization)
             tod_filled = np.nan_to_num(tod, nan=0.0)
 
-            ft = np.fft.fft2(tod)
+            ft = np.fft.fft(tod)
             p2 = (ft * np.conj(ft)).real * norm
 
             # Compute radial average

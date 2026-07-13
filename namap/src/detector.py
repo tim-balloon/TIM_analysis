@@ -863,5 +863,6 @@ class AntiAliasingFilter():
         filtered: 1D array
             the low-pass filtered data
         """
+        
         x_filt = self.filter(x)
         return self.downsample(x_filt)

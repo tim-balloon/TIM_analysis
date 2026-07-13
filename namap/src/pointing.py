@@ -404,6 +404,7 @@ class apply_offset(object):
             corrected array of coordinates two
         """  
         if self.ctype.lower() == 'ra and dec':
+        
 
             if(self.input_ctype.lower() == 'ra and dec'): 
                 conv2azel = utils(self.coord1, self.coord2, self.lst, self.lat) #hour, deg, hour, deg
