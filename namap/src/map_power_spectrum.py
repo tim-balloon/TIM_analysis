@@ -19,7 +19,7 @@ class angular_power_spectrum:
     -------
     """
 
-    def __init__(self, maps, res, delta_k_over_k=0, map2=None):
+    def __init__(self, maps, res, delta_k_over_k=0, map2=None, nu=None, dnu=None, nu0=None):
 
         """
         Create an instance of the class.
@@ -44,6 +44,9 @@ class angular_power_spectrum:
         self.resx = res
         self.delta_k_over_k = delta_k_over_k
         self.resx = res
+        self.nu=nu
+        self.dnu=dnu
+        self.nu0=nu0
 
         if maps.ndim == 2:
             self.ny, self.nx = maps.shape
@@ -51,6 +54,23 @@ class angular_power_spectrum:
             self.nz, self.ny, self.nx = maps.shape
         else:
             raise ValueError(f"Expected a 2D or 3D map, got shape {maps[0].shape}")
+        
+        if all(x is not None for x in (nu, dnu, nu0)): self.D3_pk_to_D2_pk()
+    
+        
+    def D3_pk_to_D2_pk(self):
+
+        nu, dnu, nu0 = self.nu, self.dnu, self.nu0
+        z = nu0 / nu -1
+        dz = (1+z)**2 / nu0 * dnu
+        Dc =  cosmo.comoving_distance(z) 
+        delta_Dc = ( (cst.c*1e-3) * (1+z) * dnu / cosmo.H(z) / nu)
+        self.pk_3d_to_2d = 1/(Dc**2*delta_Dc)
+        self.k_3d_to_2d  = Dc/2/np.pi
+        self.pk_2d_to_3d = 1 / self.pk_3d_to_2d
+        self.k_2d_to_3d  = 1 / self.k_3d_to_2d
+        return 0
+
 
     # ------------------------------------------------------------
     # Make k bins
@@ -239,8 +259,15 @@ class angular_power_spectrum:
             pk[~mask] = np.nan
             pk_list.append(pk)
 
-        return pk_list, self.k_bin_tab, self.k_out
+        if all(x is not None for x in (self.nu, self.dnu, self.nu0)):
 
+            d3_k_list = [self.k_out * k_2d_to_3d for k_2d_to_3d in self.k_2d_to_3d ]
+            d3_pk_list = [pk * pk_2d_to_3d for pk, pk_2d_to_3d in zip(pk_list, self.k_2d_to_3d)]            
+            return pk_list, self.k_bin_tab, self.k_out, d3_k_list, d3_pk_list
+
+        else:
+            return pk_list, self.k_bin_tab, self.k_out, None, None
+    
 class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
     """
     Class to measure an spherically-averaged power spectrum out of a 3D cube
@@ -252,7 +279,7 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
     -------
     """
 
-    def __init__(self, cube, resz, resx, resy, delta_k_over_k_perp=0, delta_k_over_k_par=0, correct_spectral_window=False):
+    def __init__(self, cube, resz, resx, resy,  delta_k_over_k_perp=0, delta_k_over_k_par=0, correct_spectral_window=False,):
 
         """
         Create an instance of the class
@@ -365,12 +392,10 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         self.kperp_flat = self.k_transv_3d.flatten()
         self.kpar_flat = self.k_z_3d.flatten()
         self.ksphere_flat = self.k_sphere.flatten()
-
-
-        #--------------------------------------------------
-        """
-        """
-        #-----------------------------n --------------------------
+           
+        self.k_map_2d = np.sqrt(k_transv**2) 
+        
+        
 
     # ------------------------------------------------------------
     # Main P(k) estimator
@@ -469,7 +494,28 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         '''
         #----------------------------------------------------
 
-        return P2D_avg, Nmodes, self.k_bins_parr, self.k_bins_perp, P1d_sum, self.k_sphere_bins, Nmodes1d, self.k_out, self.k_map_3d, self.k_z_3d
+        if(self.compute_slice_by_slice):
+        
+            norm = (self.resx*self.resy*self.resz) / (self.ny*self.nx)
+            pks_lists = []
+            for i, map in enumerate(self.cube):
+
+                mask = np.isfinite(map).astype(float)
+                map_filled = np.nan_to_num(map, nan=0.0)
+                ft = np.fft.fft2(map_filled)
+                if self.cube2 is None: ft2 = ft
+                else:
+                    map_filled_2 = np.nan_to_num(self.cube2[i], nan=0.0)
+                    ft2 = np.fft.fft2(map_filled_2)
+                p2map = (ft * np.conj(ft2)).real * norm
+                Nmodes1d, _ = np.histogram( self.k_map_2d, bins=self.k_bins_perp)
+                P1d_sum, _ = np.histogram(  self.k_map_2d, bins=self.k_bins_perp, weights=p2map)
+                P1d_sum /= Nmodes1d
+                pks_lists.append(P1d_sum)
+
+            return P2D_avg, Nmodes, self.k_bins_parr, self.k_bins_perp, P1d_sum, self.k_sphere_bins, Nmodes1d, self.k_out, self.k_map_3d, self.k_z_3d, self.k_out_perp, pks_lists
+        else:
+            return P2D_avg, Nmodes, self.k_bins_parr, self.k_bins_perp, P1d_sum, self.k_sphere_bins, Nmodes1d, self.k_out, self.k_map_3d, self.k_z_3d
 
 class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_comoving_cubes):
     """
@@ -482,7 +528,7 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
     -------
     """
 
-    def __init__(self, cube, res, nu, dnu, nu0, delta_k_over_k_perp=0,delta_k_over_k_par=0, correct_spectral_window=False):
+    def __init__(self, cube, res, nu, dnu, nu0, cube2=None,delta_k_over_k_perp=0,delta_k_over_k_par=0, compute_slice_by_slice=False,correct_spectral_window=False):
 
         """
         Create an instance of the class.
@@ -518,8 +564,11 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
         self.dnu = dnu
         self.delta_k_over_k_perp = delta_k_over_k_perp
         self.delta_k_over_k_par = delta_k_over_k_par
+        
         self.nz, self.ny, self.nx = cube.shape
         self.correct_spectral_window=correct_spectral_window
+        self.cube2 = cube2
+        self.compute_slice_by_slice = compute_slice_by_slice
 
     # ------------------------------------------------------------
     # convert angles to Mpc
@@ -540,19 +589,18 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
         Dc_center = cosmo.comoving_distance(z_list).value
         chi = cosmo.comoving_distance(z_list).value
         self.Vvoxels = self.res**2 * chi**2 * (cst.c*1e-3) / cosmo.H(z_list).value * (1+z_list)**2 * self.dnu / self.nu0
+        
         self.Vvoxel = self.Vvoxels.mean()
         Delta_Dc = cst.c*1e-3*(1+z_list) / cosmo.H(z_list).value * self.dnu / self.nu
         res_pix = Dc_center * self.res
         self.resx = res_pix.mean()
         self.resy = res_pix.mean()
         self.resz = Delta_Dc.mean() 
-        
-        print("")
-        print(f'z={z_list.mean():.1f}, Vtot = {self.Vvoxel/1e6*self.nx*self.ny*self.nz:.1f} 10^6 Mpc^3')
-        print(f'z={z_list.mean():.1f}, dV = {(self.Vvoxels.max()/self.Vvoxel.min()):.2f} ')
-        print("")
-        
 
+        self.resx_list = res_pix
+        self.resy_list = res_pix
+        self.resz_list = Delta_Dc
+              
         return 0
     
     # ------------------------------------------------------------
