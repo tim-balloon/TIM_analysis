@@ -89,10 +89,8 @@ class angular_power_spectrum:
             the wavenumber k bins
         
         """
-        if(dkk is None):
-            dkk = self.delta_k_over_k
+        if(dkk is None):  dkk = self.delta_k_over_k
         
-
         if dkk == 0:
             # linear bins
             bintab = np.arange(kmin, kmax + dk_min, dk_min)
@@ -354,10 +352,15 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         k_z_3d = np.zeros((self.nz, self.ny, self.nx))
         k_z_3d[:,:,:] = k_z[:,None, None]  
         k_sphere = np.sqrt(k_z_3d**2+k_transv_3d**2) #np.sqrt( u_freq[:,None,None]**2+ v_freq[None,:,None]**2 + w_freq[None,None,:]**2)
+        cos_theta = np.zeros_like(k_z_3d)
+        mask = k_sphere > 0  # Avoid division by zero
+        cos_theta[mask] = k_z_3d[mask] / k_sphere[mask]
 
         self.k_map_3d = k_sphere
+        self.cos_theta = cos_theta
 
         kmin_perp, kmax_perp = k_transv[k_transv>0].min(), k_transv.max()
+
 
         k_z_positive = k_z[k_z > 0]
         if k_z_positive.size > 0:
@@ -369,9 +372,15 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         kmin, kmax = np.min((kmin_perp, kmin_parr)), np.max((kmax_perp, kmax_parr))
         #dkk = 0 #np.max((self.delta_k_over_k_perp,self.delta_k_over_k_par))
 
+        if(self.delta_k_over_k_perp==0): kmin_perp = self.dk_min
+        if(self.delta_k_over_k_par==0): 
+            kmin_parr = self.dk_min
+            kmin = self.dk_min
+
         k_bins_perp = self.make_bintab(kmin_perp, kmax_perp, kmin_perp, self.delta_k_over_k_perp)
         k_bins_parr = self.make_bintab(kmin_parr, kmax_parr, kmin_parr, self.delta_k_over_k_par)
         k_edges =  self.make_bintab(   kmin,      kmax,      kmin, self.delta_k_over_k_par)
+
 
 
         # Bin centers
@@ -396,7 +405,6 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         self.k_map_2d = np.sqrt(k_transv**2) 
         
         
-
     # ------------------------------------------------------------
     # Main P(k) estimator
     # ------------------------------------------------------------
@@ -445,13 +453,11 @@ class threedim_power_spectrum_for_comoving_cubes(angular_power_spectrum):
         # Fill NaNs with 0 (or the mean, depending on your normalization)
         map_filled = np.nan_to_num(self.cube, nan=0.0)
         ft = np.fft.fftn(map_filled) 
-        ft2 = ft
-        '''
-        #if self.cube2 is None:
+                
+        if self.cube2 is None: ft2 = ft
         else:
             map_filled_2 = np.nan_to_num(self.cube2, nan=0.0)
             ft2 = np.fft.fftn(map_filled_2)
-        '''
         
         p2map = (ft * np.conj(ft2)).real * norm
 
@@ -528,7 +534,7 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
     -------
     """
 
-    def __init__(self, cube, res, nu, dnu, nu0, cube2=None,delta_k_over_k_perp=0,delta_k_over_k_par=0, compute_slice_by_slice=False,correct_spectral_window=False):
+    def __init__(self, cube, res, nu, dnu, nu0, cube2=None, dk_min = 0, delta_k_over_k_perp=0, delta_k_over_k_par=0, compute_slice_by_slice=False,correct_spectral_window=False):
 
         """
         Create an instance of the class.
@@ -564,6 +570,7 @@ class threedim_power_spectrum_for_angular_cubes(threedim_power_spectrum_for_como
         self.dnu = dnu
         self.delta_k_over_k_perp = delta_k_over_k_perp
         self.delta_k_over_k_par = delta_k_over_k_par
+        self.dk_min = dk_min
         
         self.nz, self.ny, self.nx = cube.shape
         self.correct_spectral_window=correct_spectral_window
