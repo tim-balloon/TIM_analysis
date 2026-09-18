@@ -372,7 +372,6 @@ if __name__ == "__main__":
     #Repogroup.add_argument('-te', '--telemetry', action='store_true', help='For BLAST-TNG, specify if the data are coming from \
 
     '''
-    If you want to modify this code, please create your own branch. 
 
     Instructions: 
 
