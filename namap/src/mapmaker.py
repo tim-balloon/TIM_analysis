@@ -7,57 +7,68 @@ from astropy.io import fits
 import json
 
 class maps():
-
     '''
-    Wrapper class for the wcs_word class and the mapmaking class.
+    Wrapper class for WCS projection and map-making operations
+
+    This class computes the WCS projection and pixel coordinates from
+    observational coordinates, generates 2D maps from detector
+    timestreams, optionally applies variance weighting and convolution,
+    and saves the resulting maps as FITS files
+
     Parameters
     ----------
+
     Returns
     -------
     '''
 
     def __init__(self, ctype, crpix, cdelt, crval, pixnum, data, coord1, coord2, convolution, std, output_file, DT,IT,coadd=False, variance_weighting=False, parang=None, params=None): #telcoord=False,
         '''
-        Create an instance of maps
+        Create an instance of the map-making wrapper.
+
         Parameters
         ----------
-        ctype: str
-            coordinates type (RA-DEC, AZ-EL, ect...)
-        crpix: (float, float)
-            coordinates of the reference pixel, usually the center of the map. 
-        cdelt: (float, float)
-            the pixel size in the y and x direction
-        crval: (float, float)
-            Sky coordinates at the reference pixel
-        pixnum: (int, int)
-            the maximum pixel sizes in the y and x direction allowed for the maps. 
-        data: list
-            list of the detector data
-        coord1: list
-            coordinate 1 for each detector data
-        coord2: list
-            coordinate 2 for each detector data
-        convolution: bool
-            If True, convolve the maps
-        std: float
-            std of the beam to convolve the maps
-        output_file: str
-            the path, name and format to save the maps. 
-        DT: type
-            Float precision required
-        IT: type
-            Int precision required
-        coadd: bool
-            If True, coadd all the detectors provided.
-        variance_weighting: bool
-            If True, compute the variance of each detector and weight its data by it in the map. 
-        parang: 1d array
-            The paralactic angle
-        params: dictionnary
-            The parameter dictionnary will be saved in 'COMMENTS' of the header
-        
+        ctype : str
+            Coordinate system used for the map projection.
+        crpix : array-like
+            Reference pixel coordinates of the WCS.
+        cdelt : array-like
+            Pixel scale in each coordinate direction.
+        crval : array-like
+            World-coordinate values corresponding to the reference pixel.
+        pixnum : array-like
+            Maximum number of pixels used to construct the map.
+        data : array-like
+            Cleaned detector timestreams used to generate the maps.
+        coord1 : numpy.ndarray
+            Array containing the first coordinate 
+        coord2 : numpy.ndarray
+            Array containing the second coordinate 
+        convolution : bool
+            If True, convolve the resulting map with a Gaussian kernel.
+        std : float
+            Standard deviation of the Gaussian convolution kernel in sigma
+        output_file : str
+            Filename used to save the resulting FITS map.
+        DT : type
+            Floating-point data type used for map calculations.
+        IT : type
+            Integer data type used for pixel coordinates and indexing.
+        coadd : bool, optional
+            If True, coadd the maps from all detectors into a single
+            map. Defaults to False.
+        variance_weighting : bool, optional
+            If True, weight each detector according to the standard
+            deviation of its timestream. Defaults to False.
+        parang : array-like, optional
+            Parallactic angles in degrees. Defaults to None.
+        params : dict, optional
+            Additional parameters describing the map-making configuration.
+            Defaults to None.
+            
         Returns
         -------
+
         '''
 
         self.ctype = ctype             #see wcs_world for explanation of this parameter
@@ -85,14 +96,22 @@ class maps():
         self.proj = 0.                 #inizialization of the wcs of the map. see wcs_world for more explanation about projections
 
     def wcs_proj(self):
-
         '''
-        Function to compute the projection and the pixel coordinates
+        Compute the WCS projection and pixel coordinates.
+
+
+        The input world coordinates are passed to :class:`wcs_world`,
+        which computes the map projection and corresponding pixel
+        coordinates. The resulting objects are stored in self.proj
+        and self.w.
+
         Parameters
         ----------
+
         Returns
         -------
         '''
+        
         wcsworld = wcs_world(self.ctype, self.crpix, self.cdelt, self.crval, self.DT, self.IT,)
         proj, w = wcsworld.world(self.coord1,self.coord2, self.parang)
         self.proj = proj
@@ -100,14 +119,25 @@ class maps():
 
     def map2d(self):
 
-        '''
-        Function to generate the maps using the pixel coordinates to bin
+        """
+        Generate 2D maps from the detector timestreams.
+
+        Detector timestreams can optionally be weighted according to
+        their standard deviations. The pixel coordinates previously
+        computed by :meth:`wcs_proj` are passed to the map-making class.
+        The resulting map can optionally be convolved with a Gaussian
+        kernel.
+
         Parameters
         ----------
+
         Returns
         -------
-        '''
-        
+        map_list : numpy.ndarray
+            2D map or array of detector maps. If coadd is True,
+            the detector maps are coadded into a single map.
+        """
+
         if(self.variance_weighting): weights = [np.std(d) for d in self.data] 
         else:                        weights = np.ones(len(self.data))
         
@@ -117,24 +147,36 @@ class maps():
         
         self.w.wcs.crpix = crpix
 
-        if not self.convolution: return Pow_map
+        if not self.convolution: 
+            map_list = Pow_map
         else:
             std_pixel = self.std/3600./self.cdelt[0]
-            return mapmaker.convolution(std_pixel, Pow_map)
+            map_list = mapmaker.convolution(std_pixel, Pow_map)
+        return map_list
         
     def map_plot(self, data_maps, kid_num):
-
         """
-        Save the map out of the data timestreams.     
+        Save the generated maps as FITS files.
+
+        If coadd is`True, a single coadded map is saved using
+        output_file. Otherwise, each detector map is saved separately,
+        with the detector identifier appended to the output filename.
+
+        The FITS headers contain the WCS information, map units, creation
+        date, and map-making parameters.
+
         Parameters
-        ---------- 
-        data_maps: list
-            list of maps to plot
-        kid_num: list: 
-            names of the kids used to generate the list of maps.   
+        ----------
+        data_maps : numpy.ndarray
+            Map or array of detector maps to save.
+        kid_num : array-like
+            Detector identifiers corresponding to ``data_maps`` when
+            saving individual detector maps.
+
         Returns
         -------
-        """    
+        """
+          
         crval = self.w.wcs.crval
         cdelt = self.w.wcs.cdelt[0]
         ctype = self.ctype
@@ -165,28 +207,8 @@ class maps():
             ylab = 'PITCH (deg)'
         '''
 
-
         if(self.coadd):
 
-            '''
-            fig, ax = plt.subplots(dpi=150, subplot_kw={'projection': self.w})
-            im = ax.imshow(data_maps, origin='lower', interpolation='None', cmap='cividis' )
-                        
-            cbar = fig.colorbar(im, ax=ax, orientation='vertical',)
-            cbar.set_label('Intensity')  # Adjust the label if needed
-
-            ax.set_title('Coadd Map')
-
-            xel = ax.coords[0]
-            el = ax.coords[1]
-            xel.set_axislabel(xlab)
-            el.set_axislabel(ylab)
-            
-            plt.tight_layout()
-            path = os.getcwd()+'/plot/'+f'coadd.png'
-            plt.savefig(path, transparent=True)
-            #plt.show()
-            '''
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
             hdu = fits.HDUList([f])
             hdr = hdu[0].header
@@ -207,25 +229,6 @@ class maps():
 
             for m, name in zip(data_maps, kid_num): 
 
-                '''
-                fig, ax = plt.subplots(dpi=150, subplot_kw={'projection': self.w})
-                im = ax.imshow(m, origin='lower', interpolation='None', cmap='cividis' )
-                cbar = fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.046, pad=0.04)
-                cbar.set_label('Intensity')  # Adjust the label if needed
-                ax.set_title(f'Map of {name}')
-
-                xel = ax.coords[0]
-                el = ax.coords[1]
-                xel.set_axislabel(xlab)
-                el.set_axislabel(ylab)
-
-                plt.tight_layout()
-                path = os.getcwd()+'/plot/'+f'{name}.png'
-                plt.savefig(path, transparent=True)
-                #if(len(kid_num)<6): plt.show()
-                #else: plt.close()
-                plt.show()
-                '''
                 f = fits.PrimaryHDU(m, header=self.w.to_header())
                 hdu = fits.HDUList([f])
                 hdr = hdu[0].header
@@ -247,6 +250,7 @@ class wcs_world():
 
     Parameters
     ----------
+
     Returns
     -------
     '''
@@ -256,18 +260,19 @@ class wcs_world():
 
         Parameters
         ----------
-        ctype: str
+        ctype : str
             ctype of the map, which projection is used to convert coordinates to pixel numbers
-        cdelt: str
+        cdelt : str
             cdelt of the map, distance in deg between two close pixels
-        crpix: str
+        crpix : str
             crpix of the map, central pixel of the map in pixel coordinates
-        crval: str
+        crval : str
             crval of the map, central pixel of the map in sky/telescope (depending on the system) coordinates
-        DT: type
+        DT : type
             Float precision required
-        IT: type
+        IT : type
             Integer precision required
+
         Returns
         -------
         '''
@@ -293,6 +298,7 @@ class wcs_world():
             list of timestreams of sky coordinates 2
         parang: array
             list of parallactic angle in degree. 
+
         Returns
         -------
         world: list
@@ -326,35 +332,36 @@ class wcs_world():
         return world, w
 
 class mapmaking(object):
-
     '''
     Class to generate the maps. 
+
     Parameters
     ----------
+
     Returns
     -------
     
     '''
 
     def __init__(self, data, weight, number, pixelmap, coadd, DT, IT):
-
         '''
         Create an instance of the class to generate the maps. 
+
         Parameters
         ----------
-        data: list    
+        data : list    
             detector TOD
-        weight: array       
+        weight : numpy.ndarray
             weights associated with the detector values
-        number: int
+        number : int
             Number of detectors to be mapped
-        pixelmap: array  
+        pixelmap : numpy.ndarray
             Coordinates of each point in the TOD in pixel coordinates
-        coadd: bool
+        coadd : bool
             If to coadd all the detectors maps or return their individual maps. 
+
         Returns
         -------
-        
         '''
 
         self.data = data               #detector TOD
@@ -366,19 +373,20 @@ class mapmaking(object):
         self.IT = IT
 
     def map_Ionly(self, crpix, pixnum, coadd=False, value=None, var=None, pixelmap = None):
-        
         '''
         Function to create the 2D map
+
         Parameters
         ----------
-        coadd: bool
+        coadd : bool
             to return the coadd map between all detectors or the individual maps. 
-        value: list
+        value : list
             list of the detector data
-        noise: array
+        noise : numpy.ndarray
             list of the noise in the detectors
-        pixelmap: list
+        pixelmap : list
             list of pixel coordinates timestreams of the detectors
+
         Returns
         -------
         '''
@@ -474,18 +482,19 @@ class mapmaking(object):
             return hist.T, crpix
 
     def convolution(self, std, map_value):
-
         '''
         Function to convolve the maps with a gaussian.
+
         Parameters
         ----------
-        std: float
+        std : float
             std of the gaussian in pixel values
-        map_values: 2d array
+        map_values : numpy.ndarray
             the map to be convolved
+
         Returns
         -------
-        convolved_map: 2d array
+        convolved_map : numpy.ndarray
             the convolved map
         '''
 

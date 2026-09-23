@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class tod_psd:
     """
-    Class to measure a power spectrum density of time-ordered data (TODs). 
+    Class to measure the power spectral density (PSD) of time-ordered data (TODs).
 
     Parameters
     ----------
@@ -24,13 +24,14 @@ class tod_psd:
 
         Parameters
         ----------
-
         det_data : list
-            list of TODs
+            List of time-ordered data arrays, with one array per detector.
         freq_res : float
-            acquisition frequency of the TODs
-        delta_k_over_k : float
-            relative bin width (0 = linear bins)
+            Sampling frequency of the time-ordered data.
+        delta_f_over_f : float, optional
+            Relative frequency-bin width. A value of 0 gives linear bins,
+            while a non-zero value gives logarithmically spaced bins.
+
         Returns
         -------
         """
@@ -44,15 +45,16 @@ class tod_psd:
     # ------------------------------------------------------------
     def give_fourier_freq(self):
         """
-        Return the 2D Discrete Fourier Transform sample frequencies.
+        Return the discrete Fourier-transform sample frequencies.
 
         Parameters
         ----------
 
         Returns
         -------
-        f: 1D array
-            the Fourier Transform frequencies
+        f : numpy.ndarray
+            One-dimensional array containing the Fourier frequencies
+            associated with the TOD sampling.
         """
 
         n = self.n
@@ -67,17 +69,25 @@ class tod_psd:
     # ------------------------------------------------------------
     def make_bintab(self, fmin, fmax, df_min):
         """
-        Logarithmic or linear bins.
-        if delta_k_over_k is 0, the returned bins are linearly spaced. Else they are log spaced. 
+        Construct linear or logarithmic frequency bins.
+
+        If delta_f_over_f is 0, the bins are linearly spaced with a
+        minimum width of df_min. Otherwise, the bin width scales with
+        frequency while remaining larger than df_min.
 
         Parameters
         ----------
+        fmin : float
+            Minimum Fourier frequency of the binning range.
+        fmax : float
+            Maximum Fourier frequency of the binning range.
+        df_min : float
+            Minimum allowed frequency-bin width.
 
         Returns
         -------
-        bintab: array
-            the Fourier frequency bins
-        
+        bintab : numpy.ndarray
+            Array containing the frequency-bin edges.
         """
         dff = self.delta_f_over_f
 
@@ -100,13 +110,17 @@ class tod_psd:
     # ------------------------------------------------------------
     def set_f_infos(self):
         """
-        Compute all wavenumber related quantities based on the frequency and lenght of the TODs to be analysed.
+        Compute the Fourier frequencies and frequency-bin information.
+
+        The natural Fourier frequency resolution is determined from the
+        TOD length and sampling frequency. The resulting frequency array,
+        bin edges, and bin centers are stored as class attributes.
 
         Parameters
         ----------
 
         Returns
-        -------        
+        -------
         """
 
         n = self.n
@@ -131,20 +145,27 @@ class tod_psd:
     # ------------------------------------------------------------
     # Main P(k) estimator
     # ------------------------------------------------------------
-    def p2(self,mask_correction=False):
-            
+    def p2(self,mask_correction=False): 
         """
-        Estimates the power spectral densities
+        Estimate the power spectral density of the TODs.
+
+        The PSD is computed independently for each detector by taking
+        the squared modulus of the Fourier transform and averaging the
+        resulting power within the defined frequency bins.
 
         Parameters
         ----------
+        mask_correction : bool, optional
+            Whether to apply a correction for masked or invalid samples.
+            Currently not used in the calculation.
 
         Returns
         -------
-        psd_list: array
-            the Fourier amplitudes
-        k_bin_tab: array
-            the k bins in rad-1        
+        psd_list : numpy.ndarray
+            Power spectral density values for each detector, averaged
+            within the frequency bins.
+        f_out : numpy.ndarray
+            Centers of the Fourier-frequency bins.      
         """
 
         n  = self.n

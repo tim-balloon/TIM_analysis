@@ -11,8 +11,10 @@ class data_cleaned():
     '''
     Class to clean the detector TOD using the functions in 
     the next classes. Check them for more explanations
+
     Parameters
     ----------
+
     Returns
     -------
     '''
@@ -24,25 +26,32 @@ class data_cleaned():
                  sigma_clipping, low_thresh, high_thresh,
                  DT):
         """
-        create an instance of the class to clean the detector TODs.
+        creates an instance of the class to clean the detector TODs.
+
         Parameters
         ----------
-        data: list
+        data : list
             detector TODs
-        fs: float
+        fs : float
             frequency sampling of the detectors
-        cutoff: float
+        cutoff : float
             cutoff frequency of the highpass filter     
-        polynomialorder: int
+        polynomialorder : int
             polynomial order for fitting
-        despike: bool
+        despike : bool
             if True despikes the data using scipy.signal
-        sigma: float
-            height in std value to look for spikes 
-        prominence: float
-            prominence in std value to look for spikes
-        DT: type
-        Float precision required
+        sigma : float
+            height in std value of peaks to remove 
+        prominence : float
+            prominence of peaks w.r.t neighboring peaks in std value
+        DT : type
+            Float precision required
+        sigma_clipping : bool
+            if True, remove TODs whose variance is below low_thresh or above high_thresh
+        low_thresh : float
+            lower variance treshold in std units below which remove a TOd from further analysis
+        high_thresh : float
+            higher variance treshold in std units above which remove a TOd from further analysis
         Returns
         -------
         """
@@ -63,13 +72,19 @@ class data_cleaned():
     def data_clean(self):
 
         '''
-        Function to return the cleaned TOD as numpy array
+        Function to clean the TODs
+        
         Parameters
         ----------
+
         Returns
         -------
-        cleaned_data: list
+        cleaned_data : list
             list of cleaned data timestreams
+        accepted_detectors_list : list 
+            List of detectors name who passed the sigma clipping
+        rejected_detetectors_list : list
+            List of detectors name who did not passed the sigma clipping and been removed from further analysis
         '''
         
         
@@ -113,9 +128,16 @@ class data_cleaned():
 class despike():
 
     '''
-    Class to despike the TOD
+    Class for detecting and replacing spikes in a time-ordered data (TOD) signal.
+
+    The class identifies peaks in the TOD based on their height and/or
+    prominence relative to the standard deviation of the signal. Detected
+    spikes can then be characterized by their width and replaced with a
+    noise realization.
+
     Parameters
     ----------
+
     Returns
     -------
     '''
@@ -123,11 +145,13 @@ class despike():
     def __init__(self, data):
 
         '''
-        Create an instance of the class to despike the TOD
+        Create an instance of the despike class.
+
         Parameters
         ----------
-        data: 1d array
-            the TOD to be despiked
+        data : numpy.ndarray
+            One-dimensional time-ordered data (TOD) to be despiked.
+
         Returns
         -------
         '''
@@ -135,23 +159,29 @@ class despike():
         self.data = data
 
     def findpeak(self, hthres=5, pthres=0):
-
         '''
-        This function finds the peak in the TOD.
-        hthresh and pthres are measured in how many std the height (or the prominence) 
-        of the peak is computed. The height of the peak is computed with respect to 
-        the mean of the signal    
+        Find peaks in the TOD that are likely to be spikes.
+
+        Peaks are identified using the absolute value of the signal
+        after subtracting its mean when the signal is strictly positive.
+        The peak height and prominence thresholds are expressed in units
+        of the standard deviation of the signal.
+
         Parameters
         ----------
-        hthres: int
-            height in sigma of the peak
-        pthres: int 
-            prominence of the peak in sigma. 
-        
+        hthres : float, optional
+            Threshold on the peak height, expressed in units of the
+            standard deviation of the signal. A value of 0 disables
+            the height criterion. Default is 5.
+        pthres : float, optional
+            Threshold on the peak prominence, expressed in units of the
+            standard deviation of the signal. A value of 0 disables
+            the prominence criterion. Default is 0.
+
         Returns
         -------
-        index: list
-            list of index of the peaks in the timestreams. 
+        index : numpy.ndarray
+            Indices of the detected peaks in the TOD.
         '''
 
         index = np.ones(1)
@@ -189,28 +219,37 @@ class despike():
 
     def peak_width(self, peaks, hthres=5, pthres=0, window = 100):
         '''
-        Function to estimate the width of the peaks.
-        Window is the parameter used by the algorith to find the minimum 
-        left and right of the peak. The minimum at left and right is used
-        to compute the width of the peak
+        Estimate the left and right edges of detected peaks.
+
+        For each detected peak, the method searches for the minimum
+        absolute signal value within a specified window on either side
+        of the peak. These minima are used as the left and right edges
+        of the peak.
+
         Parameters
         ----------
-        peaks: list
-            list of index of the peaks found in the timestream. 
-        hthres: int
-            height in sigma of the peak. 
-        pthres: int 
-            prominence of the peak in sigma. 
-        window: float
-            how far in samples to look to the left and right of each peak to find the local minimum
+        peaks : numpy.ndarray
+            Indices of the peaks for which the widths should be estimated.
+        hthres : float, optional
+            Peak-height threshold used when identifying peaks. This
+            parameter is only relevant if peaks are determined within
+            this method. Default is 5.
+        pthres : float, optional
+            Peak-prominence threshold used when identifying peaks. This
+            parameter is only relevant if peaks are determined within
+            this method. Default is 0.
+        window : int, optional
+            Number of samples on each side of a peak over which to search
+            for the left and right edges. Default is 100.
+
         Returns
         -------
-        param[0].copy(): list
-            list of peak widths
-        ledge: list
-            list of peaks' left edge index 
-        redge: list
-            list of peaks' right edge index 
+        param: numpy.ndarray
+            Peak widths estimated using ``scipy.signal.peak_widths``.
+        ledge : numpy.ndarray
+            Indices of the left edges of the peaks.
+        redge : numpy.ndarray
+            Indices of the right edges of the peaks.
         '''
         
         #peaks = self.findpeak(hthres=hthres, pthres=pthres)
@@ -242,29 +281,38 @@ class despike():
 
     def replace_peak(self, hthres=5, pthres = 5, peaks = np.array([]), widths = np.array([])):
 
-        '''
-        This function replaces the spikes data with noise realization. Noise can be gaussian
-        or poissonian based on the statistic of the data
-                
-        Function to estimate the width of the peaks.
-        Window is the parameter used by the algorith to find the minimum 
-        left and right of the peak. The minimum at left and right is used
-        to compute the width of the peak
+        """
+        Replace detected spikes with a noise realization.
+
+        Spikes are identified and their corresponding samples are replaced
+        with a noise realization. The noise distribution is selected based
+        on the relationship between the mean and variance of the despiked
+        signal. A Poisson distribution is used when the mean and variance
+        are approximately equal; otherwise, a Gaussian distribution is used.
+
         Parameters
         ----------
-        hthres: int
-            height in sigma of the peak. 
-        pthres: int 
-            prominence of the peak in sigma. 
-        peaks: list
-            list of index of the peaks found in the timestream. 
-        widths: list
-            list of peak widths
+        hthres : float, optional
+            Threshold on the peak height, expressed in units of the
+            standard deviation of the signal. Default is 5.
+        pthres : float, optional
+            Threshold on the peak prominence, expressed in units of the
+            standard deviation of the signal. Default is 5.
+        peaks : numpy.ndarray, optional
+            Indices of previously detected peaks. If not provided, the
+            peaks are identified using ``findpeak``.
+        widths : numpy.ndarray, optional
+            Peak edge information previously computed by ``peak_width``.
+            If not provided, the peak widths and edges are computed
+            automatically.
+
         Returns
         -------
-        replaced: array
-            timestream array with replaced peaks. 
-        '''
+        replaced : numpy.ndarray
+            Copy of the input TOD with the detected spike samples
+            replaced by a noise realization.
+        """
+
 
         x_inter = np.array([], dtype = 'int')
 
@@ -319,53 +367,57 @@ class despike():
         return replaced
 
 class filterdata():
-
     '''
-    class for filter the detector TOD
+    Class for filtering detector time-ordered data (TOD).
+
+    The class provides Butterworth and cosine high-pass filters that can
+    be applied either directly in the time domain or in Fourier space.
+
     Parameters
     ----------
+
     Returns
     -------
     '''
 
     def __init__(self, data, cutoff, fs, DT):
-        
-        '''
-        See data_cleaned for parameters explanantion
+        """
+        Create an instance of the filterdata class.
+
         Parameters
         ----------
-        data: 1d array
-            the data to be filtered
-        cutoff: float
-            the frequency of the filter
-        fs: float
-            the sampling frequency of array
-        DT: type
+        data : numpy.ndarray
+            Detector time-ordered data (TOD) to be filtered.
+        cutoff : float
+            High-pass filter cutoff frequency in Hz.
+        fs : float
+            Sampling frequency of the detector TOD in Hz.
+        DT : type
             float precision required
-
+        
         Returns
         -------
-        '''
-
+        """
         self.data = data
         self.cutoff = cutoff
         self.fs = fs
         self.DT = DT
 
     def highpass(self, order):
-
         '''
-        Highpass Butterworth filter.
+        Compute the coefficients of a Butterworth high-pass filter.
+
         Parameters
-        order: int
-            the order of the butterworth filter
         ----------
+        order : int
+            Order of the Butterworth filter.
+
         Returns
-        b: ndarray
-            Numerator polynomials of the IIR filter
-        a: ndarray
-            Denominator polynomials of the IIR filter
         -------
+        b : numpy.ndarray
+            Numerator coefficients of the filter.
+        a : numpy.ndarray
+            Denominator coefficients of the filter.
         '''
         
         nyq = 0.5*self.fs
@@ -374,56 +426,72 @@ class filterdata():
         return b, a
 
     def butter_highpass_filter(self, order=5):
+        """
+        Apply a Butterworth high-pass filter to the detector TOD.
 
-        '''
-        Data filtered with a butterworth filter 
         Parameters
-        order: int
-            the order of the butterworth filter
         ----------
+        order : int, optional
+            Order of the Butterworth filter. Default is 5.
+
         Returns
-        filterdata: array
-            filtered timestream
-        -------        
-        '''
+        -------
+        filterdata : numpy.ndarray
+            Detector TOD after applying the Butterworth high-pass filter.
+        """
+
         b, a = self.highpass(order)
         filterdata = sgn.lfilter(b, a, self.data)
+
         return filterdata
 
     def cosine_filter(self, f):
-
         '''
-        Highpass cosine filter
+        Compute the response of a cosine high-pass filter.
+
+        The filter response is zero below half the cutoff frequency,
+        smoothly increases from zero to one between half the cutoff
+        frequency and the cutoff frequency, and is one above the
+        cutoff frequency.
+
         Parameters
-        f: float
-            frequency at which to evaluate the filter
         ----------
+        f : float
+            Frequency at which to evaluate the filter response, in Hz.
+
         Returns
-        cosline_filter: float
-            the transmission of the cosine filter at f. 
         -------
+        resp : float
+            Filter response at the input frequency. The value ranges
+            from 0 to 1.
         '''
 
         if f < .5*self.cutoff:
-            return 0
+            resp = 0
         elif 0.5*self.cutoff <= f  and f <= self.cutoff:
-            return 0.5-0.5*np.cos(np.pi*(f-0.5*self.cutoff)*(self.cutoff-0.5*self.cutoff)**-1)
+            resp = 0.5-0.5*np.cos(np.pi*(f-0.5*self.cutoff)*(self.cutoff-0.5*self.cutoff)**-1)
         elif f > self.cutoff:
-            return 1
+            resp = 1
+        return resp
     
     def fft_filter(self, window):
-
         '''
-        Return an fft of the despiked data using the cosine filter.
-        
+        Compute the Fourier transform of the filtered detector TOD.
+
+        A cosine high-pass filter is applied to the Fourier transform of
+        the input data. Optionally, a Hann window can be applied to the
+        data before computing the Fourier transform.
+
         Parameters
-        Window: bool
-            A parameter that can be true if the FFT is computed using a Hanning window. 
         ----------
+        window : bool
+            If True, apply a Hann window to the input data before computing
+            the Fourier transform. If False, no window is applied.
+
         Returns
-        filtereddata: array
-            the filtered timestream. 
         -------
+        filtereddata: numpy.ndarray
+            Filtered Fourier transform of the detector TOD.
         '''
 
         if window is True:
@@ -442,19 +510,24 @@ class filterdata():
         return filtereddata
 
     def ifft_filter(self, window):
+        """
+        Transform the filtered Fourier-domain data back to the time domain.
 
-        '''
-        Inverse FFT of cleaned FFT data calculated in the previous function.
+        The Fourier-domain data are obtained using ``fft_filter`` and
+        transformed back using an inverse real Fourier transform.
 
         Parameters
-        Window: bool
-            A parameter that can be true if the FFT is computed using a Hanning window. 
         ----------
+        window : bool
+            If True, apply a Hann window before computing the Fourier
+            transform. If False, no window is applied.
+
         Returns
-        filtereddata: array
-            the inverse FFT of cleaned FFT data. 
         -------
-        '''
+        numpy.ndarray
+            Filtered detector TOD in the time domain.
+        """
+        
 
         ifft_data = np.fft.irfft(self.fft_filter(window=window), len(self.data))
 
@@ -463,20 +536,28 @@ class filterdata():
 class detector_trend():
 
     '''
-    Class to detrend a TOD
+    Class for fitting and removing a polynomial trend from detector
+    time-ordered data (TOD).
+
     Parameters
     ----------
+
     Returns
     -------
     '''
 
     def __init__(self, data, DT):
         '''
-        create an instance of the class to detrend a TOD
+
+        Create an instance of the detector_trend class.
+
         Parameters
         ----------
-        data: 1 array
-            the timestream to remove the trend of. 
+        data : numpy.ndarray
+            Detector time-ordered data (TOD) to be detrended.
+        DT : type
+            float precision required
+
         Returns
         -------
         '''
@@ -485,21 +566,28 @@ class detector_trend():
         self.DT = DT
 
     def polyfit(self, edge = 0, order=6):
-
         '''
-        Function to fit a trend line to a TOD
+        Fit a polynomial trend to the detector TOD.
+
+        The polynomial is fitted to the TOD as a function of the sample
+        index. The fitted polynomial is then evaluated over the full
+        length of the TOD.
+
         Parameters
-        edge: int
-            dimension of the list of timestreams passed to the function. 
-        order: int
-            order of the polynome to be fit to the timsetream.
         ----------
+        edge : int, optional
+            Number of samples at the edges of the TOD to exclude from
+            the fit. Currently not used in the polynomial fitting.
+            Default is 0.
+        order : int, optional
+            Order of the polynomial used to fit the TOD. Default is 6.
+
         Returns
-        y_fin: array
-            fitted data
-        index_exclude: array
-            index of elements to set to 0. 
         -------
+        y_fin : numpy.ndarray
+            Polynomial fit evaluated over the full TOD.
+        index_exclude : numpy.ndarray
+            Indices of samples excluded from the fit.
         '''
 
         x = np.arange(len(self.data))
@@ -515,20 +603,27 @@ class detector_trend():
         return y_fin, index_exclude.astype(int)
     
     def fit_residual(self, edge = 0, order=6):
+        """
+        Remove the fitted polynomial trend from the detector TOD.
 
-        '''
-        Function to remove the trend polynomial from the TOD
+        The polynomial trend is computed using ``polyfit`` and subtracted
+        from the input TOD. Samples identified as excluded indices are
+        set to zero before subtracting the fitted trend.
+
         Parameters
-        edge: int
-            dimension of the list of timestreams passed to the function. 
-        order: int
-            order of the polynome to be fit to the timsetream.
         ----------
+        edge : int, optional
+            Number of samples at the edges of the TOD to exclude from
+            the fit. Default is 0.
+        order : int, optional
+            Order of the polynomial used to fit the TOD. Default is 6.
+
         Returns
-        fit_residual: array
-            the residual between the timestream and the fit of the timestream. 
         -------
-        '''
+        final_tod : numpy.ndarray
+            Detrended detector TOD obtained by subtracting the fitted
+            polynomial trend from the input data.
+        """
         polyres = self.polyfit(edge=edge, order=order)
         fitteddata = polyres[0]
         index = polyres[1]
@@ -536,25 +631,34 @@ class detector_trend():
         zero_data = self.data.copy()
         if(len(index)>0): zero_data[index] = 0.
 
-        return -fitteddata+zero_data
+        final_tod = -fitteddata+zero_data
+
+        return final_tod
 
 class sigma_clipping():
 
     '''
-    Class to measure the variance in a timestream, and remove it from further analysis if its variance is too low or too high. 
+
+    Class for evaluating the standard deviation of a time-ordered data
+    (TOD) stream and identifying timestreams with unusually low or high
+    variance.
+
     Parameters
     ----------
+
     Returns
     -------
     '''
 
     def __init__(self, data):
         '''
-        Create an instance of the class to measure the variance in a timestream
+        Create an instance of the sigma_clipping class.
+
         Parameters
         ----------
-        data: 1d array
-            the detector timestream
+        data : numpy.ndarray
+            Time-ordered data (TOD) to be evaluated.
+
         Returns
         -------
         '''
@@ -563,18 +667,31 @@ class sigma_clipping():
     
     def clipping(self, low_thresh, high_thresh):
         '''
-        Measure the variance of a timestream and return True if its variance is within the thresholds.
+        Determine whether the TOD should be rejected based on its variance.
+
+        The mean and mean square of the TOD are computed using a sliding
+        window spanning the full length of the timestream. The standard
+        deviation is then computed from these quantities. The timestream
+        is flagged for rejection if any value of the standard deviation
+        falls below the lower threshold or exceeds the upper threshold.
+
         Parameters
         ----------
-        low_trhesh: float
-            the lower threshold in sigma for the timestream variance
-        
-        high_trhesh: float
-            the higher threshold in sigma for the timestream variance
+        low_thresh : float
+            Lower threshold for the standard deviation of the TOD.
+            The timestream is rejected if its standard deviation falls
+            below this value.
+        high_thresh : float
+            Upper threshold for the standard deviation of the TOD.
+            The timestream is rejected if its standard deviation exceeds
+            this value.
+
         Returns
         -------
-        reject: bool
-            If True, the timestream variance is inside the thresholds
+        reject : bool
+            ``True`` if the timestream should be rejected because its
+            standard deviation is outside the specified thresholds;
+            ``False`` otherwise.
         '''        
 
         # mean in sliding window
@@ -597,8 +714,10 @@ class sigma_clipping():
 class kidsutils():
     '''
     Class containing useful functions for KIDs
+
     Parameters
     ----------
+
     Returns
     -------
     '''
@@ -607,10 +726,20 @@ class kidsutils():
 
         '''
         Rotate phase for a KID
+
         Parameters
         ----------
+        I : numpy.ndarray
+            I Time-ordered data 
+        Q : numpy.ndarray
+            Q Time-ordered data 
+
         Returns
         -------
+        I : numpy.ndarray
+            Rotated I Time-ordered data 
+        Q : numpy.ndarray
+            Rotated Q Time-ordered data 
         '''
 
         X = I+1j*Q
@@ -628,14 +757,14 @@ class kidsutils():
         Power = Phase/Responsivity
 
         Parameters
-        I: array
+        I: numpy.ndarray
             I phase of the kid 
-        Q: array: 
+        Q: numpy.ndarray
             Q phase of the kid
         ----------
         Returns
         -------
-        phi: array
+        phi: numpy.ndarray
             the phase of the kid
         '''
 
@@ -651,136 +780,56 @@ class kidsutils():
         Compute the magnitude response of a KID
 
         Parameters
-        I: array
+        I: numpy.ndarray
             I phase of the kid 
-        Q: array: 
+        Q: numpy.ndarray
             Q phase of the kid
         ----------
         Returns
         -------
-        mag: array
+        mag: numpy.ndarray
             the magnitude
         '''
 
-        return np.sqrt(I**2+Q**2 )
-
-    """
-    def interpolation_roach(self, data, bins, sampling, DT, IT):
-
-        '''
-        data: values that need to be interpolated
-        bins: bins of data coming from the pps signal
-        sampling: frequency sampling of the detectors 
-        Parameters
-        ----------
-        Returns
-        -------
-        '''
-        '''
-        start = np.append(0, np.cumsum(bins[:-1]))
-        end = np.cumsum(bins)
-        ln = np.linspace(start, end-1, int(sampling))
-        idx = np.reshape(np.transpose(ln), np.size(ln))
-        idx_plus = np.append(idx[:-1]+1, idx[-1])
-        return (data[idx_plus.astype(int)]-data[idx.astype(int)])*(idx-idx.astype(int))+data[idx.astype(int)]
-        '''
-        # Ensure bins are in DT
-        bins = np.array(bins, dtype=DT)
-        
-        # Start and end positions
-        start = np.append(DT(0), np.cumsum(bins[:-1], dtype=DT))
-        end = np.cumsum(bins, dtype=DT)
-        
-        # Linear spacing within each bin
-        ln = np.linspace(start, end - DT(1), int(sampling), dtype=DT)
-        
-        # Flatten index array
-        idx = np.reshape(np.transpose(ln), np.size(ln)).astype(DT)
-        
-        # idx_plus as integer indices for data access
-        idx_plus = np.append(idx[:-1] + DT(1), idx[-1]).astype(DT)
-        
-        # Integer indices for data
-        idx_int = idx.astype(DT)
-        
-        # Interpolation in chosen DT
-        
-        result = (data[idx_plus.astype(IT)] - data[idx_int.astype(IT)]) * (idx - idx_int) + data[idx_int.astype(IT)]
-
-        return result.astype(DT)
-    """
-
-    """
-    def det_time(self, path, roach_number, frames, ctime_start, ctime_end, sampling):
-        '''
-        get the time timestreams. 
-        Need implementation for TIM
-        Parameters
-        ----------
-        Returns
-        -------
-        '''
-
-        roach_string_ctime = ['ctime_packet_roach' + f'{roach}' for roach in roach_number] #roach_string_ctime = 'ctime_packet_roach'+str(int(roach_number))
-        pps_roach_string = ['pps_count_roach' + f'{roach}' for roach in roach_number] #pps_roach_string = 'pps_count_roach'+str(int(roach_number))
-
-        num_frames= int(frames[1]-frames[0])
-        
-        ctime_roach_list, spf_ctime_roach = ld.data_value.load(path,roach_string_ctime, first_frame=frames[0], num_frames=num_frames) #d.getdata(roach_string_ctime, first_frame=frames[0], num_frames=num_frames)
-        pps_list, spf_pps = ld.data_value.load(path, pps_roach_string, first_frame=frames[0], num_frames=num_frames)#d.getdata(pps_roach_string, first_frame=frames[0], num_frames=num_frames)
-        
-        ctime_roach_renormed = []
-        bins_list = [] 
-        for i in range(len(roach_number)):
-            if pps_list.ndim == 1:  # If it's a 1D array
-                pps = pps_list  # Assign the entire array
-                ctime_roach = ctime_roach_list
-            else:  # If it's a 2D array
-                pps = pps_list[i, :]
-                ctime_roach = ctime_roach_list[i,:]
-
-            bn = np.bincount(pps)
-            bins = bn[bn>0]
-            bins_list.append(bins)
-            
-            if bins[0] < 350:
-                pps = pps[bins[0]:]
-                ctime_roach = ctime_roach[bins[0]:]
-            if bins[-1] < 350:
-                pps = pps[:-bins[-1]]
-                ctime_roach = ctime_roach[:-bins[-1]]
-                
-            ctime_roach =ctime_roach* 1e-2
-            ctime_roach += 1570000000
-            pps_duration =  pps[-1]-pps[0]+1
-            pps_final =  pps[0]+np.arange(0, pps_duration, 1/sampling) 
-            ctime_roach = self.interpolation_roach(ctime_roach, bins[bins>350], sampling)
-            ctime_roach += pps_final
-
-            ctime_roach_renormed.append(ctime_roach)
-
-        return np.asarray(ctime_roach_renormed), np.asarray(bins_list)
-    """
-
+        return np.sqrt(I**2+Q**2)
+    
 class AntiAliasingFilter():
     """
-    Anti-aliasing filter for downsampling TODs.
+
+    Anti-aliasing filter for downsampling time-ordered data.
+
+    The filter is designed as a linear-phase low-pass filter with
+    configurable cutoff frequency, number of taps, and window function.
+    The filtered data can then be downsampled from ``fs_in`` to ``fs_out``.
+    
+    Parameters
+    ----------
+
+    Returns
+    -------
     """
 
     def __init__(self, fs_in, fs_out, DT, fc=None, numtaps=257, window='hann'):
         """
+        Create an anti-aliasing filter for downsampling time-ordered data.
+
         Parameters
         ----------
         fs_in : float
-            Input sampling frequency [Hz]
+            Input sampling frequency in Hz.
         fs_out : float
-            Output sampling frequency [Hz]
-        fc : float or None
-            Cutoff frequency [Hz]. If None, uses 0.45 * fs_out
-        numtaps : int
-            Length of FIR filter (odd recommended)
-        window : str
-            'hann' or 'hamming'
+            Output sampling frequency in Hz.
+        DT : type
+            Data type used for the filtered output.
+        fc : float, optional
+            Low-pass filter cutoff frequency in Hz. If not provided, the
+            cutoff frequency is set to ``0.45 * fs_out``.
+        numtaps : int, optional
+            Number of coefficients in the filter. Defaults to 257.
+        window : str, optional
+            Window function applied to the filter coefficients. Must be
+            'hann' or 'hamming'. Defaults to 'hann'.
+
         Returns
         -------
         """
@@ -795,12 +844,17 @@ class AntiAliasingFilter():
 
     def _design_filter(self):
         """
-        Design linear-phase FIR low-pass filter
+        Design linear-phase low-pass filter
+        
         Parameters
         ----------
+
         Returns
         -------
+        h : numpy.ndarray
+            Normalized filter coefficients with unity DC gain.
         """
+        
         n = np.arange(self.numtaps) - (self.numtaps - 1) / 2
 
         h = 2 * self.fc / self.fs_in * np.sinc(2 * self.fc * n / self.fs_in)
@@ -819,31 +873,41 @@ class AntiAliasingFilter():
 
     def filter(self, x):
         """
-        Apply anti-aliasing filter
+        Apply the anti-aliasing filter to the input data.
+
         Parameters
         ----------
-        x: 1D array
-            the detector data to be filtered
+        x : numpy.ndarray
+            Input time-ordered data sampled at fs_in
+
         Returns
         -------
-        filtered: 1D array
-            the low-pass filtered data
+        filtered : numpy.ndarray
+            Low-pass filtered data with the same length as the input
+
         """
         filtered = np.convolve(x, self.h, mode='same').astype(self.DT)
         return filtered
 
     def downsample(self, x):
         """
-        Downsample filtered signal.
-        Uses nearest-neighbor time picking (safe after LPF).
+
+        Downsample the filtered data to fs_out.
+
+        Samples are selected at regular intervals corresponding to the
+        ratio between the input and output sampling frequencies. The
+        input data should be low-pass filtered before downsampling to
+        prevent aliasing.
+
         Parameters
         ----------
-        x: 1D array
-            the data to be decimated
+        x : numpy.ndarray
+            Input data sampled at fs_in, typically after applying filter()
+
         Returns
         -------
-        decimated_data: 1D array
-            the downsampled data
+        decimated_data : numpy.ndarray
+            Downsampled data sampled at approximately fs_out.
         """
         ratio = self.fs_in / self.fs_out
         n_out = int(len(x) / ratio)
@@ -853,16 +917,19 @@ class AntiAliasingFilter():
 
     def process(self, x):
         """
-        Filter + downsample
+        Filter and downsample the input data.
+
         Parameters
         ----------
-        x: 1D array
-            the detector data to be filtered
+        x : numpy.ndarray
+            Input time-ordered data sampled at fs_in.
+
         Returns
         -------
-        filtered: 1D array
-            the low-pass filtered data
+        decimated_x : numpy.ndarray
+            Low-pass filtered and downsampled data sampled at approximately fs_out.
         """
         
         x_filt = self.filter(x)
-        return self.downsample(x_filt)
+        decimated_x = self.downsample(x_filt)
+        return decimated_x

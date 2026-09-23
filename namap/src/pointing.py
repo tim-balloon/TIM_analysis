@@ -9,8 +9,10 @@ class utils(object):
 
     '''
     class to handle conversion between different coodinates sytem 
+
     Parameters
     ----------
+
     Returns
     -------
     '''
@@ -18,16 +20,17 @@ class utils(object):
     def __init__(self, coord1, coord2, lst = None, lat = None):
 
         '''
-        class to handle conversion between different coodinates sytem 
+        class to handle conversion between different coodinates sytems
+
         Parameters
         ----------
-        coord1: 1d array
+        coord1 : numpy.ndarray
             array of coord 1 converted in degrees   
-        coord2: 1d array
+        coord2 : numpy.ndarray
             array of coord 2 converted in degrees   
-        lst: 1d array
+        lst : numpy.ndarray, optional
             local Sideral Time in hours
-        lat: 1d array
+        lat : numpy.ndarray, optional
             latitude converted in degrees
 
         Returns
@@ -45,11 +48,12 @@ class utils(object):
 
         Parameters
         ----------
-        HA: array
+        HA : numpy.ndarray
             hour angle in radians
+
         Returns
         -------
-        za: array
+        za : numpy.ndarray
             zenith angle in radians
         """
 
@@ -59,18 +63,18 @@ class utils(object):
 
     def azimuthAngle(self, HA):
         """
-        source azimuth angle (rad)
+        source azimuth angle in radians
         latitude and coord2 need to be in degrees.
 
         Parameters
         ----------
-        HA: array
+        HA : numpy.ndarray
             hour angle in radians
 
         Returns
         -------
-        aa: array
-            source azimuth angle (rad)
+        aa : numpy.ndarray
+            source azimuth angle in radians
         """ 
 
         za = self.zenithAngle(HA)
@@ -85,7 +89,7 @@ class utils(object):
 
     def declinationAngle(self):
         """
-        source declination angle (rad)
+        source declination angle in radians
         latitude and cooord2 need to be in degrees.
         coord1 needs to be in radians
 
@@ -94,7 +98,7 @@ class utils(object):
 
         Returns
         -------
-        Dec: array
+        Dec : numpy.ndarray
             source declination angle (rad)
         """ 
 
@@ -103,9 +107,8 @@ class utils(object):
         return np.arcsin(sinDec)
     
     def azeltoha(self):
-
         """
-        source hour angle (rad)
+        source hour angle in radians
         latitude and coord2 need to be in degrees
         coord1 needs to be in radians
 
@@ -114,7 +117,7 @@ class utils(object):
 
         Returns
         -------
-        ha: array
+        ha : numpy.ndarray
             source hour angle (rad)
         """ 
 
@@ -124,32 +127,34 @@ class utils(object):
         return HA
 
     def ra2ha(self):
-
         '''
         Return the hour angle in radians given the lst in hours and RA in radians
         i.e. lst needs to be in hours, ra in needs to be in radians 
+
         Parameters
         ----------
+
         Returns
         -------
-        ha: array
+        ha : numpy.ndarray
             hour angle in hour
         ''' 
         ha = self.lst*np.pi/12 - self.coord1
         return  (ha + np.pi) % (2 * np.pi) - np.pi
 
     def ha2ra(self, hour_angle):
-
         '''
         Return the right ascension in radians given the lst in hours and the hour angle in radians
         i.e. lst needs to be in hours, hour angle in needs to be in radians 
+
         Parameters
         ----------
-        hour_angle: array
+        hour_angle : numpy.ndarray
             source hour angle in radians
+
         Returns
         -------
-        ra: array
+        ra : numpy.ndarray
             Right Ascension angle in hour
         '''
         return self.lst*np.pi/12 - hour_angle
@@ -158,13 +163,15 @@ class utils(object):
 
         '''
         Function to convert RA and DEC to AZ and EL
+
         Parameters
         ----------
+
         Returns
         -------
-        az: array
+        az : numpy.ndarray
             Azimuth angle in degree.
-        el: array
+        el : numpy.ndarray
             Elevation angle in degree.
         '''
 
@@ -180,16 +187,16 @@ class utils(object):
 
         Parameters
         ----------
-        dec: float 
+        dec : numpy.ndarray
             declination angle in degrees     
-        lat: float
+        lat : numpy.ndarray
             latitude angle in degrees
-        HA: array
+        HA : numpy.ndarray
             hour angle in hour
 
         Returns
         -------
-        ea: array
+        ea : numpy.ndarray
             elevation angle in degree
         """ 
 
@@ -201,45 +208,53 @@ class utils(object):
 
         Parameters
         ----------
-        azi: float 
+        azi : numpy.ndarray
             azimuth in degrees     
-        alt: float
+        alt : numpy.ndarray
             latitude  angle in degrees
-        lat: float
-            latitude angle in degree
 
         Returns
         -------
-        Dec: float
+        Dec : numpy.ndarray
             source declination angle (rad)
         """ 
         sinDec =  np.sin(np.radians(alt))*np.sin(np.radians(self.lat)) + np.cos(np.radians(alt))*np.cos(np.radians(self.lat))*np.cos(np.radians(azi))
         return np.arcsin(sinDec)
     
     def hourAngle(self, azi, alt):
+        """
+        Hour Angle in radians
+
+        Parameters
+        ----------
+        azi : numpy.ndarray
+            azimuth in degrees     
+        alt : numpy.ndarray
+            latitude  angle in degrees
+
+        Returns
+        -------
+        HA : numpy.ndarray
+            hour angle (rad)
+        """ 
         
         tanHA = - np.sin(np.radians(azi)) / (np.tan(np.radians(alt)) * np.cos(np.radians(self.lat)) - np.cos(np.radians(azi))*np.sin(np.radians(self.lat)))
         HA = np.arctan(tanHA)
-        '''
-        sin_dec = np.sin(np.radians(alt))*np.sin(np.radians(lat)) + np.cos(np.radians(alt))*np.cos(np.radians(lat))*np.cos(np.radians(azi))
-        dec = np.arcsin(sin_dec)
-        
-        sin_HA = -np.sin(np.radians(azi))*np.cos(np.radians(alt)) / np.cos(dec)
-        cos_HA = (np.sin(np.radians(alt)) - np.sin(dec)*np.sin(np.radians(lat))) / (np.cos(dec)*np.cos(np.radians(lat)))
-        HA = np.arctan2(sin_HA, cos_HA)
-        '''
+
         return HA
 
     def genPointingPath(self, offsets=np.zeros(2), azel=False):
         """
         Function that takes local paths and generates the pointing on sky vs time.
+
         Parameters
         ----------
-        offsets: array [EL_offset_deg, XEL_offset_deg]
+        offsets : numpy.ndarray
             EL and cross-EL offsets in degrees
+
         Returns
         -------
-        path: nd array
+        path : numpy.ndarray
             the RA/Dec coordinates of the pointing, in degrees
         """
         # Hour angle in radians (ra2ha returns radians)
@@ -293,9 +308,9 @@ class utils(object):
         ----------
         Returns
         ----------
-        ra: array
+        ra : numpy.ndarray
             Right Ascension angle in degree.
-        dec: array
+        dec : numpy.ndarray
             Declination angle in degree.
         '''
 
@@ -314,8 +329,10 @@ class convert_to_telescope(object):
 
     '''
     Class to convert from sky equatorial coordinates to telescope coordinates
+    
     Parameters
     ----------
+
     Returns
     ----------
     '''
@@ -331,10 +348,16 @@ class convert_to_telescope(object):
 
         '''
         This function rotates the coordinates projected on the plane using the parallactic angle
+
         Parameters
         ----------
+
         Returns
         -------
+        x_tel : numpy.ndarray
+            The x coordinates of telescope in degrees
+        y_tel : numpy.ndarray
+            The y coordinates of telescope in degrees
         '''
         
         parang = utils(self.coord1, self.coord2, self.lst, self.lat)
@@ -363,20 +386,21 @@ class apply_offset(object):
 
         Parameters
         ----------
-        coord1: array
+        coord1 : numpy.ndarray
             Array of coordinate 1
-        coord2: array
+        coord2 : numpy.ndarray
             Array of coordinate 2
-        ctype: array
+        ctype : numpy.ndarray
             Ctype of the map
-        xsc_offset: tuple
+        xsc_offset : tuple
             Offset with respect to star cameras in xEL and EL
-        det_offset: 2d array
+        det_offset : numpy.ndarray
             Offset with respect to the central detector in xEL and EL
-        lst: array
+        lst : numpy.ndarray
             Local Sideral Time array
-        lat: array
+        lat : numpy.ndarray
             Latitude array
+
         Returns
         -------
         """    
@@ -394,13 +418,15 @@ class apply_offset(object):
     def correction(self):
         """
         Apply offset
+
         Parameters
         ----------
+
         Returns
         -------
-        ra_corrected: array
+        ra_corrected : array
             corrected array of coordinates one
-        dec_corrected: array
+        dec_corrected : array
             corrected array of coordinates two
         """  
         if self.ctype.lower() == 'ra and dec':
