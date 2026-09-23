@@ -59,8 +59,8 @@ class data_value():
     def __init__(self, det_path, det_name, coord1_name, \
                  coord2_name, startframe, numframes, \
                  despike, sigma, prominence, \
-                 downsample, freq_target, DT, IT, 
-                 remove_turnarounds=False):
+                 downsample, freq_target, fc, DT, IT, 
+                 remove_turnarounds=False, bufferframe=0):
 
         """
         Create an instance for loading and processing timestream data.
@@ -108,18 +108,14 @@ class data_value():
         self.numframes = numframes                  #Ending frame to be analyzed
         self.DT=DT                                  #Float precision required 
         self.IT=IT                                  #Int precision required 
-        self.freq_target = freq_target              #Frequency in Hz to downsample the data to. 
+        self.freq_target = freq_target              #Frequency in Hz to downsample the data to
+        self.fc = fc                                #Frequency in Hz for anti-aliasing filter 
         self.downsample = downsample                #If True, downsample the data
         self.sigma = sigma                          #height in std value to look for spikes
         self.prominence = prominence                #prominence in std value to look for spikes
         self.despike = despike                      #if True despikes the data 
         self.remove_turnarounds = remove_turnarounds
-
-        if self.startframe < 100:
-            self.bufferframe = int(0)  #Buffer frames to be loaded before and after the starting and ending frame
-        else:
-            self.bufferframe = int(0)
-
+        self.bufferframe = bufferframe
         self.startframe += self.bufferframe
 
     def conversion_type(self, file_type):
@@ -269,8 +265,9 @@ class data_value():
         if(first_frame is None): first_frame = 0
 
         values = d.getdata(file, gdtype, num_frames = num, first_frame=first_frame)
+        values = np.asarray(values, dtype=DT)
 
-        return np.asarray(values).astype(DT, copy=False)
+        return values
 
     def values(self):
         """
@@ -312,25 +309,16 @@ class data_value():
             Number of samples per frame of the latitude and local
             sidereal time timestreams.
         """
-
-        ####################
-        """
-        kidutils = det.kidsutils()
-        det_data = kidutils.KIDmag(I_data, Q_data)`
-        """
-        ####################
-
         #-----------------------------------------------------------------------------------------------
-
 
         # Load the sample-per-frame of the detector timestreams (assuming they all have the same spf). 
         if('.hdf5' in self.det_path):
-            spf_data = data_value.loadspf_hdf5(self.det_path,  f'data_time')
+            spf_data = self.loadspf_hdf5(self.det_path,  f'data_time')
             #Load the detector timestamps, assuming the detectors all have the same timestamps. 
             #1st, load the pulse per second, which defines to which second each sample belong to. 
-            pps = data_value.loaddata_hdf5(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
+            pps = self.loaddata_hdf5(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
             #2nd, load the sub-second part of the timestamps. 
-            subsec = data_value.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
+            subsec = self.loaddata_hdf5(self.det_path, f'data_subsecond_ps',self.DT, self.numframes, self.startframe)
         else: 
             spf_data = self.loadspf_dirfile(self.det_path,  f'data_time')
             pps      = self.loaddata_dirfile(self.det_path, f'data_pps', self.DT, self.numframes, self.startframe,) 
@@ -356,31 +344,33 @@ class data_value():
 
         
         #if downsample is True, define an anti-aliasing filter. 
-        if(self.downsample): aaf = det.AntiAliasingFilter( fs_in=spf_data, fs_out=self.freq_target, fc=self.freq_target/2-5, DT=self.DT,window='hann')
+        if(self.downsample): aaf = det.AntiAliasingFilter( fs_in=spf_data, fs_out=self.freq_target, fc=self.fc, DT=self.DT,window='hann')
         kidutils = det.kidsutils()
 
 
         #-----------------------------------------------------------------------------------------------
 
-
         #Load the data on a dectector-per-detector basis. 
         #The data are first loaded, then despiked, then high- and low-pass filtered, and finaly decimate to target_frequency. 
+
+        kidutils = det.kidsutils()
         det_data = []
 
         #For each detector: 
         for kid in self.det_name: 
-            '''
-            det_I_string = 'kid'+kid+'_I_roachN' #different options in the names here
-            det_Q_string = 'kid'+kid+'_Q_roachN'
-            I_data = self.load(self.det_path, det_I_string, self.det_file_type)
-            Q_data = self.load(self.det_path, det_Q_string, self.det_file_type)
-            det_data = kidutils.KIDmag(I_data, Q_data)
-            '''
+            
+            det_I_string = f'kid_{kid}_I_roach' #different options in the names here
+            det_Q_string = f'kid_{kid}_Q_roach'
+            
             if('.hdf5' in self.det_path):
-                data = data_value.loaddata_hdf5(self.det_path, f'kid_{kid}_roach', self.DT, self.numframes, self.startframe) #kidutils.KIDmag(I_data, Q_data))
+                I_data = self.loaddata_dirfile(self.det_path, det_I_string, self.DT, self.numframes, self.startframe,)
+                Q_data = self.loaddata_dirfile(self.det_path, det_Q_string, self.DT, self.numframes, self.startframe,)
             else:     
-                data = self.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
+                #data = self.loaddata_dirfile(self.det_path,  f'kid_{kid}_roach', self.DT, self.numframes, self.startframe,) 
+                I_data = self.loaddata_dirfile(self.det_path, det_I_string, self.DT, self.numframes, self.startframe,)
+                Q_data = self.loaddata_dirfile(self.det_path, det_Q_string, self.DT, self.numframes, self.startframe,)
 
+            data = kidutils.KIDmag(I_data, Q_data)
             #remove the frames that don't have all their samples: 
             data = data[pps_start:pps_end]
 
@@ -471,7 +461,7 @@ class data_value():
         
         # Decimate the coordinates (and their timestamps) to freq_target.
         if(self.freq_target is not None and spf_ctime > self.freq_target and self.downsample): 
-            aaf = det.AntiAliasingFilter( fs_in=spf_ctime, fs_out=self.freq_target, fc=self.freq_target/2-5, DT=self.DT, window='hann')
+            aaf = det.AntiAliasingFilter( fs_in=spf_ctime, fs_out=self.freq_target, fc=self.fc, DT=self.DT, window='hann')
             ctime= aaf.downsample(ctime)
             self.coord1_data = aaf.downsample(self.coord1_data)
             self.coord2_data = aaf.downsample(self.coord2_data)

@@ -72,7 +72,7 @@ def main(P, nbdets=None):
     #-----------------------------------------------------------------------------------------
 
     #Frames to be loaded
-    num_frames, first_frame = P['num_frames'], P['first_frame']
+    num_frames, first_frame, bufferframe = P['num_frames'], P['first_frame'], P['bufferframe']
 
     telemetry = P['telemetry']
 
@@ -130,7 +130,7 @@ def main(P, nbdets=None):
     
 
     #Cleaning data parameters
-    downsample_frequency = P['downsample_frequency'] 
+    downsample_frequency, fc = P['downsample_frequency'], P['antialiasing_filter_frequency']
     if(downsample_frequency is not None): downsample_bool = True
     else: downsample_bool = False
     highpassfreq = P['highpassfreq']
@@ -152,8 +152,8 @@ def main(P, nbdets=None):
                              coord1, coord2, 
                              first_frame, num_frames,
                              despike_bool, sigma, prominence, 
-                             downsample_bool, downsample_frequency,  
-                             DT, IT)
+                             downsample_bool, downsample_frequency, fc,
+                             DT, IT, bufferframe=bufferframe)
     
     dettime, det_data, ctime,  coord1_data, coord2_data, turnaround_flags, lst_data, lat_data, spf_data, spf_coord, lat_spf = dataload.values()
     
@@ -263,7 +263,7 @@ def main(P, nbdets=None):
                     np.asarray([P['crval'][0], P['crval'][1]]), 
                     np.asarray([P['pixnum'][0],P['pixnum'][1]]), 
                     cleaned_data, coord1slice, coord2slice, convolution, std, P['output_map'], DT,IT,
-                    coadd=P['coadd'],   parang=parallactic, params=str(P), variance_weighting=P['variance_weighting']) 
+                    coadd=P['coadd'],   parang=parallactic, params=P, variance_weighting=P['variance_weighting']) 
         
         maps.wcs_proj()
         map_values = maps.map2d()
@@ -369,6 +369,7 @@ if __name__ == "__main__":
     cli.add_argument('--frequencies',          type=float, default=None, nargs=2, help='Frequency band in GHz, e.g. 715.0 719.0 to make map from')
     cli.add_argument('--num_frames', type=int, help='Integration time in seconds to be loaded')
     cli.add_argument('--first_frame', type=int, help='Starting frame index (in seconds)')
+    cli.add_argument('--bufferframe', type=int, help='Buffer frame used is starting frame is 0 (in seconds)')
     cli.add_argument('--correction',           action='store_true', help='Enable pointing offset correction')
     cli.add_argument('--telemetry',            action='store_true', help='Specify if data is from telemetry (e.g. Mole)')
     cli.add_argument('--telescope_coordinate', action='store_true', help='Use telescope coordinates for mapmaking')
@@ -389,12 +390,12 @@ if __name__ == "__main__":
     cli.add_argument('--save_downsampled_TODS',action='store_true', help='save cleaned timestreams and stops')
     cli.add_argument('--variance_weighting',   action='store_true', help='if True, weights TOD with their variance in the map-making')
     cli.add_argument('--downsample_frequency ',type=float, help='The frequency to downsample the data to')
+    cli.add_argument('--antialiasing_filter_frequency ',type=float, help='The LPF frequency for anti-aliasing')
     cli.add_argument('--highpassfreq',         type=float, default = 0.1, help='High-pass filter cutoff frequency (Hz)')
     cli.add_argument('--polynomialorder',      type=int, default = 5,help='Polynomial order used to detrend TODs')
     cli.add_argument('--despike',              action='store_true', help='Flag to enable despiking of TODs')
     cli.add_argument('--sigma',                type=float, help='Sigma threshold for despike detection')
     cli.add_argument('--prominence',           type=float, help='Prominence threshold (in sigma units) for despiking')
-    cli.add_argument('--variance_weighting',   action='store_true', help='if True, weights TOD with their variance in the map-making')
     cli.add_argument('--sigma_clipping',       action='store_true', help='if True, remove TODs from further analysis based on their variance')
     cli.add_argument('--low_thresh',           type=float, help='Max value threshold (in sigma units) for clipping')
     cli.add_argument('--high_thresh',          type=float, help='Min value threshold (in sigma units) for clipping')

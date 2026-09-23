@@ -4,7 +4,7 @@ from astropy.convolution import Gaussian2DKernel, convolve
 from IPython import embed
 import os, datetime
 from astropy.io import fits
-import json
+from astropy.table import Table
 
 class maps():
     '''
@@ -210,16 +210,21 @@ class maps():
         if(self.coadd):
 
             f = fits.PrimaryHDU(data_maps, header=self.w.to_header())
-            hdu = fits.HDUList([f])
-            hdr = hdu[0].header
+            #hdu = fits.HDUList([f])
+            hdr = f.header
             hdr.set("map")
             hdr.set("Datas")
             hdr["BITPIX"] = ("64", "array data type")
-            hdr["BUNIT"] = 'MJy/sr'
+            hdr["BUNIT"] = ("MJy/sr", "Map units")
+            hdr["MAPTYPE"] = ("COADDED", "Type of map")
+            hdr.add_history("Coadded map created by the map-making pipeline")
             hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-            hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
-            hdu.writeto(self.output_file, overwrite=True) # os.getcwd()+'/fits_and_hdf5/'+
-            hdu.close()
+            param_table = Table(rows=[(key, str(value)) for key, value in self.params.items()],names=("PARAMETER", "VALUE"),)
+            param_hdu = fits.table_to_hdu(param_table)
+            param_hdu.name = "PARAMETERS"
+            hdul = fits.HDUList([f, param_hdu])
+            hdul.writeto(self.output_file, overwrite=True)
+            hdul.close()
             print(f'Saved the coadded map {self.output_file}')
 
         else: 
@@ -227,21 +232,27 @@ class maps():
             name_before_fits = filename.rsplit('.fits', 1)[0]
             fits_and_after = filename[filename.find('.fits'):]  
 
+
+
+            param_table = Table(rows=[(key, str(value)) for key, value in self.params.items()],names=("PARAMETER", "VALUE"),)
+            param_hdu = fits.table_to_hdu(param_table)
+            param_hdu.name = "PARAMETERS"
+
             for m, name in zip(data_maps, kid_num): 
 
                 f = fits.PrimaryHDU(m, header=self.w.to_header())
-                hdu = fits.HDUList([f])
-                hdr = hdu[0].header
+                hdr = f.header
                 hdr.set("map")
                 hdr.set("Datas")
-                hdr["INFO"] = json.dumps(self.params, ensure_ascii=True)
                 hdr["BITPIX"] = ("64", "array data type")
-                hdr["BUNIT"] = 'MJy/sr'
                 hdr["DATE"] = (str(datetime.datetime.now()), "date of creation")
-
-                hdu.writeto(name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                hdr["BUNIT"] = ("MJy/sr", "Map units")
+                hdr["MAPTYPE"] = ("INDIVIDUAL", "Type of map")
+                hdr.add_history(f"Individual {name} map created by the map-making pipeline")
+                hdul = fits.HDUList([f, param_hdu])
+                hdul.writeto(name_before_fits+'_'+name+fits_and_after, overwrite=True)
+                hdul.close()
                 print(f"Saved individual map {name_before_fits+'_'+name+fits_and_after}")
-                hdu.close()
 
 class wcs_world():
 
