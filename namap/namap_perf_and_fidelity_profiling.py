@@ -77,7 +77,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['precision'] = precision                        
                         P_namap['num_frames']  = int(t*60) #integration time in seconds to be loaded. 
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
-                        P_namap['output_map'] = P['output_path']+map_compression
+                        P_namap['output_map'] = P_namap['output_path']+map_compression
                         P_namap['coadd'] = True
                         P_namap['save_TODS'] = False
                         P_namap['remove_turnarounds'] = False
@@ -138,7 +138,7 @@ def profiling_coadded_maps(dict_file_path, profiling_vs_tod_time =True, profilin
                         P_namap['precision'] = precision                        
                         P_namap['num_frames']  = int(5*60) #integration time in seconds to be loaded. 
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
-                        P_namap['output_map'] = P['output_path']+map_compression
+                        P_namap['output_map'] = P_namap['output_path']+map_compression
                         P_namap['coadd'] = True
                         P_namap['save_TODS'] = False
                         P_namap['remove_turnarounds'] = False
@@ -205,7 +205,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                     P_namap['precision'] = precision                        
                     P_namap['num_frames']  = t * 60 #seconds 
                     P_namap['first_frame'] = 0 #Starting time in second to loaded
-                    P_namap['output_map'] = P['output_path']+map_compression
+                    P_namap['output_map'] = P_namap['output_path']+map_compression
                     P_namap['coadd'] = False
                     P_namap['save_TODS'] = False
 
@@ -225,7 +225,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                     results[key][precision][map_compression]['time [s]'].append(timing)
 
                     # Path to your files (adjust if needed)
-                    folder = P['output_path']  # current directory
+                    folder = P_namap['output_path']  # current directory
                     filename = map_compression
                     name_before_fits = filename.rsplit('.fits', 1)[0]
                     fits_and_after = filename[filename.find('.fits'):]  
@@ -282,7 +282,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             P_namap['precision'] = precision                        
                             P_namap['num_frames']  = 5 * 60 #seconds 
                             P_namap['first_frame'] = 0 #Starting time in second to loaded
-                            P_namap['output_map'] = P['output_path']+map_compression
+                            P_namap['output_map'] = P_namap['output_path']+map_compression
                             P_namap['coadd'] = False
                             P_namap['save_TODS'] = False
                             
@@ -303,7 +303,7 @@ def profiling_individual_maps(dict_file_path, profiling_vs_tod_time=True, profil
                             results[key][precision][map_compression]['peak memory [MB]'].append(peak / 1e6)
                             results[key][precision][map_compression]['time [s]'].append(timing)
 
-                            folder = P['output_path']  # current directory
+                            folder = P_namap['output_path']  # current directory
                             filename = map_compression
                             name_before_fits = filename.rsplit('.fits', 1)[0]
                             fits_and_after = filename[filename.find('.fits'):]  
@@ -371,7 +371,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                     P_namap['num_frames']  = t * 60 #seconds 
                     P_namap['first_frame'] = 0 #Starting time in second to loaded
                     P_namap['save_TODS'] = True
-                    P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
+                    P_namap['output_tods'] = P_namap['output_path']+f'tods_{precision}'+compression
                     P_namap['remove_turnarounds'] = False
                     if('raw' in compression): P_namap['downsample_frequency'] = None
                     else: P_namap['downsample_frequency'] = 100
@@ -443,7 +443,7 @@ def profiling_tods(dict_file_path, profiling_vs_tod_time = True, profiling_vs_nb
                         P_namap['num_frames']  = 5 * 60 #seconds 
                         P_namap['first_frame'] = 0 #Starting time in second to loaded
                         P_namap['save_TODS'] = True
-                        P_namap['output_tods'] = P['output_path']+f'tods_{precision}'+compression
+                        P_namap['output_tods'] = P_namap['output_path']+f'tods_{precision}'+compression
                         P_namap['remove_turnarounds'] = False
                         if('raw' in compression): P_namap['downsample_frequency'] = None
                         else: P_namap['downsample_frequency'] = 100
