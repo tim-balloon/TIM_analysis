@@ -733,11 +733,13 @@ class save_tods():
         '''
 
         # Creats the file if it doesn't exist, otherwise open it    
-        with h5py.File(self.tods_path, "w") as f:
-            print(f"Created file: {self.tods_path}")
+        with h5py.File(self.tods_path, "w") as f: print(f"Created file: {self.tods_path}")
 
         #-----------------------------------------------------------------------------------------------
 
+
+        # Save parameters in /parameters
+        self.save_params_to_hdf5(f)
 
         data = np.asarray(self.det_data)
         data, min, max = self.to8bit_intprecision(data)
@@ -754,10 +756,30 @@ class save_tods():
         for array, name in zip((self.coord1_data,self.coord2_data, self.lst_data, self.lat_data, self.ctime), (self.coord1,self.coord2,'LST','latitude', 'coords_timestamps')):
             self.save_array_to_hdf5(name, (array,), (name,), spf=self.coords_sample_frame, min=min, max=max)
 
+        print(f"Saved HDF5 file: {self.tods_path}")
+
 
         #-----------------------------------------------------------------------------------------------
 
-    
+    def save_params_to_hdf5(self, h5file):
+        """
+        Save pipeline parameters in a dedicated HDF5 group.
+
+
+        Parameters
+        ----------
+        h5file : str
+            hdf5 file 
+        
+        Returns
+        -------
+        """
+
+        if "parameters" in h5file: del h5file["parameters"]
+        params_group = h5file.create_group("parameters")
+        params_group.create_dataset("PARAMETER",data=np.array([str(key) for key in self.params.keys()],dtype=h5py.string_dtype(encoding="utf-8")))
+        params_group.create_dataset("VALUE",data=np.array([str(value) for value in self.params.values()],dtype=h5py.string_dtype(encoding="utf-8")))
+
     def save_array_to_hdf5(self, grp_name, data, list_names, spf=None, min=None, max=None):
         '''
         Save an array and its associated metadata to an HDF5 group.
@@ -897,18 +919,17 @@ class save_tods():
         #-----------------------------------------------------------------------------------------------
 
 
-        for key in self.P:
-            entry = gd.entry(gd.STRING_ENTRY,'param_'+key,0,parameters={key: f"{self.P[key]}" })
-
-
+        # Save parameters as STRING_ENTRY fields
+        for key, value in self.P.items():
+            field_name = f"param_{key}"
+            value = str(value)
+            entry = gd.entry(gd.STRING_ENTRY,field_name,0)
             try:
                 df.add(entry)
             except gd.DuplicateError:
-                df.delete(key)   # remove existing field
-                df.add(entry)           # recreate it
-
-        df.close()
-
+                df.delete(field_name)
+                df.add(entry)
+            df.put_string(field_name, value)
 
         if('zip' in self.tods_path):
 
